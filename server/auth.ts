@@ -23,10 +23,16 @@ async function hashPassword(password: string) {
 }
 
 async function comparePasswords(supplied: string, stored: string) {
+  console.log("Comparing passwords:");
+  console.log("Supplied password length:", supplied.length);
+  console.log("Stored hash format:", stored.includes(".") ? "valid" : "invalid");
+
   const [hashed, salt] = stored.split(".");
   const hashedBuf = Buffer.from(hashed, "hex");
   const suppliedBuf = (await scryptAsync(supplied, salt, 64)) as Buffer;
-  return timingSafeEqual(hashedBuf, suppliedBuf);
+  const matches = timingSafeEqual(hashedBuf, suppliedBuf);
+  console.log("Password comparison result:", matches);
+  return matches;
 }
 
 export function setupAuth(app: Express) {
@@ -52,12 +58,23 @@ export function setupAuth(app: Express) {
       { usernameField: 'email' },
       async (email, password, done) => {
         try {
+          console.log("Login attempt for email:", email);
           const user = await storage.getUserByEmail(email);
-          if (!user || !(await comparePasswords(password, user.password))) {
+          console.log("User found:", !!user);
+
+          if (!user) {
+            return done(null, false);
+          }
+
+          console.log("Stored password hash:", user.password);
+          const isValid = await comparePasswords(password, user.password);
+
+          if (!isValid) {
             return done(null, false);
           }
           return done(null, user);
         } catch (err) {
+          console.error("Login error:", err);
           return done(err);
         }
       }
@@ -87,10 +104,14 @@ export function setupAuth(app: Express) {
         return res.status(400).send("Email already exists");
       }
 
+      console.log("Registering new user with email:", parsed.data.email);
+      const hashedPassword = await hashPassword(parsed.data.password);
+      console.log("Generated password hash:", hashedPassword);
+
       // Create user first
       const user = await storage.createUser({
         ...parsed.data,
-        password: await hashPassword(parsed.data.password),
+        password: hashedPassword,
       });
 
       // Then create their first restaurant
