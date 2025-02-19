@@ -3,22 +3,55 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "wouter";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ChevronDown, Store } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
-import { Restaurant } from "@shared/schema";
+import { ChevronDown, Store, PlusCircle } from "lucide-react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { Restaurant, insertRestaurantSchema } from "@shared/schema";
 import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 export default function HomePage() {
   const { user, logoutMutation } = useAuth();
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
+  const [isCreateOpen, setCreateOpen] = useState(false);
 
   const { data: restaurants } = useQuery<Restaurant[]>({
     queryKey: ["/api/restaurants"],
+  });
+
+  const form = useForm({
+    resolver: zodResolver(insertRestaurantSchema),
+    defaultValues: {
+      name: "",
+    },
+  });
+
+  const createMutation = useMutation({
+    mutationFn: async (data: { name: string }) => {
+      const res = await apiRequest("POST", "/api/restaurants", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/restaurants"] });
+      setCreateOpen(false);
+      form.reset();
+    },
   });
 
   // Select first restaurant by default
@@ -34,37 +67,65 @@ export default function HomePage() {
             <div>
               <h1 className="text-3xl font-bold flex items-center gap-2">
                 <Store className="h-8 w-8" />
-                {restaurants && restaurants.length > 1 ? (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="font-bold text-xl">
-                        {selectedRestaurant?.name || "Select Restaurant"}
-                        <ChevronDown className="ml-2 h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="w-[200px]">
-                      {restaurants.map((restaurant) => (
-                        <DropdownMenuItem
-                          key={restaurant.id}
-                          onClick={() => setSelectedRestaurant(restaurant)}
-                        >
-                          {restaurant.name}
-                        </DropdownMenuItem>
-                      ))}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="font-bold text-xl">
+                      {selectedRestaurant?.name || "Select Restaurant"}
+                      <ChevronDown className="ml-2 h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-[200px]">
+                    {restaurants?.map((restaurant) => (
                       <DropdownMenuItem
-                        className="text-primary font-medium"
-                        onClick={() => {
-                          // Navigate to bulk update page
-                          window.location.href = `/menu?bulk=true`;
-                        }}
+                        key={restaurant.id}
+                        onClick={() => setSelectedRestaurant(restaurant)}
                       >
-                        Update All Restaurants
+                        {restaurant.name}
                       </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                ) : (
-                  selectedRestaurant?.name
-                )}
+                    ))}
+                    {restaurants && restaurants.length > 1 && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="text-primary font-medium"
+                          onClick={() => {
+                            window.location.href = `/menu?bulk=true`;
+                          }}
+                        >
+                          Update All Restaurants
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                    <DropdownMenuSeparator />
+                    <Dialog open={isCreateOpen} onOpenChange={setCreateOpen}>
+                      <DialogTrigger asChild>
+                        <DropdownMenuItem
+                          onSelect={(e) => e.preventDefault()}
+                          className="gap-2"
+                        >
+                          <PlusCircle className="h-4 w-4" />
+                          Add New Restaurant
+                        </DropdownMenuItem>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Add New Restaurant</DialogTitle>
+                        </DialogHeader>
+                        <form onSubmit={form.handleSubmit((data) => createMutation.mutate(data))}>
+                          <div className="space-y-4">
+                            <div>
+                              <Label htmlFor="name">Restaurant Name</Label>
+                              <Input id="name" {...form.register("name")} />
+                            </div>
+                            <Button type="submit" className="w-full">
+                              Add Restaurant
+                            </Button>
+                          </div>
+                        </form>
+                      </DialogContent>
+                    </Dialog>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </h1>
               <p className="text-muted-foreground">Welcome back!</p>
             </div>
