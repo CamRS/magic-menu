@@ -16,7 +16,7 @@ import {
 import { Store, PlusCircle, Loader2 } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Restaurant, MenuItem, insertMenuItemSchema, type InsertMenuItem } from "@shared/schema";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Label } from "@/components/ui/label";
@@ -38,7 +38,13 @@ export default function HomePage() {
 
   const { data: menuItems, isLoading: isLoadingMenuItems } = useQuery<MenuItem[]>({
     queryKey: ["/api/menu-items", selectedRestaurant?.id],
-    enabled: !!selectedRestaurant?.id
+    queryFn: async () => {
+      if (!selectedRestaurant?.id) return [];
+      const response = await apiRequest("GET", `/api/menu-items?restaurantId=${selectedRestaurant.id}`);
+      if (!response.ok) throw new Error("Failed to fetch menu items");
+      return response.json();
+    },
+    enabled: !!selectedRestaurant?.id,
   });
 
   const form = useForm<InsertMenuItem>({
@@ -98,17 +104,19 @@ export default function HomePage() {
     },
   });
 
+  // Set initial restaurant if none selected
+  useEffect(() => {
+    if (!selectedRestaurant && restaurants?.length) {
+      setSelectedRestaurant(restaurants[0]);
+    }
+  }, [restaurants, selectedRestaurant]);
+
   if (!restaurants?.length) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <p className="text-muted-foreground">Please create a restaurant first</p>
       </div>
     );
-  }
-
-  // Set initial restaurant if none selected
-  if (!selectedRestaurant && restaurants.length > 0) {
-    setSelectedRestaurant(restaurants[0]);
   }
 
   return (
@@ -217,6 +225,10 @@ export default function HomePage() {
           {isLoadingMenuItems ? (
             <div className="col-span-2 flex justify-center">
               <Loader2 className="h-8 w-8 animate-spin" />
+            </div>
+          ) : menuItems?.length === 0 ? (
+            <div className="col-span-2 text-center text-muted-foreground">
+              No menu items yet. Add your first item!
             </div>
           ) : (
             menuItems?.map((item) => (
