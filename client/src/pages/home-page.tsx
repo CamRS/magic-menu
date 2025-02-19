@@ -107,15 +107,14 @@ export default function HomePage() {
         throw new Error("No restaurant selected");
       }
 
-      // Format the data before sending
       const data = {
         ...formData,
         restaurantId: selectedRestaurant.id,
-        // Ensure price is stored as a string without currency symbol
         price: formData.price.replace(/^\$/, ''),
-        // Ensure image is a string, use empty string if null
         image: formData.image || '',
       };
+
+      console.log('Submitting menu item:', data); // Add logging
 
       const res = await apiRequest("POST", "/api/menu-items", data);
       if (!res.ok) {
@@ -145,6 +144,9 @@ export default function HomePage() {
         },
       });
     },
+    onError: (error: Error) => {
+      console.error('Error creating menu item:', error);
+    }
   });
 
   // Select first restaurant by default
@@ -253,7 +255,16 @@ export default function HomePage() {
             <DialogHeader>
               <DialogTitle>Add Menu Item</DialogTitle>
             </DialogHeader>
-            <form onSubmit={menuItemForm.handleSubmit((data) => createMenuItemMutation.mutate(data))} className="space-y-6">
+            <form 
+              onSubmit={(e) => {
+                e.preventDefault();
+                menuItemForm.handleSubmit((data) => {
+                  console.log('Form data:', data); // Add logging
+                  return createMenuItemMutation.mutate(data);
+                })(e);
+              }} 
+              className="space-y-6"
+            >
               <div className="grid grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <div>
