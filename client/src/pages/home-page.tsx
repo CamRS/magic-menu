@@ -111,13 +111,16 @@ export default function HomePage() {
       const data = {
         ...formData,
         restaurantId: selectedRestaurant.id,
-        // Ensure price is formatted correctly
-        price: formData.price.startsWith('$') ? formData.price.slice(1) : formData.price,
+        // Ensure price is stored as a string without currency symbol
+        price: formData.price.replace(/^\$/, ''),
+        // Ensure image is a string, use empty string if null
+        image: formData.image || '',
       };
 
       const res = await apiRequest("POST", "/api/menu-items", data);
       if (!res.ok) {
-        throw new Error("Failed to create menu item");
+        const error = await res.json();
+        throw new Error(error.message || "Failed to create menu item");
       }
       return res.json();
     },
@@ -221,7 +224,7 @@ export default function HomePage() {
             <DialogHeader>
               <DialogTitle>Add New Restaurant</DialogTitle>
             </DialogHeader>
-            <form 
+            <form
               onSubmit={restaurantForm.handleSubmit((data) => createRestaurantMutation.mutate(data))}
               className="space-y-4"
             >
@@ -234,8 +237,8 @@ export default function HomePage() {
                   </p>
                 )}
               </div>
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 className="w-full"
                 disabled={createRestaurantMutation.isPending}
               >
@@ -291,9 +294,9 @@ export default function HomePage() {
                   </div>
                   <div>
                     <Label htmlFor="image">Image</Label>
-                    <Input 
-                      id="image" 
-                      type="file" 
+                    <Input
+                      id="image"
+                      type="file"
                       accept="image/*"
                       onChange={handleImageUpload}
                       className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
@@ -323,8 +326,8 @@ export default function HomePage() {
                   </div>
                 </div>
               </div>
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 className="w-full"
                 disabled={createMenuItemMutation.isPending}
               >
@@ -347,15 +350,21 @@ export default function HomePage() {
               menuItems?.map((item) => (
                 <Card key={item.id}>
                   <CardContent className="p-6">
-                    <img
-                      src={item.image}
-                      alt={item.name}
-                      className="w-full h-48 object-cover rounded-md mb-4"
-                    />
+                    {item.image ? (
+                      <img
+                        src={item.image}
+                        alt={item.name}
+                        className="w-full h-48 object-cover rounded-md mb-4"
+                      />
+                    ) : (
+                      <div className="w-full h-48 bg-gray-100 rounded-md mb-4 flex items-center justify-center">
+                        <span className="text-gray-400">No image</span>
+                      </div>
+                    )}
                     <h3 className="text-xl font-semibold mb-2">{item.name}</h3>
                     <p className="text-muted-foreground mb-4">{item.description}</p>
                     <div className="flex justify-between items-center">
-                      <span className="font-semibold">${item.price}</span>
+                      <span className="font-semibold">${parseFloat(item.price).toFixed(2)}</span>
                       <div className="flex flex-wrap gap-2">
                         {Object.entries(item.allergens)
                           .filter(([_, value]) => value)

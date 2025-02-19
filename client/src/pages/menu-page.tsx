@@ -65,12 +65,17 @@ export default function MenuPage() {
 
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
-      const res = await apiRequest("POST", "/api/menu-items", {
+      const formattedData = {
         ...data,
-        restaurantId: parseInt(restaurantId || "0")
-      });
+        restaurantId: parseInt(restaurantId || "0"),
+        price: data.price.replace(/^\$/, ''),
+        image: data.image || '',
+      };
+
+      const res = await apiRequest("POST", "/api/menu-items", formattedData);
       if (!res.ok) {
-        throw new Error("Failed to create menu item");
+        const error = await res.json();
+        throw new Error(error.message || "Failed to create menu item");
       }
       return res.json();
     },
@@ -169,9 +174,9 @@ export default function MenuPage() {
                     </div>
                     <div>
                       <Label htmlFor="image">Image</Label>
-                      <Input 
-                        id="image" 
-                        type="file" 
+                      <Input
+                        id="image"
+                        type="file"
                         accept="image/*"
                         onChange={handleImageUpload}
                         className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
@@ -196,8 +201,8 @@ export default function MenuPage() {
                     </div>
                   </div>
                 </div>
-                <Button 
-                  type="submit" 
+                <Button
+                  type="submit"
                   className="w-full"
                   disabled={createMutation.isPending}
                 >
@@ -215,15 +220,21 @@ export default function MenuPage() {
           {menuItems?.map((item) => (
             <Card key={item.id}>
               <CardContent className="p-6">
-                <img
-                  src={item.image}
-                  alt={item.name}
-                  className="w-full h-48 object-cover rounded-md mb-4"
-                />
+                {item.image ? (
+                  <img
+                    src={item.image}
+                    alt={item.name}
+                    className="w-full h-48 object-cover rounded-md mb-4"
+                  />
+                ) : (
+                  <div className="w-full h-48 bg-gray-100 rounded-md mb-4 flex items-center justify-center">
+                    <span className="text-gray-400">No image</span>
+                  </div>
+                )}
                 <h3 className="text-xl font-semibold mb-2">{item.name}</h3>
                 <p className="text-muted-foreground mb-4">{item.description}</p>
                 <div className="flex justify-between items-center">
-                  <span className="font-semibold">${item.price}</span>
+                  <span className="font-semibold">${parseFloat(item.price).toFixed(2)}</span>
                   <div className="flex flex-wrap gap-2">
                     {Object.entries(item.allergens)
                       .filter(([_, value]) => value)
