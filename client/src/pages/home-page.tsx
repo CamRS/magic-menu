@@ -68,7 +68,7 @@ export default function HomePage() {
       description: "",
       price: "",
       category: "",
-      restaurantId: selectedRestaurant?.id || 0,
+      restaurantId: selectedRestaurant?.id ?? 0,
       image: "",
       allergens: {
         milk: false,
@@ -104,9 +104,12 @@ export default function HomePage() {
 
   const createMenuItemMutation = useMutation({
     mutationFn: async (data: any) => {
+      if (!selectedRestaurant?.id) {
+        throw new Error("No restaurant selected");
+      }
       const res = await apiRequest("POST", "/api/menu-items", {
         ...data,
-        restaurantId: selectedRestaurant?.id
+        restaurantId: selectedRestaurant.id
       });
       if (!res.ok) {
         throw new Error("Failed to create menu item");
@@ -116,7 +119,24 @@ export default function HomePage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/menu-items", selectedRestaurant?.id] });
       setCreateMenuItemOpen(false);
-      menuItemForm.reset();
+      menuItemForm.reset({
+        name: "",
+        description: "",
+        price: "",
+        category: "",
+        restaurantId: selectedRestaurant?.id ?? 0,
+        image: "",
+        allergens: {
+          milk: false,
+          eggs: false,
+          peanuts: false,
+          nuts: false,
+          shellfish: false,
+          fish: false,
+          soy: false,
+          gluten: false,
+        },
+      });
     },
   });
 
