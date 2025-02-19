@@ -50,12 +50,24 @@ export function setupAuth(app: Express) {
   passport.use(
     new LocalStrategy(async (username, password, done) => {
       try {
+        console.log("Attempting login for username:", username); // Debug log
         const user = await storage.getUserByUsername(username);
-        if (!user || !(await comparePasswords(password, user.password))) {
+        console.log("Found user:", user ? "yes" : "no"); // Debug log
+
+        if (!user) {
+          console.log("User not found"); // Debug log
+          return done(null, false);
+        }
+
+        const isPasswordValid = await comparePasswords(password, user.password);
+        console.log("Password valid:", isPasswordValid); // Debug log
+
+        if (!isPasswordValid) {
           return done(null, false);
         }
         return done(null, user);
       } catch (err) {
+        console.error("Login error:", err); // Debug log
         return done(err);
       }
     }),
@@ -108,12 +120,24 @@ export function setupAuth(app: Express) {
   });
 
   app.post("/api/login", (req, res, next) => {
+    console.log("Login attempt with:", req.body); // Debug log
+
     passport.authenticate("local", (err: Error, user: SelectUser) => {
-      if (err) return next(err);
-      if (!user) return res.status(401).send("Invalid credentials");
+      if (err) {
+        console.error("Authentication error:", err); // Debug log
+        return next(err);
+      }
+      if (!user) {
+        console.log("Authentication failed - no user"); // Debug log
+        return res.status(401).send("Invalid credentials");
+      }
 
       req.login(user, (err) => {
-        if (err) return next(err);
+        if (err) {
+          console.error("Login error:", err); // Debug log
+          return next(err);
+        }
+        console.log("Login successful for user:", user.id); // Debug log
         res.json(user);
       });
     })(req, res, next);
