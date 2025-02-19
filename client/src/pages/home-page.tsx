@@ -39,16 +39,24 @@ export default function HomePage() {
     resolver: zodResolver(insertRestaurantSchema),
     defaultValues: {
       name: "",
+      userId: user?.id,
     },
   });
 
   const createMutation = useMutation({
     mutationFn: async (data: { name: string }) => {
-      const res = await apiRequest("POST", "/api/restaurants", data);
-      return res.json();
+      const response = await apiRequest("POST", "/api/restaurants", {
+        ...data,
+        userId: user?.id,
+      });
+      if (!response.ok) {
+        throw new Error("Failed to create restaurant");
+      }
+      return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (newRestaurant) => {
       queryClient.invalidateQueries({ queryKey: ["/api/restaurants"] });
+      setSelectedRestaurant(newRestaurant);
       setCreateOpen(false);
       form.reset();
     },
@@ -83,47 +91,15 @@ export default function HomePage() {
                         {restaurant.name}
                       </DropdownMenuItem>
                     ))}
-                    {restaurants && restaurants.length > 1 && (
-                      <>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="text-primary font-medium"
-                          onClick={() => {
-                            window.location.href = `/menu?bulk=true`;
-                          }}
-                        >
-                          Update All Restaurants
-                        </DropdownMenuItem>
-                      </>
-                    )}
                     <DropdownMenuSeparator />
-                    <Dialog open={isCreateOpen} onOpenChange={setCreateOpen}>
-                      <DialogTrigger asChild>
-                        <DropdownMenuItem
-                          onSelect={(e) => e.preventDefault()}
-                          className="gap-2"
-                        >
-                          <PlusCircle className="h-4 w-4" />
-                          Add New Restaurant
-                        </DropdownMenuItem>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Add New Restaurant</DialogTitle>
-                        </DialogHeader>
-                        <form onSubmit={form.handleSubmit((data) => createMutation.mutate(data))}>
-                          <div className="space-y-4">
-                            <div>
-                              <Label htmlFor="name">Restaurant Name</Label>
-                              <Input id="name" {...form.register("name")} />
-                            </div>
-                            <Button type="submit" className="w-full">
-                              Add Restaurant
-                            </Button>
-                          </div>
-                        </form>
-                      </DialogContent>
-                    </Dialog>
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-start px-2 gap-2"
+                      onClick={() => setCreateOpen(true)}
+                    >
+                      <PlusCircle className="h-4 w-4" />
+                      Add New Restaurant
+                    </Button>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </h1>
@@ -134,6 +110,35 @@ export default function HomePage() {
             Logout
           </Button>
         </div>
+
+        <Dialog open={isCreateOpen} onOpenChange={setCreateOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Add New Restaurant</DialogTitle>
+            </DialogHeader>
+            <form 
+              onSubmit={form.handleSubmit((data) => createMutation.mutate(data))}
+              className="space-y-4"
+            >
+              <div>
+                <Label htmlFor="name">Restaurant Name</Label>
+                <Input id="name" {...form.register("name")} />
+                {form.formState.errors.name && (
+                  <p className="text-sm text-destructive mt-1">
+                    {form.formState.errors.name.message}
+                  </p>
+                )}
+              </div>
+              <Button 
+                type="submit" 
+                className="w-full"
+                disabled={createMutation.isPending}
+              >
+                {createMutation.isPending ? "Creating..." : "Add Restaurant"}
+              </Button>
+            </form>
+          </DialogContent>
+        </Dialog>
 
         <div className="grid md:grid-cols-2 gap-6">
           <Link href={`/menu?restaurantId=${selectedRestaurant?.id}`}>
