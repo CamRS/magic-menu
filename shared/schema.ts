@@ -22,13 +22,15 @@ export const menuItems = pgTable("menu_items", {
   price: text("price").notNull(),
   image: text("image").notNull(),
   category: text("category").notNull(),
-  dietaryInfo: jsonb("dietary_info").$type<{
-    vegetarian: boolean;
-    vegan: boolean;
-    glutenFree: boolean;
-    dairyFree: boolean;
-    nutFree: boolean;
+  allergens: jsonb("allergens").$type<{
+    milk: boolean;
+    eggs: boolean;
+    peanuts: boolean;
+    nuts: boolean;
     shellfish: boolean;
+    fish: boolean;
+    soy: boolean;
+    gluten: boolean;
   }>().notNull(),
 });
 

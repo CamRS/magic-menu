@@ -20,13 +20,15 @@ import { Loader2, PlusCircle } from "lucide-react";
 import { useState } from "react";
 import { useLocation } from "wouter";
 
-type DietaryInfo = {
-  vegetarian: boolean;
-  vegan: boolean;
-  glutenFree: boolean;
-  dairyFree: boolean;
-  nutFree: boolean;
+type AllergenInfo = {
+  milk: boolean;
+  eggs: boolean;
+  peanuts: boolean;
+  nuts: boolean;
   shellfish: boolean;
+  fish: boolean;
+  soy: boolean;
+  gluten: boolean;
 };
 
 export default function MenuPage() {
@@ -47,14 +49,16 @@ export default function MenuPage() {
       price: "",
       category: "",
       restaurantId: parseInt(restaurantId || "0"),
-      image: "https://images.unsplash.com/photo-1599250300435-b9693f21830d",
-      dietaryInfo: {
-        vegetarian: false,
-        vegan: false,
-        glutenFree: false,
-        dairyFree: false,
-        nutFree: false,
+      image: "",
+      allergens: {
+        milk: false,
+        eggs: false,
+        peanuts: false,
+        nuts: false,
         shellfish: false,
+        fish: false,
+        soy: false,
+        gluten: false,
       },
     },
   });
@@ -93,8 +97,19 @@ export default function MenuPage() {
     );
   }
 
-  const handleDietaryChange = (key: keyof DietaryInfo, checked: boolean) => {
-    form.setValue(`dietaryInfo.${key}`, checked, { shouldValidate: true });
+  const handleAllergenChange = (key: keyof AllergenInfo, checked: boolean) => {
+    form.setValue(`allergens.${key}`, checked, { shouldValidate: true });
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        form.setValue("image", reader.result as string, { shouldValidate: true });
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   return (
@@ -109,76 +124,88 @@ export default function MenuPage() {
                 Add Item
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-w-2xl">
               <DialogHeader>
                 <DialogTitle>Add Menu Item</DialogTitle>
               </DialogHeader>
-              <form onSubmit={form.handleSubmit((data) => createMutation.mutate(data))}>
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="name">Name</Label>
-                    <Input id="name" {...form.register("name")} />
-                    {form.formState.errors.name && (
-                      <p className="text-sm text-destructive mt-1">
-                        {form.formState.errors.name.message}
-                      </p>
-                    )}
+              <form onSubmit={form.handleSubmit((data) => createMutation.mutate(data))} className="space-y-6">
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="name">Name</Label>
+                      <Input id="name" {...form.register("name")} />
+                      {form.formState.errors.name && (
+                        <p className="text-sm text-destructive mt-1">
+                          {form.formState.errors.name.message}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <Label htmlFor="description">Description</Label>
+                      <Textarea id="description" {...form.register("description")} />
+                      {form.formState.errors.description && (
+                        <p className="text-sm text-destructive mt-1">
+                          {form.formState.errors.description.message}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <Label htmlFor="price">Price</Label>
+                      <Input id="price" {...form.register("price")} />
+                      {form.formState.errors.price && (
+                        <p className="text-sm text-destructive mt-1">
+                          {form.formState.errors.price.message}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <Label htmlFor="category">Category</Label>
+                      <Input id="category" {...form.register("category")} />
+                      {form.formState.errors.category && (
+                        <p className="text-sm text-destructive mt-1">
+                          {form.formState.errors.category.message}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <Label htmlFor="image">Image</Label>
+                      <Input 
+                        id="image" 
+                        type="file" 
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+                      />
+                    </div>
                   </div>
                   <div>
-                    <Label htmlFor="description">Description</Label>
-                    <Textarea id="description" {...form.register("description")} />
-                    {form.formState.errors.description && (
-                      <p className="text-sm text-destructive mt-1">
-                        {form.formState.errors.description.message}
-                      </p>
-                    )}
-                  </div>
-                  <div>
-                    <Label htmlFor="price">Price</Label>
-                    <Input id="price" {...form.register("price")} />
-                    {form.formState.errors.price && (
-                      <p className="text-sm text-destructive mt-1">
-                        {form.formState.errors.price.message}
-                      </p>
-                    )}
-                  </div>
-                  <div>
-                    <Label htmlFor="category">Category</Label>
-                    <Input id="category" {...form.register("category")} />
-                    {form.formState.errors.category && (
-                      <p className="text-sm text-destructive mt-1">
-                        {form.formState.errors.category.message}
-                      </p>
-                    )}
-                  </div>
-                  <div>
-                    <Label>Dietary Information</Label>
+                    <Label>Allergens</Label>
                     <div className="grid grid-cols-2 gap-4 mt-2">
-                      {(Object.keys(form.getValues().dietaryInfo) as Array<keyof DietaryInfo>).map((key) => (
+                      {(Object.keys(form.getValues().allergens) as Array<keyof AllergenInfo>).map((key) => (
                         <div key={key} className="flex items-center space-x-2">
                           <Checkbox
                             id={key}
-                            checked={form.getValues().dietaryInfo[key]}
-                            onCheckedChange={(checked) => handleDietaryChange(key, checked as boolean)}
+                            checked={form.getValues().allergens[key]}
+                            onCheckedChange={(checked) => handleAllergenChange(key, checked as boolean)}
                           />
-                          <Label htmlFor={key}>
-                            {key.replace(/([A-Z])/g, " $1").trim()}
+                          <Label htmlFor={key} className="capitalize">
+                            {key}
                           </Label>
                         </div>
                       ))}
                     </div>
                   </div>
-                  <Button 
-                    type="submit" 
-                    className="w-full"
-                    disabled={createMutation.isPending}
-                  >
-                    {createMutation.isPending && (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    )}
-                    Add Item
-                  </Button>
                 </div>
+                <Button 
+                  type="submit" 
+                  className="w-full"
+                  disabled={createMutation.isPending}
+                >
+                  {createMutation.isPending && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  Add Item
+                </Button>
               </form>
             </DialogContent>
           </Dialog>
@@ -196,16 +223,16 @@ export default function MenuPage() {
                 <h3 className="text-xl font-semibold mb-2">{item.name}</h3>
                 <p className="text-muted-foreground mb-4">{item.description}</p>
                 <div className="flex justify-between items-center">
-                  <span className="font-semibold">{item.price}</span>
-                  <div className="flex gap-2">
-                    {Object.entries(item.dietaryInfo)
+                  <span className="font-semibold">${item.price}</span>
+                  <div className="flex flex-wrap gap-2">
+                    {Object.entries(item.allergens)
                       .filter(([_, value]) => value)
                       .map(([key]) => (
                         <span
                           key={key}
-                          className="px-2 py-1 bg-primary/10 text-primary text-xs rounded-full"
+                          className="px-2 py-1 bg-primary/10 text-primary text-xs rounded-full capitalize"
                         >
-                          {key.replace(/([A-Z])/g, " $1").trim()}
+                          {key}
                         </span>
                       ))}
                   </div>
