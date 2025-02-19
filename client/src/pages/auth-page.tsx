@@ -12,12 +12,12 @@ import { Loader2 } from "lucide-react";
 import { z } from "zod";
 
 const loginSchema = z.object({
-  username: z.string().min(1, "Username is required"),
+  email: z.string().email("Please enter a valid email address"),
   password: z.string().min(1, "Password is required"),
 });
 
 const registerSchema = z.object({
-  username: z.string().min(1, "Username is required"),
+  email: z.string().email("Please enter a valid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
   restaurantName: z.string().min(1, "Restaurant name is required"),
 });
@@ -30,12 +30,12 @@ export default function AuthPage() {
 
   const loginForm = useForm<LoginData>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { username: "", password: "" },
+    defaultValues: { email: "", password: "" },
   });
 
   const registerForm = useForm<RegisterData>({
     resolver: zodResolver(registerSchema),
-    defaultValues: { username: "", password: "", restaurantName: "" },
+    defaultValues: { email: "", password: "", restaurantName: "" },
   });
 
   if (user) {
@@ -61,11 +61,11 @@ export default function AuthPage() {
                   <form onSubmit={loginForm.handleSubmit((data) => loginMutation.mutate(data))}>
                     <div className="space-y-4">
                       <div>
-                        <Label htmlFor="username">Username</Label>
-                        <Input id="username" {...loginForm.register("username")} />
-                        {loginForm.formState.errors.username && (
+                        <Label htmlFor="email">Email Address</Label>
+                        <Input id="email" type="email" {...loginForm.register("email")} />
+                        {loginForm.formState.errors.email && (
                           <p className="text-sm text-destructive mt-1">
-                            {loginForm.formState.errors.username.message}
+                            {loginForm.formState.errors.email.message}
                           </p>
                         )}
                       </div>
@@ -110,11 +110,11 @@ export default function AuthPage() {
                         )}
                       </div>
                       <div>
-                        <Label htmlFor="reg-username">Username</Label>
-                        <Input id="reg-username" {...registerForm.register("username")} />
-                        {registerForm.formState.errors.username && (
+                        <Label htmlFor="reg-email">Email Address</Label>
+                        <Input id="reg-email" type="email" {...registerForm.register("email")} />
+                        {registerForm.formState.errors.email && (
                           <p className="text-sm text-destructive mt-1">
-                            {registerForm.formState.errors.username.message}
+                            {registerForm.formState.errors.email.message}
                           </p>
                         )}
                       </div>

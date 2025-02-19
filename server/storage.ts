@@ -6,7 +6,7 @@ const MemoryStore = createMemoryStore(session);
 
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
 
   getRestaurants(userId: number): Promise<Restaurant[]>;
@@ -45,27 +45,27 @@ export class MemStorage implements IStorage {
   }
 
   async getUser(id: number): Promise<User | undefined> {
-    console.log("Getting user by ID:", id); // Debug log
+    console.log("Getting user by ID:", id);
     const user = this.users.get(id);
-    console.log("Found user:", user); // Debug log
+    console.log("Found user:", user);
     return user;
   }
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    console.log("Getting user by username:", username); // Debug log
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    console.log("Getting user by email:", email);
     const user = Array.from(this.users.values()).find(
-      (user) => user.username.toLowerCase() === username.toLowerCase(),
+      (user) => user.email.toLowerCase() === email.toLowerCase(),
     );
-    console.log("Found user:", user); // Debug log
+    console.log("Found user:", user);
     return user;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    console.log("Creating user:", insertUser.username); // Debug log
+    console.log("Creating user:", insertUser.email);
     const id = this.currentUserId++;
     const user = { ...insertUser, id };
     this.users.set(id, user);
-    console.log("Created user:", user); // Debug log
+    console.log("Created user:", user);
     return user;
   }
 

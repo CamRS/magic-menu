@@ -48,29 +48,32 @@ export function setupAuth(app: Express) {
   app.use(passport.session());
 
   passport.use(
-    new LocalStrategy(async (username, password, done) => {
-      try {
-        console.log("Attempting login for username:", username); // Debug log
-        const user = await storage.getUserByUsername(username);
-        console.log("Found user:", user ? "yes" : "no"); // Debug log
+    new LocalStrategy(
+      { usernameField: 'email' },
+      async (email, password, done) => {
+        try {
+          console.log("Attempting login for email:", email);
+          const user = await storage.getUserByEmail(email);
+          console.log("Found user:", user ? "yes" : "no");
 
-        if (!user) {
-          console.log("User not found"); // Debug log
-          return done(null, false);
+          if (!user) {
+            console.log("User not found");
+            return done(null, false);
+          }
+
+          const isPasswordValid = await comparePasswords(password, user.password);
+          console.log("Password valid:", isPasswordValid);
+
+          if (!isPasswordValid) {
+            return done(null, false);
+          }
+          return done(null, user);
+        } catch (err) {
+          console.error("Login error:", err);
+          return done(err);
         }
-
-        const isPasswordValid = await comparePasswords(password, user.password);
-        console.log("Password valid:", isPasswordValid); // Debug log
-
-        if (!isPasswordValid) {
-          return done(null, false);
-        }
-        return done(null, user);
-      } catch (err) {
-        console.error("Login error:", err); // Debug log
-        return done(err);
       }
-    }),
+    )
   );
 
   passport.serializeUser((user, done) => done(null, user.id));
@@ -91,9 +94,9 @@ export function setupAuth(app: Express) {
         return res.status(400).json(parsed.error);
       }
 
-      const existingUser = await storage.getUserByUsername(parsed.data.username);
+      const existingUser = await storage.getUserByEmail(parsed.data.email);
       if (existingUser) {
-        return res.status(400).send("Username already exists");
+        return res.status(400).send("Email already exists");
       }
 
       // Create user first
@@ -120,24 +123,24 @@ export function setupAuth(app: Express) {
   });
 
   app.post("/api/login", (req, res, next) => {
-    console.log("Login attempt with:", req.body); // Debug log
+    console.log("Login attempt with:", req.body);
 
     passport.authenticate("local", (err: Error, user: SelectUser) => {
       if (err) {
-        console.error("Authentication error:", err); // Debug log
+        console.error("Authentication error:", err);
         return next(err);
       }
       if (!user) {
-        console.log("Authentication failed - no user"); // Debug log
+        console.log("Authentication failed - no user");
         return res.status(401).send("Invalid credentials");
       }
 
       req.login(user, (err) => {
         if (err) {
-          console.error("Login error:", err); // Debug log
+          console.error("Login error:", err);
           return next(err);
         }
-        console.log("Login successful for user:", user.id); // Debug log
+        console.log("Login successful for user:", user.id);
         res.json(user);
       });
     })(req, res, next);
