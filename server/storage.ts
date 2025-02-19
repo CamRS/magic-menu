@@ -1,8 +1,12 @@
 import { User, InsertUser, MenuItem, InsertMenuItem, Restaurant, InsertRestaurant } from "@shared/schema";
 import session from "express-session";
-import createMemoryStore from "memorystore";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
+import { users, restaurants, menuItems } from "@shared/schema";
+import connectPg from "connect-pg-simple";
+import { pool } from "./db";
 
-const MemoryStore = createMemoryStore(session);
+const PostgresSessionStore = connectPg(session);
 
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
@@ -23,113 +27,110 @@ export interface IStorage {
   sessionStore: session.Store;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  private restaurants: Map<number, Restaurant>;
-  private menuItems: Map<number, MenuItem>;
-  private currentUserId: number;
-  private currentRestaurantId: number;
-  private currentMenuItemId: number;
+export class DatabaseStorage implements IStorage {
   sessionStore: session.Store;
 
   constructor() {
-    this.users = new Map();
-    this.restaurants = new Map();
-    this.menuItems = new Map();
-    this.currentUserId = 1;
-    this.currentRestaurantId = 1;
-    this.currentMenuItemId = 1;
-    this.sessionStore = new MemoryStore({
-      checkPeriod: 86400000,
+    this.sessionStore = new PostgresSessionStore({
+      pool,
+      createTableIfMissing: true,
     });
   }
 
   async getUser(id: number): Promise<User | undefined> {
     console.log("Getting user by ID:", id);
-    const user = this.users.get(id);
+    const [user] = await db.select().from(users).where(eq(users.id, id));
     console.log("Found user:", user ? { ...user, password: '[REDACTED]' } : 'null');
     return user;
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
     console.log("Getting user by email:", email);
-    const users = Array.from(this.users.values());
-    console.log("Current users in storage:", users.map(u => ({ ...u, password: '[REDACTED]' })));
-
-    const user = users.find(
-      (user) => user.email.toLowerCase() === email.toLowerCase()
-    );
-
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, email.toLowerCase()));
     console.log("Found user:", user ? { ...user, password: '[REDACTED]' } : 'null');
     return user;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.currentUserId++;
-    const user: User = { ...insertUser, id };
-    console.log("Creating user with data:", { ...user, password: '[REDACTED]' });
-    this.users.set(id, user);
-
-    const allUsers = Array.from(this.users.values());
-    console.log("Current users after creation:", allUsers.map(u => ({ ...u, password: '[REDACTED]' })));
+    console.log("Creating user with data:", { ...insertUser, password: '[REDACTED]' });
+    const [user] = await db.insert(users).values(insertUser).returning();
+    console.log("Created user:", { ...user, password: '[REDACTED]' });
     return user;
   }
 
   async getRestaurants(userId: number): Promise<Restaurant[]> {
-    return Array.from(this.restaurants.values()).filter(
-      (restaurant) => restaurant.userId === userId,
-    );
+    return await db
+      .select()
+      .from(restaurants)
+      .where(eq(restaurants.userId, userId));
   }
 
   async getRestaurant(id: number): Promise<Restaurant | undefined> {
-    return this.restaurants.get(id);
+    const [restaurant] = await db
+      .select()
+      .from(restaurants)
+      .where(eq(restaurants.id, id));
+    return restaurant;
   }
 
   async createRestaurant(restaurant: InsertRestaurant): Promise<Restaurant> {
-    const id = this.currentRestaurantId++;
-    const newRestaurant = { ...restaurant, id };
-    this.restaurants.set(id, newRestaurant);
+    const [newRestaurant] = await db
+      .insert(restaurants)
+      .values(restaurant)
+      .returning();
     return newRestaurant;
   }
 
   async getMenuItems(restaurantId: number): Promise<MenuItem[]> {
-    return Array.from(this.menuItems.values()).filter(
-      (item) => item.restaurantId === restaurantId,
-    );
+    return await db
+      .select()
+      .from(menuItems)
+      .where(eq(menuItems.restaurantId, restaurantId));
   }
 
   async getMenuItem(id: number): Promise<MenuItem | undefined> {
-    return this.menuItems.get(id);
-  }
-
-  async createMenuItem(item: InsertMenuItem): Promise<MenuItem> {
-    const id = this.currentMenuItemId++;
-    const menuItem = { ...item, id };
-    this.menuItems.set(id, menuItem);
+    const [menuItem] = await db
+      .select()
+      .from(menuItems)
+      .where(eq(menuItems.id, id));
     return menuItem;
   }
 
-  async updateMenuItem(id: number, updates: Partial<InsertMenuItem>): Promise<MenuItem> {
-    const existing = await this.getMenuItem(id);
-    if (!existing) throw new Error("Menu item not found");
+  async createMenuItem(item: InsertMenuItem): Promise<MenuItem> {
+    const [menuItem] = await db.insert(menuItems).values(item).returning();
+    return menuItem;
+  }
 
-    const updated = { ...existing, ...updates };
-    this.menuItems.set(id, updated);
+  async updateMenuItem(
+    id: number,
+    updates: Partial<InsertMenuItem>,
+  ): Promise<MenuItem> {
+    const [updated] = await db
+      .update(menuItems)
+      .set(updates)
+      .where(eq(menuItems.id, id))
+      .returning();
     return updated;
   }
 
-  async updateMenuItemsForRestaurants(restaurantIds: number[], updates: Partial<InsertMenuItem>): Promise<void> {
+  async updateMenuItemsForRestaurants(
+    restaurantIds: number[],
+    updates: Partial<InsertMenuItem>,
+  ): Promise<void> {
     for (const restaurantId of restaurantIds) {
-      const items = await this.getMenuItems(restaurantId);
-      for (const item of items) {
-        await this.updateMenuItem(item.id, updates);
-      }
+      await db
+        .update(menuItems)
+        .set(updates)
+        .where(eq(menuItems.restaurantId, restaurantId));
     }
   }
 
   async deleteMenuItem(id: number): Promise<void> {
-    this.menuItems.delete(id);
+    await db.delete(menuItems).where(eq(menuItems.id, id));
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
