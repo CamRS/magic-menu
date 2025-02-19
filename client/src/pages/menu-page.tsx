@@ -18,11 +18,25 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Loader2, PlusCircle } from "lucide-react";
 import { useState } from "react";
+import { useLocation } from "wouter";
+
+type DietaryInfo = {
+  vegetarian: boolean;
+  vegan: boolean;
+  glutenFree: boolean;
+  dairyFree: boolean;
+  nutFree: boolean;
+  shellfish: boolean;
+};
 
 export default function MenuPage() {
   const [open, setOpen] = useState(false);
+  const [location] = useLocation();
+  const restaurantId = new URLSearchParams(location.split('?')[1]).get('restaurantId');
+
   const { data: menuItems, isLoading } = useQuery<MenuItem[]>({
-    queryKey: ["/api/menu-items"],
+    queryKey: ["/api/menu-items", restaurantId],
+    enabled: !!restaurantId
   });
 
   const form = useForm({
@@ -32,6 +46,7 @@ export default function MenuPage() {
       description: "",
       price: "",
       category: "",
+      restaurantId: parseInt(restaurantId || "0"),
       image: "https://images.unsplash.com/photo-1599250300435-b9693f21830d",
       dietaryInfo: {
         vegetarian: false,
@@ -46,15 +61,29 @@ export default function MenuPage() {
 
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
-      const res = await apiRequest("POST", "/api/menu-items", data);
+      const res = await apiRequest("POST", "/api/menu-items", {
+        ...data,
+        restaurantId: parseInt(restaurantId || "0")
+      });
+      if (!res.ok) {
+        throw new Error("Failed to create menu item");
+      }
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/menu-items"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/menu-items", restaurantId] });
       setOpen(false);
       form.reset();
     },
   });
+
+  if (!restaurantId) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-muted-foreground">Please select a restaurant first</p>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -63,6 +92,10 @@ export default function MenuPage() {
       </div>
     );
   }
+
+  const handleDietaryChange = (key: keyof DietaryInfo, checked: boolean) => {
+    form.setValue(`dietaryInfo.${key}`, checked, { shouldValidate: true });
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 p-8">
@@ -85,27 +118,48 @@ export default function MenuPage() {
                   <div>
                     <Label htmlFor="name">Name</Label>
                     <Input id="name" {...form.register("name")} />
+                    {form.formState.errors.name && (
+                      <p className="text-sm text-destructive mt-1">
+                        {form.formState.errors.name.message}
+                      </p>
+                    )}
                   </div>
                   <div>
                     <Label htmlFor="description">Description</Label>
                     <Textarea id="description" {...form.register("description")} />
+                    {form.formState.errors.description && (
+                      <p className="text-sm text-destructive mt-1">
+                        {form.formState.errors.description.message}
+                      </p>
+                    )}
                   </div>
                   <div>
                     <Label htmlFor="price">Price</Label>
                     <Input id="price" {...form.register("price")} />
+                    {form.formState.errors.price && (
+                      <p className="text-sm text-destructive mt-1">
+                        {form.formState.errors.price.message}
+                      </p>
+                    )}
                   </div>
                   <div>
                     <Label htmlFor="category">Category</Label>
                     <Input id="category" {...form.register("category")} />
+                    {form.formState.errors.category && (
+                      <p className="text-sm text-destructive mt-1">
+                        {form.formState.errors.category.message}
+                      </p>
+                    )}
                   </div>
                   <div>
                     <Label>Dietary Information</Label>
                     <div className="grid grid-cols-2 gap-4 mt-2">
-                      {Object.keys(form.getValues("dietaryInfo")).map((key) => (
+                      {(Object.keys(form.getValues().dietaryInfo) as Array<keyof DietaryInfo>).map((key) => (
                         <div key={key} className="flex items-center space-x-2">
                           <Checkbox
                             id={key}
-                            {...form.register(`dietaryInfo.${key}`)}
+                            checked={form.getValues().dietaryInfo[key]}
+                            onCheckedChange={(checked) => handleDietaryChange(key, checked as boolean)}
                           />
                           <Label htmlFor={key}>
                             {key.replace(/([A-Z])/g, " $1").trim()}
@@ -114,7 +168,11 @@ export default function MenuPage() {
                       ))}
                     </div>
                   </div>
-                  <Button type="submit" className="w-full">
+                  <Button 
+                    type="submit" 
+                    className="w-full"
+                    disabled={createMutation.isPending}
+                  >
                     {createMutation.isPending && (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     )}
