@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Store, PlusCircle, Loader2 } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Restaurant, MenuItem } from "@shared/schema";
+import { Restaurant, MenuItem, insertMenuItemSchema, type InsertMenuItem } from "@shared/schema";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -41,13 +41,14 @@ export default function HomePage() {
     enabled: !!selectedRestaurant?.id
   });
 
-  const form = useForm({
+  const form = useForm<InsertMenuItem>({
+    resolver: zodResolver(insertMenuItemSchema),
     defaultValues: {
       name: "",
       description: "",
       price: "",
       category: "",
-      image: "",
+      restaurantId: 0,
       allergens: {
         milk: false,
         eggs: false,
@@ -62,20 +63,21 @@ export default function HomePage() {
   });
 
   const createMutation = useMutation({
-    mutationFn: async (formData: any) => {
+    mutationFn: async (data: InsertMenuItem) => {
       if (!selectedRestaurant?.id) {
         throw new Error("No restaurant selected");
       }
 
-      const response = await apiRequest("POST", "/api/menu-items", {
-        ...formData,
+      const menuItem = {
+        ...data,
         restaurantId: selectedRestaurant.id,
-      });
+      };
 
+      const response = await apiRequest("POST", "/api/menu-items", menuItem);
       if (!response.ok) {
-        throw new Error("Failed to create menu item");
+        const error = await response.json();
+        throw new Error(error.message || "Failed to create menu item");
       }
-
       return response.json();
     },
     onSuccess: () => {
@@ -87,18 +89,14 @@ export default function HomePage() {
         description: "Menu item created successfully",
       });
     },
-    onError: () => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
-        description: "Failed to create menu item",
+        description: error.message,
         variant: "destructive",
       });
     },
   });
-
-  const handleAllergenChange = (key: string, checked: boolean) => {
-    form.setValue(`allergens.${key}`, checked);
-  };
 
   if (!restaurants?.length) {
     return (
@@ -106,6 +104,11 @@ export default function HomePage() {
         <p className="text-muted-foreground">Please create a restaurant first</p>
       </div>
     );
+  }
+
+  // Set initial restaurant if none selected
+  if (!selectedRestaurant && restaurants.length > 0) {
+    setSelectedRestaurant(restaurants[0]);
   }
 
   return (
@@ -148,45 +151,57 @@ export default function HomePage() {
             <DialogHeader>
               <DialogTitle>Add Menu Item</DialogTitle>
             </DialogHeader>
-            <form onSubmit={form.handleSubmit((data) => createMutation.mutate(data))}>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="name">Name</Label>
-                  <Input {...form.register("name")} />
-                </div>
-                <div>
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea {...form.register("description")} />
-                </div>
-                <div>
-                  <Label htmlFor="price">Price</Label>
-                  <Input {...form.register("price")} />
-                </div>
-                <div>
-                  <Label htmlFor="category">Category</Label>
-                  <Input {...form.register("category")} />
-                </div>
-                <div>
-                  <Label>Allergens</Label>
-                  <div className="grid grid-cols-2 gap-4 mt-2">
-                    {Object.keys(form.getValues().allergens).map((key) => (
-                      <div key={key} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={key}
-                          checked={form.getValues().allergens[key]}
-                          onCheckedChange={(checked) => handleAllergenChange(key, checked as boolean)}
-                        />
-                        <Label htmlFor={key} className="capitalize">
-                          {key}
-                        </Label>
-                      </div>
-                    ))}
-                  </div>
+            <form onSubmit={form.handleSubmit((data) => createMutation.mutate(data))} className="space-y-4">
+              <div>
+                <Label htmlFor="name">Name</Label>
+                <Input {...form.register("name")} />
+                {form.formState.errors.name && (
+                  <p className="text-sm text-destructive mt-1">{form.formState.errors.name.message}</p>
+                )}
+              </div>
+              <div>
+                <Label htmlFor="description">Description</Label>
+                <Textarea {...form.register("description")} />
+                {form.formState.errors.description && (
+                  <p className="text-sm text-destructive mt-1">{form.formState.errors.description.message}</p>
+                )}
+              </div>
+              <div>
+                <Label htmlFor="price">Price</Label>
+                <Input {...form.register("price")} />
+                {form.formState.errors.price && (
+                  <p className="text-sm text-destructive mt-1">{form.formState.errors.price.message}</p>
+                )}
+              </div>
+              <div>
+                <Label htmlFor="category">Category</Label>
+                <Input {...form.register("category")} />
+                {form.formState.errors.category && (
+                  <p className="text-sm text-destructive mt-1">{form.formState.errors.category.message}</p>
+                )}
+              </div>
+              <div>
+                <Label>Allergens</Label>
+                <div className="grid grid-cols-2 gap-4 mt-2">
+                  {(Object.keys(form.getValues().allergens) as Array<keyof InsertMenuItem['allergens']>).map((key) => (
+                    <div key={key} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={key}
+                        checked={form.getValues().allergens[key]}
+                        onCheckedChange={(checked) => {
+                          form.setValue(`allergens.${key}`, checked as boolean, { shouldValidate: true });
+                        }}
+                      />
+                      <Label htmlFor={key} className="capitalize">
+                        {key}
+                      </Label>
+                    </div>
+                  ))}
                 </div>
               </div>
               <Button
                 type="submit"
-                className="w-full mt-6"
+                className="w-full"
                 disabled={createMutation.isPending}
               >
                 {createMutation.isPending && (
