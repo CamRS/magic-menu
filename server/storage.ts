@@ -47,17 +47,20 @@ export class MemStorage implements IStorage {
   async getUser(id: number): Promise<User | undefined> {
     console.log("Getting user by ID:", id);
     const user = this.users.get(id);
-    console.log("Found user:", user);
+    console.log("Found user:", user ? { ...user, password: '[REDACTED]' } : 'null');
     return user;
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
     console.log("Getting user by email:", email);
-    console.log("Current users in storage:", Array.from(this.users.values()));
-    const user = Array.from(this.users.values()).find(
+    const users = Array.from(this.users.values());
+    console.log("Current users in storage:", users.map(u => ({ ...u, password: '[REDACTED]' })));
+
+    const user = users.find(
       (user) => user.email.toLowerCase() === email.toLowerCase()
     );
-    console.log("Found user:", user);
+
+    console.log("Found user:", user ? { ...user, password: '[REDACTED]' } : 'null');
     return user;
   }
 
@@ -66,7 +69,9 @@ export class MemStorage implements IStorage {
     const user: User = { ...insertUser, id };
     console.log("Creating user with data:", { ...user, password: '[REDACTED]' });
     this.users.set(id, user);
-    console.log("Current users after creation:", Array.from(this.users.values()).map(u => ({ ...u, password: '[REDACTED]' })));
+
+    const allUsers = Array.from(this.users.values());
+    console.log("Current users after creation:", allUsers.map(u => ({ ...u, password: '[REDACTED]' })));
     return user;
   }
 

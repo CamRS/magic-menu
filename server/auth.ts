@@ -55,19 +55,19 @@ export function setupAuth(app: Express) {
 
   passport.use(
     new LocalStrategy(
-      { usernameField: 'email' },
+      { usernameField: "email" },
       async (email, password, done) => {
         try {
           console.log("Login attempt for email:", email);
           const user = await storage.getUserByEmail(email);
-          console.log("User found:", !!user);
+          console.log("User found:", user ? { ...user, password: '[REDACTED]' } : 'null');
 
           if (!user) {
             console.log("No user found with email:", email);
             return done(null, false, { message: "Invalid credentials" });
           }
 
-          console.log("Stored password hash:", user.password);
+          console.log("Attempting password validation");
           const isValid = await comparePasswords(password, user.password);
           console.log("Password validation result:", isValid);
 
@@ -95,7 +95,7 @@ export function setupAuth(app: Express) {
     try {
       console.log("Deserializing user:", id);
       const user = await storage.getUser(id);
-      console.log("Deserialized user found:", !!user);
+      console.log("Deserialized user found:", user ? { ...user, password: '[REDACTED]' } : 'null');
       done(null, user);
     } catch (err) {
       console.error("Deserialization error:", err);
@@ -103,32 +103,37 @@ export function setupAuth(app: Express) {
     }
   });
 
+  // Registration endpoint
   app.post("/api/register", async (req, res, next) => {
     try {
       console.log("Registration attempt with data:", { ...req.body, password: '[REDACTED]' });
       const { restaurantName, ...userData } = req.body;
-      const parsed = insertUserSchema.safeParse(userData);
 
-      if (!parsed.success) {
-        console.log("Registration validation failed:", parsed.error);
-        return res.status(400).json(parsed.error);
+      // Validate the user data
+      const result = insertUserSchema.safeParse(userData);
+      if (!result.success) {
+        console.log("Registration validation failed:", result.error);
+        return res.status(400).json({ message: "Invalid registration data", errors: result.error.errors });
       }
 
-      const existingUser = await storage.getUserByEmail(parsed.data.email);
+      // Check for existing user
+      const existingUser = await storage.getUserByEmail(result.data.email);
       if (existingUser) {
-        console.log("Registration failed - email exists:", parsed.data.email);
-        return res.status(400).json({ message: "Email already exists" });
+        console.log("Registration failed - email exists:", result.data.email);
+        return res.status(400).json({ message: "Email already registered" });
       }
 
-      const hashedPassword = await hashPassword(parsed.data.password);
+      // Hash password and create user
+      const hashedPassword = await hashPassword(result.data.password);
       console.log("Generated password hash for new user");
 
       const user = await storage.createUser({
-        ...parsed.data,
+        ...result.data,
         password: hashedPassword,
       });
       console.log("Created new user:", { ...user, password: '[REDACTED]' });
 
+      // Create initial restaurant if name provided
       if (restaurantName) {
         const restaurant = await storage.createRestaurant({
           userId: user.id,
@@ -137,6 +142,7 @@ export function setupAuth(app: Express) {
         console.log("Created initial restaurant:", restaurant);
       }
 
+      // Log the user in
       req.login(user, (err) => {
         if (err) {
           console.error("Login after registration failed:", err);
@@ -151,6 +157,7 @@ export function setupAuth(app: Express) {
     }
   });
 
+  // Login endpoint
   app.post("/api/login", (req, res, next) => {
     passport.authenticate("local", (err: Error, user: SelectUser, info: any) => {
       if (err) {
