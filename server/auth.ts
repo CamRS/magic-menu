@@ -73,7 +73,8 @@ export function setupAuth(app: Express) {
 
   app.post("/api/register", async (req, res, next) => {
     try {
-      const parsed = insertUserSchema.safeParse(req.body);
+      const { restaurantName, ...userData } = req.body;
+      const parsed = insertUserSchema.safeParse(userData);
       if (!parsed.success) {
         return res.status(400).json(parsed.error);
       }
@@ -83,10 +84,19 @@ export function setupAuth(app: Express) {
         return res.status(400).send("Username already exists");
       }
 
+      // Create user first
       const user = await storage.createUser({
         ...parsed.data,
         password: await hashPassword(parsed.data.password),
       });
+
+      // Then create their first restaurant
+      if (restaurantName) {
+        await storage.createRestaurant({
+          userId: user.id,
+          name: restaurantName,
+        });
+      }
 
       req.login(user, (err) => {
         if (err) return next(err);

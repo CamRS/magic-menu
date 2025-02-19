@@ -7,8 +7,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { Redirect } from "wouter";
-import { insertUserSchema, InsertUser } from "@shared/schema";
+import { insertUserSchema } from "@shared/schema";
 import { Loader2 } from "lucide-react";
+import { z } from "zod";
+
+const registerSchema = z.object({
+  username: z.string().min(1, "Username is required"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  restaurantName: z.string().min(1, "Restaurant name is required"),
+});
+
+type RegisterData = z.infer<typeof registerSchema>;
 
 export default function AuthPage() {
   const { user, loginMutation, registerMutation } = useAuth();
@@ -17,8 +26,8 @@ export default function AuthPage() {
     defaultValues: { username: "", password: "" },
   });
 
-  const registerForm = useForm({
-    resolver: zodResolver(insertUserSchema),
+  const registerForm = useForm<RegisterData>({
+    resolver: zodResolver(registerSchema),
     defaultValues: { username: "", password: "", restaurantName: "" },
   });
 
@@ -68,7 +77,7 @@ export default function AuthPage() {
                   <CardTitle>Register Your Restaurant</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <form onSubmit={registerForm.handleSubmit((data) => registerMutation.mutate(data as InsertUser))}>
+                  <form onSubmit={registerForm.handleSubmit((data) => registerMutation.mutate(data))}>
                     <div className="space-y-4">
                       <div>
                         <Label htmlFor="restaurantName">Restaurant Name</Label>
