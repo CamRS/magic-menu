@@ -52,24 +52,12 @@ export function setupAuth(app: Express) {
       { usernameField: 'email' },
       async (email, password, done) => {
         try {
-          console.log("Attempting login for email:", email);
           const user = await storage.getUserByEmail(email);
-          console.log("Found user:", user ? "yes" : "no");
-
-          if (!user) {
-            console.log("User not found");
-            return done(null, false);
-          }
-
-          const isPasswordValid = await comparePasswords(password, user.password);
-          console.log("Password valid:", isPasswordValid);
-
-          if (!isPasswordValid) {
+          if (!user || !(await comparePasswords(password, user.password))) {
             return done(null, false);
           }
           return done(null, user);
         } catch (err) {
-          console.error("Login error:", err);
           return done(err);
         }
       }
@@ -123,24 +111,16 @@ export function setupAuth(app: Express) {
   });
 
   app.post("/api/login", (req, res, next) => {
-    console.log("Login attempt with:", req.body);
-
     passport.authenticate("local", (err: Error, user: SelectUser) => {
       if (err) {
-        console.error("Authentication error:", err);
         return next(err);
       }
       if (!user) {
-        console.log("Authentication failed - no user");
         return res.status(401).send("Invalid credentials");
       }
 
       req.login(user, (err) => {
-        if (err) {
-          console.error("Login error:", err);
-          return next(err);
-        }
-        console.log("Login successful for user:", user.id);
+        if (err) return next(err);
         res.json(user);
       });
     })(req, res, next);
