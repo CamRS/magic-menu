@@ -18,7 +18,7 @@ import {
 import { ChevronDown, Store, PlusCircle, Loader2 } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Restaurant, MenuItem, insertRestaurantSchema, insertMenuItemSchema } from "@shared/schema";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Label } from "@/components/ui/label";
@@ -68,7 +68,6 @@ export default function HomePage() {
       description: "",
       price: "",
       category: "",
-      restaurantId: selectedRestaurant?.id ?? 0,
       image: "",
       allergens: {
         milk: false,
@@ -103,14 +102,20 @@ export default function HomePage() {
   });
 
   const createMenuItemMutation = useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (formData: any) => {
       if (!selectedRestaurant?.id) {
         throw new Error("No restaurant selected");
       }
-      const res = await apiRequest("POST", "/api/menu-items", {
-        ...data,
-        restaurantId: selectedRestaurant.id
-      });
+
+      // Format the data before sending
+      const data = {
+        ...formData,
+        restaurantId: selectedRestaurant.id,
+        // Ensure price is formatted correctly
+        price: formData.price.startsWith('$') ? formData.price.slice(1) : formData.price,
+      };
+
+      const res = await apiRequest("POST", "/api/menu-items", data);
       if (!res.ok) {
         throw new Error("Failed to create menu item");
       }
@@ -124,7 +129,6 @@ export default function HomePage() {
         description: "",
         price: "",
         category: "",
-        restaurantId: selectedRestaurant?.id ?? 0,
         image: "",
         allergens: {
           milk: false,
@@ -141,9 +145,11 @@ export default function HomePage() {
   });
 
   // Select first restaurant by default
-  if (!selectedRestaurant && restaurants && restaurants.length > 0) {
-    setSelectedRestaurant(restaurants[0]);
-  }
+  useEffect(() => {
+    if (!selectedRestaurant && restaurants && restaurants.length > 0) {
+      setSelectedRestaurant(restaurants[0]);
+    }
+  }, [restaurants, selectedRestaurant]);
 
   const handleAllergenChange = (key: keyof AllergenInfo, checked: boolean) => {
     menuItemForm.setValue(`allergens.${key}`, checked, { shouldValidate: true });
@@ -292,6 +298,11 @@ export default function HomePage() {
                       onChange={handleImageUpload}
                       className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
                     />
+                    {menuItemForm.formState.errors.image && (
+                      <p className="text-sm text-destructive mt-1">
+                        {menuItemForm.formState.errors.image.message}
+                      </p>
+                    )}
                   </div>
                 </div>
                 <div>
