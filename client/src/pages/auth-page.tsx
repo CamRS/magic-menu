@@ -11,18 +11,25 @@ import { insertUserSchema } from "@shared/schema";
 import { Loader2 } from "lucide-react";
 import { z } from "zod";
 
+const loginSchema = z.object({
+  username: z.string().min(1, "Username is required"),
+  password: z.string().min(1, "Password is required"),
+});
+
 const registerSchema = z.object({
   username: z.string().min(1, "Username is required"),
   password: z.string().min(6, "Password must be at least 6 characters"),
   restaurantName: z.string().min(1, "Restaurant name is required"),
 });
 
+type LoginData = z.infer<typeof loginSchema>;
 type RegisterData = z.infer<typeof registerSchema>;
 
 export default function AuthPage() {
   const { user, loginMutation, registerMutation } = useAuth();
 
-  const loginForm = useForm({
+  const loginForm = useForm<LoginData>({
+    resolver: zodResolver(loginSchema),
     defaultValues: { username: "", password: "" },
   });
 
@@ -56,10 +63,24 @@ export default function AuthPage() {
                       <div>
                         <Label htmlFor="username">Username</Label>
                         <Input id="username" {...loginForm.register("username")} />
+                        {loginForm.formState.errors.username && (
+                          <p className="text-sm text-destructive mt-1">
+                            {loginForm.formState.errors.username.message}
+                          </p>
+                        )}
                       </div>
                       <div>
                         <Label htmlFor="password">Password</Label>
-                        <Input id="password" type="password" {...loginForm.register("password")} />
+                        <Input 
+                          id="password" 
+                          type="password" 
+                          {...loginForm.register("password")} 
+                        />
+                        {loginForm.formState.errors.password && (
+                          <p className="text-sm text-destructive mt-1">
+                            {loginForm.formState.errors.password.message}
+                          </p>
+                        )}
                       </div>
                       <Button type="submit" className="w-full" disabled={loginMutation.isPending}>
                         {loginMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -82,14 +103,33 @@ export default function AuthPage() {
                       <div>
                         <Label htmlFor="restaurantName">Restaurant Name</Label>
                         <Input id="restaurantName" {...registerForm.register("restaurantName")} />
+                        {registerForm.formState.errors.restaurantName && (
+                          <p className="text-sm text-destructive mt-1">
+                            {registerForm.formState.errors.restaurantName.message}
+                          </p>
+                        )}
                       </div>
                       <div>
                         <Label htmlFor="reg-username">Username</Label>
                         <Input id="reg-username" {...registerForm.register("username")} />
+                        {registerForm.formState.errors.username && (
+                          <p className="text-sm text-destructive mt-1">
+                            {registerForm.formState.errors.username.message}
+                          </p>
+                        )}
                       </div>
                       <div>
                         <Label htmlFor="reg-password">Password</Label>
-                        <Input id="reg-password" type="password" {...registerForm.register("password")} />
+                        <Input 
+                          id="reg-password" 
+                          type="password" 
+                          {...registerForm.register("password")} 
+                        />
+                        {registerForm.formState.errors.password && (
+                          <p className="text-sm text-destructive mt-1">
+                            {registerForm.formState.errors.password.message}
+                          </p>
+                        )}
                       </div>
                       <Button type="submit" className="w-full" disabled={registerMutation.isPending}>
                         {registerMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
