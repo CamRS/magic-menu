@@ -53,19 +53,21 @@ export class MemStorage implements IStorage {
 
   async getUserByEmail(email: string): Promise<User | undefined> {
     console.log("Getting user by email:", email);
+    console.log("Current users in storage:", Array.from(this.users.values()));
     const user = Array.from(this.users.values()).find(
-      (user) => user.email.toLowerCase() === email.toLowerCase(),
+      (user) => user.email.toLowerCase() === email.toLowerCase()
     );
     console.log("Found user:", user);
     return user;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    console.log("Creating user:", insertUser.email);
+    console.log("Creating user:", insertUser);
     const id = this.currentUserId++;
     const user = { ...insertUser, id };
+    console.log("Setting user in Map with id:", id);
     this.users.set(id, user);
-    console.log("Created user:", user);
+    console.log("Users after creation:", Array.from(this.users.values()));
     return user;
   }
 
