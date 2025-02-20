@@ -161,6 +161,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Add new CSV export endpoint
+  app.get("/api/restaurants/:id/menu/export", async (req, res) => {
+    try {
+      if (!req.user) return res.sendStatus(401);
+
+      const restaurantId = parseInt(req.params.id);
+      if (isNaN(restaurantId)) {
+        return res.status(400).json({ message: "Invalid restaurant ID" });
+      }
+
+      // Verify restaurant belongs to user
+      const restaurant = await storage.getRestaurant(restaurantId);
+      if (!restaurant || restaurant.userId !== req.user.id) {
+        return res.status(403).json({ message: "Unauthorized access to restaurant" });
+      }
+
+      const menuItems = await storage.getMenuItems(restaurantId);
+
+      // Create CSV header
+      const csvHeader = "Name,Description,Price,Category,Allergens\n";
+
+      // Create CSV rows
+      const csvRows = menuItems.map(item => {
+        const allergens = Object.entries(item.allergens)
+          .filter(([_, value]) => value)
+          .map(([key]) => key)
+          .join('; ');
+
+        // Escape fields that might contain commas
+        const escapedFields = [
+          item.name.replace(/"/g, '""'),
+          item.description.replace(/"/g, '""'),
+          item.price,
+          item.category.replace(/"/g, '""'),
+          allergens
+        ].map(field => `"${field}"`);
+
+        return escapedFields.join(',');
+      }).join('\n');
+
+      const csv = csvHeader + csvRows;
+
+      // Set headers for CSV download
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename=${restaurant.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_menu.csv`);
+
+      res.send(csv);
+    } catch (error) {
+      console.error('Error exporting menu:', error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

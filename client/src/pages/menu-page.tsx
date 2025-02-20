@@ -16,9 +16,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Loader2, PlusCircle } from "lucide-react";
+import { Loader2, PlusCircle, Download } from "lucide-react";
 import { useState } from "react";
 import { useLocation } from "wouter";
+import { useToast } from "@/hooks/use-toast";
 
 type AllergenInfo = {
   milk: boolean;
@@ -86,6 +87,33 @@ export default function MenuPage() {
     },
   });
 
+  const restaurants = [{id:1, name: "Test Restaurant"}]; // Placeholder data - replace with actual restaurant data
+
+  const handleExportCSV = async () => {
+    if (!restaurantId) return;
+
+    try {
+      const response = await fetch(`/api/restaurants/${restaurantId}/menu/export`);
+      if (!response.ok) throw new Error('Failed to export menu');
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${restaurants?.find(r => r.id === parseInt(restaurantId))?.name.toLowerCase().replace(/[^a-z0-9]/gi, '_')}_menu.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      useToast({
+        title: "Error",
+        description: "Failed to export menu",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (!restaurantId) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -121,99 +149,107 @@ export default function MenuPage() {
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-4xl mx-auto">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold">Menu Items</h1>
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Add Item
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>Add Menu Item</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={form.handleSubmit((data) => createMutation.mutate(data))} className="space-y-6">
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="name">Name</Label>
-                      <Input id="name" {...form.register("name")} />
-                      {form.formState.errors.name && (
-                        <p className="text-sm text-destructive mt-1">
-                          {form.formState.errors.name.message}
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                      <Label htmlFor="description">Description</Label>
-                      <Textarea id="description" {...form.register("description")} />
-                      {form.formState.errors.description && (
-                        <p className="text-sm text-destructive mt-1">
-                          {form.formState.errors.description.message}
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                      <Label htmlFor="price">Price</Label>
-                      <Input id="price" {...form.register("price")} />
-                      {form.formState.errors.price && (
-                        <p className="text-sm text-destructive mt-1">
-                          {form.formState.errors.price.message}
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                      <Label htmlFor="category">Category</Label>
-                      <Input id="category" {...form.register("category")} />
-                      {form.formState.errors.category && (
-                        <p className="text-sm text-destructive mt-1">
-                          {form.formState.errors.category.message}
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                      <Label htmlFor="image">Image</Label>
-                      <Input
-                        id="image"
-                        type="file"
-                        accept="image/*"
-                        onChange={handleImageUpload}
-                        className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <Label>Allergens</Label>
-                    <div className="grid grid-cols-2 gap-4 mt-2">
-                      {(Object.keys(form.getValues().allergens) as Array<keyof AllergenInfo>).map((key) => (
-                        <div key={key} className="flex items-center space-x-2">
-                          <Checkbox
-                            id={key}
-                            checked={form.getValues().allergens[key]}
-                            onCheckedChange={(checked) => handleAllergenChange(key, checked as boolean)}
-                          />
-                          <Label htmlFor={key} className="capitalize">
-                            {key}
-                          </Label>
+          <div className="flex items-center gap-4">
+            <h1 className="text-3xl font-bold">Menu Items</h1>
+            <div className="flex gap-2">
+              <Dialog open={open} onOpenChange={setOpen}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Add Item
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl">
+                  <DialogHeader>
+                    <DialogTitle>Add Menu Item</DialogTitle>
+                  </DialogHeader>
+                  <form onSubmit={form.handleSubmit((data) => createMutation.mutate(data))} className="space-y-6">
+                    <div className="grid grid-cols-2 gap-6">
+                      <div className="space-y-4">
+                        <div>
+                          <Label htmlFor="name">Name</Label>
+                          <Input id="name" {...form.register("name")} />
+                          {form.formState.errors.name && (
+                            <p className="text-sm text-destructive mt-1">
+                              {form.formState.errors.name.message}
+                            </p>
+                          )}
                         </div>
-                      ))}
+                        <div>
+                          <Label htmlFor="description">Description</Label>
+                          <Textarea id="description" {...form.register("description")} />
+                          {form.formState.errors.description && (
+                            <p className="text-sm text-destructive mt-1">
+                              {form.formState.errors.description.message}
+                            </p>
+                          )}
+                        </div>
+                        <div>
+                          <Label htmlFor="price">Price</Label>
+                          <Input id="price" {...form.register("price")} />
+                          {form.formState.errors.price && (
+                            <p className="text-sm text-destructive mt-1">
+                              {form.formState.errors.price.message}
+                            </p>
+                          )}
+                        </div>
+                        <div>
+                          <Label htmlFor="category">Category</Label>
+                          <Input id="category" {...form.register("category")} />
+                          {form.formState.errors.category && (
+                            <p className="text-sm text-destructive mt-1">
+                              {form.formState.errors.category.message}
+                            </p>
+                          )}
+                        </div>
+                        <div>
+                          <Label htmlFor="image">Image</Label>
+                          <Input
+                            id="image"
+                            type="file"
+                            accept="image/*"
+                            onChange={handleImageUpload}
+                            className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <Label>Allergens</Label>
+                        <div className="grid grid-cols-2 gap-4 mt-2">
+                          {(Object.keys(form.getValues().allergens) as Array<keyof AllergenInfo>).map((key) => (
+                            <div key={key} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={key}
+                                checked={form.getValues().allergens[key]}
+                                onCheckedChange={(checked) => handleAllergenChange(key, checked as boolean)}
+                              />
+                              <Label htmlFor={key} className="capitalize">
+                                {key}
+                              </Label>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-                <Button
-                  type="submit"
-                  className="w-full"
-                  disabled={createMutation.isPending}
-                >
-                  {createMutation.isPending && (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  )}
-                  Add Item
-                </Button>
-              </form>
-            </DialogContent>
-          </Dialog>
+                    <Button
+                      type="submit"
+                      className="w-full"
+                      disabled={createMutation.isPending}
+                    >
+                      {createMutation.isPending && (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      )}
+                      Add Item
+                    </Button>
+                  </form>
+                </DialogContent>
+              </Dialog>
+              <Button variant="outline" onClick={handleExportCSV}>
+                <Download className="mr-2 h-4 w-4" />
+                Export CSV
+              </Button>
+            </div>
+          </div>
         </div>
 
         <div className="grid md:grid-cols-2 gap-6">
