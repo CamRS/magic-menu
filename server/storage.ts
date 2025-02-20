@@ -100,15 +100,13 @@ export class DatabaseStorage implements IStorage {
     return restaurant;
   }
 
-  async createRestaurant(restaurant: InsertRestaurant): Promise<Restaurant> {
-    const [newRestaurant] = await db
-      .insert(restaurants)
-      .values(restaurant)
-      .returning();
-    return newRestaurant;
-  }
-
   async getMenuItems(restaurantId: number): Promise<MenuItem[]> {
+    // Get the restaurant first to verify it exists
+    const restaurant = await this.getRestaurant(restaurantId);
+    if (!restaurant) {
+      throw new Error("Restaurant not found");
+    }
+
     return await db
       .select()
       .from(menuItems)
@@ -123,6 +121,13 @@ export class DatabaseStorage implements IStorage {
     return menuItem;
   }
 
+  async createRestaurant(restaurant: InsertRestaurant): Promise<Restaurant> {
+    const [newRestaurant] = await db
+      .insert(restaurants)
+      .values(restaurant)
+      .returning();
+    return newRestaurant;
+  }
   async createMenuItem(item: InsertMenuItem): Promise<MenuItem> {
     const [menuItem] = await db.insert(menuItems).values(item).returning();
     return menuItem;
