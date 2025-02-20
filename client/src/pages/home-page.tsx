@@ -14,7 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Copy, Store, PlusCircle, ChevronDown, Loader2, Download, Trash2, MoreVertical, Pencil, Globe } from "lucide-react";
+import { Copy, Store, PlusCircle, ChevronDown, Loader2, Download, Upload, Trash2, MoreVertical, Pencil, Globe } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { type Restaurant, type MenuItem, type InsertMenuItem, insertMenuItemSchema, insertRestaurantSchema, courseTypes } from "@shared/schema";
 import { useState, useEffect } from "react";
@@ -83,6 +83,64 @@ export default function HomePage() {
       toast({
         title: "Error",
         description: "Failed to export menu",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleImportCSV = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!selectedRestaurant?.id) return;
+
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        try {
+          const csvData = event.target?.result;
+          const response = await fetch(`/api/restaurants/${selectedRestaurant.id}/menu/import`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ csvData }),
+          });
+
+          const result = await response.json();
+          if (!response.ok) {
+            throw new Error(result.message || 'Failed to import menu items');
+          }
+
+          // Reset the file input
+          e.target.value = '';
+
+          toast({
+            title: "Import Complete",
+            description: `Successfully imported ${result.success} items. ${
+              result.failed > 0 ? `Failed to import ${result.failed} items.` : ''
+            }`,
+            variant: result.failed > 0 ? "destructive" : "default",
+          });
+
+          // Refresh the menu items
+          queryClient.invalidateQueries({ queryKey: ["/api/menu-items", selectedRestaurant.id] });
+        } catch (error) {
+          console.error('Error importing CSV:', error);
+          toast({
+            title: "Error",
+            description: error instanceof Error ? error.message : "Failed to import menu items",
+            variant: "destructive",
+          });
+        }
+      };
+
+      reader.readAsText(file);
+    } catch (error) {
+      console.error('Error reading file:', error);
+      toast({
+        title: "Error",
+        description: "Failed to read the CSV file",
         variant: "destructive",
       });
     }
@@ -333,7 +391,7 @@ export default function HomePage() {
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="animate-spin h-12 w-12" />
       </div>
-    )
+    );
   }
 
   return (
@@ -424,6 +482,16 @@ export default function HomePage() {
             >
               <Download className="mr-2 h-4 w-4" />
               Export CSV
+            </Button>
+            <Button variant="outline" className="relative w-full sm:w-auto">
+              <input
+                type="file"
+                accept=".csv"
+                onChange={handleImportCSV}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+              />
+              <Upload className="mr-2 h-4 w-4" />
+              Import CSV
             </Button>
           </div>
         </div>
