@@ -7,7 +7,42 @@ import { insertMenuItemSchema, insertRestaurantSchema } from "@shared/schema";
 export async function registerRoutes(app: Express): Promise<Server> {
   setupAuth(app);
 
-  // Restaurant routes
+  // Public routes (no authentication required)
+  app.get("/api/restaurants/:id", async (req, res) => {
+    try {
+      const restaurantId = parseInt(req.params.id);
+      if (isNaN(restaurantId)) {
+        return res.status(400).json({ message: "Invalid restaurant ID" });
+      }
+
+      const restaurant = await storage.getRestaurant(restaurantId);
+      if (!restaurant) {
+        return res.status(404).json({ message: "Restaurant not found" });
+      }
+
+      res.json(restaurant);
+    } catch (error) {
+      console.error('Error fetching restaurant:', error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.get("/api/menu-items", async (req, res) => {
+    try {
+      const restaurantId = parseInt(req.query.restaurantId as string);
+      if (isNaN(restaurantId)) {
+        return res.status(400).json({ message: "Invalid restaurant ID" });
+      }
+
+      const items = await storage.getMenuItems(restaurantId);
+      res.json(items);
+    } catch (error) {
+      console.error('Error fetching menu items:', error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Protected routes (authentication required)
   app.get("/api/restaurants", async (req, res) => {
     try {
       if (!req.user) return res.sendStatus(401);
@@ -36,24 +71,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json(restaurant);
     } catch (error) {
       console.error('Error creating restaurant:', error);
-      res.status(500).json({ message: "Internal server error" });
-    }
-  });
-
-  // Menu item routes
-  app.get("/api/menu-items", async (req, res) => {
-    try {
-      if (!req.user) return res.sendStatus(401);
-      const restaurantId = parseInt(req.query.restaurantId as string);
-
-      if (isNaN(restaurantId)) {
-        return res.status(400).json({ message: "Invalid restaurant ID" });
-      }
-
-      const items = await storage.getMenuItems(restaurantId);
-      res.json(items);
-    } catch (error) {
-      console.error('Error fetching menu items:', error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
@@ -108,28 +125,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(updated);
     } catch (error) {
       console.error('Error updating menu item:', error);
-      res.status(500).json({ message: "Internal server error" });
-    }
-  });
-
-  app.patch("/api/menu-items/bulk-update", async (req, res) => {
-    try {
-      if (!req.user) return res.sendStatus(401);
-
-      const { restaurantIds, updates } = req.body;
-
-      // Verify all restaurants belong to user
-      for (const id of restaurantIds) {
-        const restaurant = await storage.getRestaurant(id);
-        if (!restaurant || restaurant.userId !== req.user.id) {
-          return res.status(403).json({ message: "Unauthorized access to restaurant" });
-        }
-      }
-
-      await storage.updateMenuItemsForRestaurants(restaurantIds, updates);
-      res.sendStatus(200);
-    } catch (error) {
-      console.error('Error updating menu items in bulk:', error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
