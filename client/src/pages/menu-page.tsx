@@ -1,5 +1,5 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { MenuItem, insertMenuItemSchema } from "@shared/schema";
+import { MenuItem, Restaurant, insertMenuItemSchema } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -35,7 +35,13 @@ type AllergenInfo = {
 export default function MenuPage() {
   const [open, setOpen] = useState(false);
   const [location] = useLocation();
+  const { toast } = useToast();
   const restaurantId = new URLSearchParams(location.split('?')[1]).get('restaurantId');
+
+  const { data: restaurant } = useQuery<Restaurant>({
+    queryKey: ["/api/restaurants", restaurantId],
+    enabled: !!restaurantId,
+  });
 
   const { data: menuItems, isLoading } = useQuery<MenuItem[]>({
     queryKey: ["/api/menu-items", restaurantId],
@@ -87,8 +93,6 @@ export default function MenuPage() {
     },
   });
 
-  const restaurants = [{id:1, name: "Test Restaurant"}]; // Placeholder data - replace with actual restaurant data
-
   const handleExportCSV = async () => {
     if (!restaurantId) return;
 
@@ -100,17 +104,32 @@ export default function MenuPage() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${restaurants?.find(r => r.id === parseInt(restaurantId))?.name.toLowerCase().replace(/[^a-z0-9]/gi, '_')}_menu.csv`;
+      a.download = `${restaurant?.name.toLowerCase().replace(/[^a-z0-9]/gi, '_')}_menu.csv`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
     } catch (error) {
-      useToast({
+      toast({
         title: "Error",
         description: "Failed to export menu",
         variant: "destructive",
       });
+    }
+  };
+
+  const handleAllergenChange = (key: keyof AllergenInfo, checked: boolean) => {
+    form.setValue(`allergens.${key}`, checked, { shouldValidate: true });
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        form.setValue("image", reader.result as string, { shouldValidate: true });
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -129,21 +148,6 @@ export default function MenuPage() {
       </div>
     );
   }
-
-  const handleAllergenChange = (key: keyof AllergenInfo, checked: boolean) => {
-    form.setValue(`allergens.${key}`, checked, { shouldValidate: true });
-  };
-
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        form.setValue("image", reader.result as string, { shouldValidate: true });
-      };
-      reader.readAsDataURL(file);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-gray-50 p-8">
