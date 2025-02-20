@@ -1,16 +1,30 @@
 import { useQuery } from "@tanstack/react-query";
 import { useRoute } from "wouter";
-import { type MenuItem, type Restaurant } from "@shared/schema";
+import { type MenuItem, type Restaurant, courseTypes } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Loader2 } from "lucide-react";
+import { Loader2, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useState, useMemo } from "react";
+
+type AllergenType = keyof MenuItem['allergens'];
+const allergensList: AllergenType[] = ['milk', 'eggs', 'peanuts', 'nuts', 'shellfish', 'fish', 'soy', 'gluten'];
 
 export default function PublicMenuPage() {
   const [matches, params] = useRoute("/menu/:restaurantId");
   const restaurantId = params?.restaurantId;
-
-  console.log("Public Menu - Route matches:", matches);
-  console.log("Public Menu - Restaurant ID:", restaurantId);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCourse, setSelectedCourse] = useState<string>("");
+  const [selectedAllergens, setSelectedAllergens] = useState<AllergenType[]>([]);
 
   const { data: restaurant, isLoading: isLoadingRestaurant } = useQuery<Restaurant>({
     queryKey: ["/api/restaurants", restaurantId],
@@ -32,8 +46,36 @@ export default function PublicMenuPage() {
     enabled: !!restaurantId,
   });
 
-  console.log("Public Menu - Restaurant data:", restaurant);
-  console.log("Public Menu - Menu items:", menuItems);
+  const filteredItems = useMemo(() => {
+    if (!menuItems) return [];
+
+    return menuItems.filter(item => {
+      // Search filter
+      const matchesSearch = searchTerm === "" || 
+        item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.description.toLowerCase().includes(searchTerm.toLowerCase());
+
+      // Course filter
+      const matchesCourse = selectedCourse === "" || item.courseType === selectedCourse;
+
+      // Allergen filter - exclude items that contain any selected allergen
+      const matchesAllergens = selectedAllergens.length === 0 || 
+        !selectedAllergens.some(allergen => item.allergens[allergen]);
+
+      return matchesSearch && matchesCourse && matchesAllergens;
+    });
+  }, [menuItems, searchTerm, selectedCourse, selectedAllergens]);
+
+  const groupedMenuItems = useMemo(() => {
+    return filteredItems.reduce((groups, item) => {
+      const group = item.courseType;
+      if (!groups[group]) {
+        groups[group] = [];
+      }
+      groups[group].push(item);
+      return groups;
+    }, {} as Record<string, MenuItem[]>);
+  }, [filteredItems]);
 
   if (!matches || !restaurantId) {
     return (
@@ -59,15 +101,6 @@ export default function PublicMenuPage() {
     );
   }
 
-  const groupedMenuItems = menuItems?.reduce((groups, item) => {
-    const group = item.courseType;
-    if (!groups[group]) {
-      groups[group] = [];
-    }
-    groups[group].push(item);
-    return groups;
-  }, {} as Record<string, MenuItem[]>) || {};
-
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-4xl mx-auto">
@@ -75,9 +108,71 @@ export default function PublicMenuPage() {
           {restaurant?.name}
         </h1>
 
+        <div className="bg-white rounded-lg shadow p-6 mb-8">
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {/* Search Bar */}
+            <div className="col-span-full">
+              <Label htmlFor="search">Search Menu</Label>
+              <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="search"
+                  placeholder="Search by name or description..."
+                  className="pl-8"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* Course Type Filter */}
+            <div>
+              <Label>Filter by Course</Label>
+              <Select value={selectedCourse} onValueChange={setSelectedCourse}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All Courses" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">All Courses</SelectItem>
+                  {courseTypes.map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {type}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Allergen Filters */}
+            <div className="col-span-2">
+              <Label className="mb-2 block">Exclude Allergens</Label>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {allergensList.map((allergen) => (
+                  <div key={allergen} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={allergen}
+                      checked={selectedAllergens.includes(allergen)}
+                      onCheckedChange={(checked) => {
+                        setSelectedAllergens(prev => 
+                          checked
+                            ? [...prev, allergen]
+                            : prev.filter(a => a !== allergen)
+                        );
+                      }}
+                    />
+                    <Label htmlFor={allergen} className="capitalize">
+                      {allergen}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
         {Object.keys(groupedMenuItems).length === 0 ? (
           <div className="text-center text-muted-foreground">
-            No menu items available
+            No menu items match your filters
           </div>
         ) : (
           <div className="space-y-8">
