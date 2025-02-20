@@ -40,6 +40,14 @@ export default function AuthPage() {
     defaultValues: { email: "", password: "", restaurantName: "" },
   });
 
+  const handleRegister = async (data: RegisterData) => {
+    registerMutation.mutate({
+      email: data.email,
+      password: data.password,
+      restaurantName: data.restaurantName
+    });
+  };
+
   if (user) {
     return <Redirect to="/" />;
   }
@@ -109,7 +117,7 @@ export default function AuthPage() {
                   <CardTitle>Register Your Restaurant</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <form onSubmit={registerForm.handleSubmit((data) => registerMutation.mutate(data))}>
+                  <form onSubmit={registerForm.handleSubmit(handleRegister)}>
                     <div className="space-y-4">
                       <div>
                         <Label htmlFor="restaurantName">Restaurant Name</Label>

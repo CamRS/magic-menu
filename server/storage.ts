@@ -12,6 +12,7 @@ export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  createUserWithRestaurant(user: InsertUser, restaurantName: string): Promise<{ user: User; restaurant: Restaurant }>;
 
   getRestaurants(userId: number): Promise<Restaurant[]>;
   getRestaurant(id: number): Promise<Restaurant | undefined>;
@@ -59,6 +60,29 @@ export class DatabaseStorage implements IStorage {
     const [user] = await db.insert(users).values(insertUser).returning();
     console.log("Created user:", { ...user, password: '[REDACTED]' });
     return user;
+  }
+
+  async createUserWithRestaurant(user: InsertUser, restaurantName: string): Promise<{ user: User; restaurant: Restaurant }> {
+    // Start a transaction to ensure both user and restaurant are created or neither is
+    const result = await db.transaction(async (tx) => {
+      // Create the user first
+      const [newUser] = await tx.insert(users).values(user).returning();
+
+      // Create the restaurant for the new user
+      const [newRestaurant] = await tx.insert(restaurants).values({
+        name: restaurantName,
+        userId: newUser.id,
+      }).returning();
+
+      return { user: newUser, restaurant: newRestaurant };
+    });
+
+    console.log("Created user and restaurant:", {
+      user: { ...result.user, password: '[REDACTED]' },
+      restaurant: result.restaurant
+    });
+
+    return result;
   }
 
   async getRestaurants(userId: number): Promise<Restaurant[]> {
