@@ -14,7 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Store, PlusCircle, ChevronDown, Loader2 } from "lucide-react";
+import { Store, PlusCircle, ChevronDown, Loader2, Download } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Restaurant, MenuItem, insertMenuItemSchema, type InsertMenuItem, insertRestaurantSchema } from "@shared/schema";
 import { useState, useEffect } from "react";
@@ -48,6 +48,31 @@ export default function HomePage() {
     },
     enabled: !!selectedRestaurant?.id,
   });
+
+  const handleExportCSV = async () => {
+    if (!selectedRestaurant?.id) return;
+
+    try {
+      const response = await fetch(`/api/restaurants/${selectedRestaurant.id}/menu/export`);
+      if (!response.ok) throw new Error('Failed to export menu');
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${selectedRestaurant.name.toLowerCase().replace(/[^a-z0-9]/gi, '_')}_menu.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to export menu",
+        variant: "destructive",
+      });
+    }
+  };
 
   const form = useForm<InsertMenuItem>({
     resolver: zodResolver(insertMenuItemSchema),
@@ -191,10 +216,16 @@ export default function HomePage() {
                 </DropdownMenuContent>
               </DropdownMenu>
             </h1>
-            <Button onClick={() => setCreateMenuItemOpen(true)}>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Add Menu Item
-            </Button>
+            <div className="flex gap-2">
+              <Button onClick={() => setCreateMenuItemOpen(true)}>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Add Menu Item
+              </Button>
+              <Button variant="outline" onClick={handleExportCSV}>
+                <Download className="mr-2 h-4 w-4" />
+                Export CSV
+              </Button>
+            </div>
           </div>
           <Button variant="outline" onClick={() => logoutMutation.mutate()}>
             Logout
