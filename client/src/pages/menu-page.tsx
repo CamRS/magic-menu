@@ -93,6 +93,7 @@ export default function MenuPage() {
       form.reset({
         ...editItem,
         price: editItem.price.toString(),
+        image: editItem.image || undefined,
       });
       setOpen(true);
     }
@@ -455,8 +456,8 @@ export default function MenuPage() {
                 <div className="absolute top-4 right-4 z-10">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button 
-                        variant="ghost" 
+                      <Button
+                        variant="ghost"
                         size="icon"
                         data-dropdown-trigger="true"
                         onClick={(e) => e.stopPropagation()}
@@ -466,7 +467,7 @@ export default function MenuPage() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem 
+                      <DropdownMenuItem
                         onClick={(e) => {
                           e.stopPropagation();
                           setEditItem(item);
