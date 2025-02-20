@@ -180,7 +180,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const menuItems = await storage.getMenuItems(restaurantId);
 
       // Create CSV header
-      const csvHeader = "Name,Description,Price,Category,Allergens\n";
+      const csvHeader = "Name,Description,Price,Course Type,Custom Tags,Allergens\n";
 
       // Create CSV rows
       const csvRows = menuItems.map(item => {
@@ -189,12 +189,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .map(([key]) => key)
           .join('; ');
 
+        const customTags = item.customTags ? item.customTags.join('; ') : '';
+
         // Escape fields that might contain commas
         const escapedFields = [
           item.name.replace(/"/g, '""'),
           item.description.replace(/"/g, '""'),
           item.price,
-          item.category.replace(/"/g, '""'),
+          item.courseType.replace(/"/g, '""'),
+          customTags.replace(/"/g, '""'),
           allergens
         ].map(field => `"${field}"`);
 
