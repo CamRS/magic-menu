@@ -6,7 +6,16 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,7 +26,7 @@ import {
 import { Copy, Store, PlusCircle, ChevronDown, Loader2, Download, Upload, Trash2, MoreVertical, Pencil, Globe } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { type Restaurant, type MenuItem, type InsertMenuItem, insertMenuItemSchema, insertRestaurantSchema, courseTypes } from "@shared/schema";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Label } from "@/components/ui/label";
@@ -44,11 +53,13 @@ export default function HomePage() {
   const [isCreateRestaurantOpen, setCreateRestaurantOpen] = useState(false);
   const [selectedItems, setSelectedItems] = useState<number[]>([]);
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: restaurants, isLoading: isLoadingRestaurants } = useQuery<Restaurant[]>({
     queryKey: ["/api/restaurants"],
-    enabled: !!user?.id, // Only fetch if user is logged in
-    staleTime: 0, // Don't cache restaurant data
+    enabled: !!user?.id,
+    staleTime: 0,
   });
 
   const { data: menuItems, isLoading: isLoadingMenuItems } = useQuery<MenuItem[]>({
@@ -59,8 +70,8 @@ export default function HomePage() {
       if (!response.ok) throw new Error("Failed to fetch menu items");
       return response.json();
     },
-    enabled: !!selectedRestaurant?.id && !!user?.id, // Only fetch if restaurant is selected and user is logged in
-    staleTime: 0, // Don't cache menu items
+    enabled: !!selectedRestaurant?.id && !!user?.id,
+    staleTime: 0,
   });
 
   const handleExportCSV = async () => {
@@ -112,7 +123,6 @@ export default function HomePage() {
             throw new Error(result.message || 'Failed to import menu items');
           }
 
-          // Reset the file input
           e.target.value = '';
 
           toast({
@@ -123,7 +133,6 @@ export default function HomePage() {
             variant: result.failed > 0 ? "destructive" : "default",
           });
 
-          // Refresh the menu items
           queryClient.invalidateQueries({ queryKey: ["/api/menu-items", selectedRestaurant.id] });
         } catch (error) {
           console.error('Error importing CSV:', error);
@@ -378,6 +387,16 @@ export default function HomePage() {
     }
   };
 
+  const handleImportClick = () => {
+    setIsImportDialogOpen(true);
+  };
+
+  const handleContinueImport = () => {
+    setIsImportDialogOpen(false);
+    fileInputRef.current?.click();
+  };
+
+
   if (!restaurants?.length && !isLoadingRestaurants) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -483,16 +502,17 @@ export default function HomePage() {
               <Download className="mr-2 h-4 w-4" />
               Export CSV
             </Button>
-            <Button variant="outline" className="relative w-full sm:w-auto">
-              <input
-                type="file"
-                accept=".csv"
-                onChange={handleImportCSV}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-              />
+            <Button variant="outline" className="w-full sm:w-auto" onClick={handleImportClick}>
               <Upload className="mr-2 h-4 w-4" />
               Import CSV
             </Button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv"
+              onChange={handleImportCSV}
+              className="hidden"
+            />
           </div>
         </div>
 
@@ -642,6 +662,62 @@ export default function HomePage() {
                 {editingItem ? 'Update Item' : 'Add Item'}
               </Button>
             </form>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
+          <DialogContent className="max-w-3xl">
+            <DialogHeader>
+              <DialogTitle>CSV Import Instructions</DialogTitle>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Your CSV file should follow this structure. The first row must contain these exact column headers:
+              </p>
+
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead>Price</TableHead>
+                    <TableHead>Course Type</TableHead>
+                    <TableHead>Custom Tags</TableHead>
+                    <TableHead>Allergens</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <TableRow>
+                    <TableCell>Taco</TableCell>
+                    <TableCell>Tasty</TableCell>
+                    <TableCell>2.49</TableCell>
+                    <TableCell>Mains</TableCell>
+                    <TableCell></TableCell>
+                    <TableCell>milk</TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+
+              <div className="text-sm space-y-2">
+                <p><strong>Guidelines:</strong></p>
+                <ul className="list-disc list-inside space-y-1">
+                  <li>Course Type must be one of: {courseTypes.join(", ")}</li>
+                  <li>Price should be a decimal number (e.g., 2.49)</li>
+                  <li>Custom Tags should be semicolon-separated (e.g., "Spicy;Vegetarian")</li>
+                  <li>Allergens should be semicolon-separated, valid options: milk, eggs, peanuts, nuts, shellfish, fish, soy, gluten</li>
+                </ul>
+              </div>
+            </div>
+
+            <DialogFooter className="flex gap-2">
+              <Button variant="outline" onClick={() => setIsImportDialogOpen(false)}>
+                Go back
+              </Button>
+              <Button onClick={handleContinueImport}>
+                Continue Import
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
 
