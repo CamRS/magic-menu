@@ -16,10 +16,16 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Loader2, PlusCircle, Download } from "lucide-react";
+import { Loader2, PlusCircle, Download, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 
 type AllergenInfo = {
   milk: boolean;
@@ -34,6 +40,7 @@ type AllergenInfo = {
 
 export default function MenuPage() {
   const [open, setOpen] = useState(false);
+  const [selectedItems, setSelectedItems] = useState<number[]>([]);
   const [location] = useLocation();
   const { toast } = useToast();
   const restaurantId = new URLSearchParams(location.split('?')[1]).get('restaurantId');
@@ -93,6 +100,33 @@ export default function MenuPage() {
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: async (ids: number[]) => {
+      const results = await Promise.all(
+        ids.map((id) => apiRequest("DELETE", `/api/menu-items/${id}`))
+      );
+      const errors = results.filter((res) => !res.ok);
+      if (errors.length > 0) {
+        throw new Error(`Failed to delete ${errors.length} items`);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/menu-items", restaurantId] });
+      setSelectedItems([]);
+      toast({
+        title: "Success",
+        description: "Selected items have been deleted",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleExportCSV = async () => {
     if (!restaurantId) return;
 
@@ -131,6 +165,19 @@ export default function MenuPage() {
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const toggleItemSelection = (id: number) => {
+    setSelectedItems((prev) =>
+      prev.includes(id)
+        ? prev.filter((itemId) => itemId !== id)
+        : [...prev, id]
+    );
+  };
+
+  const handleDeleteSelected = () => {
+    if (selectedItems.length === 0) return;
+    deleteMutation.mutate(selectedItems);
   };
 
   if (!restaurantId) {
@@ -248,6 +295,18 @@ export default function MenuPage() {
                   </form>
                 </DialogContent>
               </Dialog>
+              {selectedItems.length > 0 && (
+                <Button
+                  variant="destructive"
+                  onClick={handleDeleteSelected}
+                  disabled={deleteMutation.isPending}
+                >
+                  {deleteMutation.isPending && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  Delete Selected ({selectedItems.length})
+                </Button>
+              )}
               <Button variant="outline" onClick={handleExportCSV}>
                 <Download className="mr-2 h-4 w-4" />
                 Export CSV
@@ -258,38 +317,56 @@ export default function MenuPage() {
 
         <div className="grid md:grid-cols-2 gap-6">
           {menuItems?.map((item) => (
-            <Card key={item.id}>
-              <CardContent className="p-6">
-                {item.image ? (
-                  <img
-                    src={item.image}
-                    alt={item.name}
-                    className="w-full h-48 object-cover rounded-md mb-4"
-                  />
-                ) : (
-                  <div className="w-full h-48 bg-gray-100 rounded-md mb-4 flex items-center justify-center">
-                    <span className="text-gray-400">No image</span>
-                  </div>
-                )}
-                <h3 className="text-xl font-semibold mb-2">{item.name}</h3>
-                <p className="text-muted-foreground mb-4">{item.description}</p>
-                <div className="flex justify-between items-center">
-                  <span className="font-semibold">${parseFloat(item.price).toFixed(2)}</span>
-                  <div className="flex flex-wrap gap-2">
-                    {Object.entries(item.allergens)
-                      .filter(([_, value]) => value)
-                      .map(([key]) => (
-                        <span
-                          key={key}
-                          className="px-2 py-1 bg-primary/10 text-primary text-xs rounded-full capitalize"
-                        >
-                          {key}
-                        </span>
-                      ))}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <ContextMenu key={item.id}>
+              <ContextMenuTrigger>
+                <Card
+                  className={`relative ${
+                    selectedItems.includes(item.id) ? "ring-2 ring-primary" : ""
+                  }`}
+                  onClick={() => toggleItemSelection(item.id)}
+                >
+                  <CardContent className="p-6">
+                    {item.image ? (
+                      <img
+                        src={item.image}
+                        alt={item.name}
+                        className="w-full h-48 object-cover rounded-md mb-4"
+                      />
+                    ) : (
+                      <div className="w-full h-48 bg-gray-100 rounded-md mb-4 flex items-center justify-center">
+                        <span className="text-gray-400">No image</span>
+                      </div>
+                    )}
+                    <h3 className="text-xl font-semibold mb-2">{item.name}</h3>
+                    <p className="text-muted-foreground mb-4">{item.description}</p>
+                    <div className="flex justify-between items-center">
+                      <span className="font-semibold">${parseFloat(item.price).toFixed(2)}</span>
+                      <div className="flex flex-wrap gap-2">
+                        {Object.entries(item.allergens)
+                          .filter(([_, value]) => value)
+                          .map(([key]) => (
+                            <span
+                              key={key}
+                              className="px-2 py-1 bg-primary/10 text-primary text-xs rounded-full capitalize"
+                            >
+                              {key}
+                            </span>
+                          ))}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </ContextMenuTrigger>
+              <ContextMenuContent>
+                <ContextMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onClick={() => deleteMutation.mutate([item.id])}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete
+                </ContextMenuItem>
+              </ContextMenuContent>
+            </ContextMenu>
           ))}
         </div>
       </div>

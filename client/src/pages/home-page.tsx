@@ -14,7 +14,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Store, PlusCircle, ChevronDown, Loader2, Download } from "lucide-react";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
+import { Store, PlusCircle, ChevronDown, Loader2, Download, Trash2 } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Restaurant, MenuItem, insertMenuItemSchema, type InsertMenuItem, insertRestaurantSchema } from "@shared/schema";
 import { useState, useEffect } from "react";
@@ -33,6 +39,7 @@ export default function HomePage() {
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
   const [isCreateMenuItemOpen, setCreateMenuItemOpen] = useState(false);
   const [isCreateRestaurantOpen, setCreateRestaurantOpen] = useState(false);
+  const [selectedItems, setSelectedItems] = useState<number[]>([]);
 
   const { data: restaurants } = useQuery<Restaurant[]>({
     queryKey: ["/api/restaurants"],
@@ -171,11 +178,51 @@ export default function HomePage() {
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: async (ids: number[]) => {
+      const results = await Promise.all(
+        ids.map((id) => apiRequest("DELETE", `/api/menu-items/${id}`))
+      );
+      const errors = results.filter((res) => !res.ok);
+      if (errors.length > 0) {
+        throw new Error(`Failed to delete ${errors.length} items`);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/menu-items", selectedRestaurant?.id] });
+      setSelectedItems([]);
+      toast({
+        title: "Success",
+        description: "Selected items have been deleted",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   useEffect(() => {
     if (!selectedRestaurant && restaurants?.length) {
       setSelectedRestaurant(restaurants[0]);
     }
   }, [restaurants, selectedRestaurant]);
+
+  const toggleItemSelection = (id: number) => {
+    setSelectedItems((prev) =>
+      prev.includes(id)
+        ? prev.filter((itemId) => itemId !== id)
+        : [...prev, id]
+    );
+  };
+
+  const handleDeleteSelected = () => {
+    if (selectedItems.length === 0) return;
+    deleteMutation.mutate(selectedItems);
+  };
 
   if (!restaurants?.length) {
     return (
@@ -221,6 +268,18 @@ export default function HomePage() {
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Add Menu Item
               </Button>
+              {selectedItems.length > 0 && (
+                <Button
+                  variant="destructive"
+                  onClick={handleDeleteSelected}
+                  disabled={deleteMutation.isPending}
+                >
+                  {deleteMutation.isPending && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  Delete Selected ({selectedItems.length})
+                </Button>
+              )}
               <Button variant="outline" onClick={handleExportCSV}>
                 <Download className="mr-2 h-4 w-4" />
                 Export CSV
@@ -339,27 +398,45 @@ export default function HomePage() {
             </div>
           ) : (
             menuItems?.map((item) => (
-              <Card key={item.id}>
-                <CardContent className="p-6">
-                  <h3 className="text-xl font-semibold mb-2">{item.name}</h3>
-                  <p className="text-muted-foreground mb-4">{item.description}</p>
-                  <div className="flex justify-between items-center">
-                    <span className="font-semibold">${parseFloat(item.price).toFixed(2)}</span>
-                    <div className="flex flex-wrap gap-2">
-                      {Object.entries(item.allergens)
-                        .filter(([_, value]) => value)
-                        .map(([key]) => (
-                          <span
-                            key={key}
-                            className="px-2 py-1 bg-primary/10 text-primary text-xs rounded-full capitalize"
-                          >
-                            {key}
-                          </span>
-                        ))}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              <ContextMenu key={item.id}>
+                <ContextMenuTrigger>
+                  <Card
+                    className={`relative ${
+                      selectedItems.includes(item.id) ? "ring-2 ring-primary" : ""
+                    }`}
+                    onClick={() => toggleItemSelection(item.id)}
+                  >
+                    <CardContent className="p-6">
+                      <h3 className="text-xl font-semibold mb-2">{item.name}</h3>
+                      <p className="text-muted-foreground mb-4">{item.description}</p>
+                      <div className="flex justify-between items-center">
+                        <span className="font-semibold">${parseFloat(item.price).toFixed(2)}</span>
+                        <div className="flex flex-wrap gap-2">
+                          {Object.entries(item.allergens)
+                            .filter(([_, value]) => value)
+                            .map(([key]) => (
+                              <span
+                                key={key}
+                                className="px-2 py-1 bg-primary/10 text-primary text-xs rounded-full capitalize"
+                              >
+                                {key}
+                              </span>
+                            ))}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </ContextMenuTrigger>
+                <ContextMenuContent>
+                  <ContextMenuItem
+                    className="text-destructive focus:text-destructive"
+                    onClick={() => deleteMutation.mutate([item.id])}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete
+                  </ContextMenuItem>
+                </ContextMenuContent>
+              </ContextMenu>
             ))
           )}
         </div>
