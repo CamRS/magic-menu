@@ -1,7 +1,7 @@
 import { User, InsertUser, MenuItem, InsertMenuItem, Restaurant, InsertRestaurant } from "@shared/schema";
 import session from "express-session";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { users, restaurants, menuItems } from "@shared/schema";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
@@ -86,31 +86,44 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getRestaurants(userId: number): Promise<Restaurant[]> {
-    return await db
+    console.log("Getting restaurants for user:", userId);
+    const userRestaurants = await db
       .select()
       .from(restaurants)
       .where(eq(restaurants.userId, userId));
+    console.log("Found restaurants:", userRestaurants);
+    return userRestaurants;
   }
 
   async getRestaurant(id: number): Promise<Restaurant | undefined> {
+    console.log("Getting restaurant:", id);
     const [restaurant] = await db
       .select()
       .from(restaurants)
       .where(eq(restaurants.id, id));
+    console.log("Found restaurant:", restaurant);
     return restaurant;
   }
 
+  async verifyRestaurantOwnership(restaurantId: number, userId: number): Promise<boolean> {
+    const restaurant = await this.getRestaurant(restaurantId);
+    return restaurant?.userId === userId;
+  }
+
   async getMenuItems(restaurantId: number): Promise<MenuItem[]> {
+    console.log("Getting menu items for restaurant:", restaurantId);
     // Get the restaurant first to verify it exists
     const restaurant = await this.getRestaurant(restaurantId);
     if (!restaurant) {
       throw new Error("Restaurant not found");
     }
 
-    return await db
+    const items = await db
       .select()
       .from(menuItems)
       .where(eq(menuItems.restaurantId, restaurantId));
+    console.log("Found menu items:", items);
+    return items;
   }
 
   async getMenuItem(id: number): Promise<MenuItem | undefined> {
@@ -122,13 +135,22 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createRestaurant(restaurant: InsertRestaurant): Promise<Restaurant> {
+    console.log("Creating restaurant:", restaurant);
     const [newRestaurant] = await db
       .insert(restaurants)
       .values(restaurant)
       .returning();
+    console.log("Created restaurant:", newRestaurant);
     return newRestaurant;
   }
+
   async createMenuItem(item: InsertMenuItem): Promise<MenuItem> {
+    // Verify restaurant ownership before creating menu item
+    const restaurant = await this.getRestaurant(item.restaurantId);
+    if (!restaurant) {
+      throw new Error("Restaurant not found");
+    }
+
     const [menuItem] = await db.insert(menuItems).values(item).returning();
     return menuItem;
   }
@@ -137,6 +159,12 @@ export class DatabaseStorage implements IStorage {
     id: number,
     updates: Partial<InsertMenuItem>,
   ): Promise<MenuItem> {
+    // Verify menu item exists and belongs to the restaurant
+    const existingItem = await this.getMenuItem(id);
+    if (!existingItem) {
+      throw new Error("Menu item not found");
+    }
+
     const [updated] = await db
       .update(menuItems)
       .set(updates)
@@ -150,6 +178,12 @@ export class DatabaseStorage implements IStorage {
     updates: Partial<InsertMenuItem>,
   ): Promise<void> {
     for (const restaurantId of restaurantIds) {
+      // Verify restaurant exists before updating its menu items
+      const restaurant = await this.getRestaurant(restaurantId);
+      if (!restaurant) {
+        throw new Error(`Restaurant ${restaurantId} not found`);
+      }
+
       await db
         .update(menuItems)
         .set(updates)
@@ -158,6 +192,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteMenuItem(id: number): Promise<void> {
+    // Verify menu item exists before deletion
+    const menuItem = await this.getMenuItem(id);
+    if (!menuItem) {
+      throw new Error("Menu item not found");
+    }
+
     await db.delete(menuItems).where(eq(menuItems.id, id));
   }
 }
