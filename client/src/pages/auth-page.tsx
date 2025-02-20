@@ -10,10 +10,12 @@ import { Redirect } from "wouter";
 import { insertUserSchema } from "@shared/schema";
 import { Loader2 } from "lucide-react";
 import { z } from "zod";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
   password: z.string().min(1, "Password is required"),
+  rememberMe: z.boolean().default(false),
 });
 
 const registerSchema = z.object({
@@ -30,7 +32,7 @@ export default function AuthPage() {
 
   const loginForm = useForm<LoginData>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { email: "", password: "" },
+    defaultValues: { email: "", password: "", rememberMe: false },
   });
 
   const registerForm = useForm<RegisterData>({
@@ -81,6 +83,15 @@ export default function AuthPage() {
                             {loginForm.formState.errors.password.message}
                           </p>
                         )}
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="rememberMe" 
+                          {...loginForm.register("rememberMe")}
+                        />
+                        <Label htmlFor="rememberMe" className="text-sm font-normal">
+                          Remember this device
+                        </Label>
                       </div>
                       <Button type="submit" className="w-full" disabled={loginMutation.isPending}>
                         {loginMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
