@@ -25,8 +25,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Loader2, PlusCircle, Download, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { Loader2, PlusCircle, Download, Trash2, Pencil } from "lucide-react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -49,6 +49,7 @@ type AllergenInfo = {
 
 export default function MenuPage() {
   const [open, setOpen] = useState(false);
+  const [editItem, setEditItem] = useState<MenuItem | null>(null);
   const [selectedItems, setSelectedItems] = useState<number[]>([]);
   const [location] = useLocation();
   const { toast } = useToast();
@@ -87,6 +88,16 @@ export default function MenuPage() {
     },
   });
 
+  useEffect(() => {
+    if (editItem) {
+      form.reset({
+        ...editItem,
+        price: editItem.price.toString(),
+      });
+      setOpen(true);
+    }
+  }, [editItem, form]);
+
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
       const formattedData = {
@@ -107,6 +118,42 @@ export default function MenuPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/menu-items", restaurantId] });
       setOpen(false);
       form.reset();
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async (data: InsertMenuItem & { id: number }) => {
+      const { id, ...updateData } = data;
+      const formattedData = {
+        ...updateData,
+        restaurantId: parseInt(restaurantId || "0"),
+        price: updateData.price.replace(/^\$/, ''),
+        image: updateData.image || '',
+      };
+
+      const res = await apiRequest("PATCH", `/api/menu-items/${id}`, formattedData);
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to update menu item");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/menu-items", restaurantId] });
+      setOpen(false);
+      setEditItem(null);
+      form.reset();
+      toast({
+        title: "Success",
+        description: "Menu item updated successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
@@ -190,6 +237,14 @@ export default function MenuPage() {
     deleteMutation.mutate(selectedItems);
   };
 
+  const handleSubmit = (data: InsertMenuItem) => {
+    if (editItem) {
+      updateMutation.mutate({ ...data, id: editItem.id });
+    } else {
+      createMutation.mutate(data);
+    }
+  };
+
   if (!restaurantId) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -213,7 +268,13 @@ export default function MenuPage() {
           <div className="flex items-center gap-4">
             <h1 className="text-3xl font-bold">Menu Items</h1>
             <div className="flex gap-2">
-              <Dialog open={open} onOpenChange={setOpen}>
+              <Dialog open={open} onOpenChange={(isOpen) => {
+                setOpen(isOpen);
+                if (!isOpen) {
+                  setEditItem(null);
+                  form.reset();
+                }
+              }}>
                 <DialogTrigger asChild>
                   <Button>
                     <PlusCircle className="mr-2 h-4 w-4" />
@@ -222,9 +283,9 @@ export default function MenuPage() {
                 </DialogTrigger>
                 <DialogContent className="max-w-2xl">
                   <DialogHeader>
-                    <DialogTitle>Add Menu Item</DialogTitle>
+                    <DialogTitle>{editItem ? "Edit Menu Item" : "Add Menu Item"}</DialogTitle>
                   </DialogHeader>
-                  <form onSubmit={form.handleSubmit((data) => createMutation.mutate(data))} className="space-y-6">
+                  <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
                     <div className="grid grid-cols-2 gap-6">
                       <div className="space-y-4">
                         <div>
@@ -346,12 +407,12 @@ export default function MenuPage() {
                     <Button
                       type="submit"
                       className="w-full"
-                      disabled={createMutation.isPending}
+                      disabled={createMutation.isPending || updateMutation.isPending}
                     >
-                      {createMutation.isPending && (
+                      {(createMutation.isPending || updateMutation.isPending) && (
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       )}
-                      Add Item
+                      {editItem ? "Update Item" : "Add Item"}
                     </Button>
                   </form>
                 </DialogContent>
@@ -426,6 +487,10 @@ export default function MenuPage() {
                 </Card>
               </ContextMenuTrigger>
               <ContextMenuContent>
+                <ContextMenuItem onClick={() => setEditItem(item)}>
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Edit
+                </ContextMenuItem>
                 <ContextMenuItem
                   className="text-destructive focus:text-destructive"
                   onClick={() => deleteMutation.mutate([item.id])}
