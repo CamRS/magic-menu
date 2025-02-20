@@ -28,11 +28,21 @@ export default function PublicMenuPage() {
 
   const { data: restaurant, isLoading: isLoadingRestaurant } = useQuery<Restaurant>({
     queryKey: ["/api/restaurants", restaurantId],
+    queryFn: async () => {
+      const response = await fetch(`/api/restaurants/${restaurantId}`);
+      if (!response.ok) throw new Error('Failed to fetch restaurant');
+      return response.json();
+    },
     enabled: !!restaurantId
   });
 
   const { data: menuItems, isLoading: isLoadingMenu } = useQuery<MenuItem[]>({
     queryKey: ["/api/menu-items", restaurantId],
+    queryFn: async () => {
+      const response = await fetch(`/api/menu-items?restaurantId=${restaurantId}`);
+      if (!response.ok) throw new Error('Failed to fetch menu items');
+      return response.json();
+    },
     enabled: !!restaurantId
   });
 
