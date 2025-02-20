@@ -285,6 +285,15 @@ export default function HomePage() {
     deleteMutation.mutate(selectedItems);
   };
 
+  const groupedMenuItems = menuItems?.reduce((groups, item) => {
+    const group = item.courseType;
+    if (!groups[group]) {
+      groups[group] = [];
+    }
+    groups[group].push(item);
+    return groups;
+  }, {} as Record<string, MenuItem[]>) || {};
+
   if (!restaurants?.length) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -501,87 +510,84 @@ export default function HomePage() {
           </DialogContent>
         </Dialog>
 
-        <div className="grid md:grid-cols-2 gap-6">
-          {isLoadingMenuItems ? (
-            <div className="col-span-2 flex justify-center">
-              <Loader2 className="h-8 w-8 animate-spin" />
-            </div>
-          ) : menuItems?.length === 0 ? (
-            <div className="col-span-2 text-center text-muted-foreground">
-              No menu items yet. Add your first item!
-            </div>
-          ) : (
-            menuItems?.map((item) => (
-              <Card
-                key={item.id}
-                className={`relative ${
-                  selectedItems.includes(item.id) ? "ring-2 ring-primary" : ""
-                }`}
-                onClick={(e) => {
-                  if (!(e.target as HTMLElement).closest('[data-dropdown-trigger="true"]')) {
-                    toggleItemSelection(item.id);
-                  }
-                }}
-              >
-                <CardContent className="p-6">
-                  <div className="absolute top-4 right-4 z-10">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          data-dropdown-trigger="true"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <MoreVertical className="h-4 w-4" />
-                          <span className="sr-only">Open menu</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setEditingItem(item);
-                          }}
-                        >
-                          <Pencil className="mr-2 h-4 w-4" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          className="text-destructive focus:text-destructive"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            deleteMutation.mutate([item.id]);
-                          }}
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
+        <div className="space-y-8">
+          {Object.entries(groupedMenuItems).map(([courseType, items]) => (
+            <div key={courseType}>
+              <h2 className="text-2xl font-semibold mb-4 text-primary">{courseType}</h2>
+              <div className="grid md:grid-cols-2 gap-6">
+                {items.map((item) => (
+                  <Card
+                    key={item.id}
+                    className={`relative ${
+                      selectedItems.includes(item.id) ? "ring-2 ring-primary" : ""
+                    }`}
+                    onClick={(e) => {
+                      if (!(e.target as HTMLElement).closest('[data-dropdown-trigger="true"]')) {
+                        toggleItemSelection(item.id);
+                      }
+                    }}
+                  >
+                    <CardContent className="p-6">
+                      <div className="absolute top-4 right-4 z-10">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              data-dropdown-trigger="true"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <MoreVertical className="h-4 w-4" />
+                              <span className="sr-only">Open menu</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingItem(item);
+                              }}
+                            >
+                              <Pencil className="mr-2 h-4 w-4" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="text-destructive focus:text-destructive"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                deleteMutation.mutate([item.id]);
+                              }}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
 
-                  <h3 className="text-xl font-semibold mb-2">{item.name}</h3>
-                  <p className="text-muted-foreground mb-4">{item.description}</p>
-                  <div className="flex justify-between items-center">
-                    <span className="font-semibold">${parseFloat(item.price).toFixed(2)}</span>
-                    <div className="flex flex-wrap gap-2">
-                      {Object.entries(item.allergens)
-                        .filter(([_, value]) => value)
-                        .map(([key]) => (
-                          <span
-                            key={key}
-                            className="px-2 py-1 bg-primary/10 text-primary text-xs rounded-full capitalize"
-                          >
-                            {key}
-                          </span>
-                        ))}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))
-          )}
+                      <h3 className="text-xl font-semibold mb-2">{item.name}</h3>
+                      <p className="text-muted-foreground mb-4">{item.description}</p>
+                      <div className="flex justify-between items-center">
+                        <span className="font-semibold">${parseFloat(item.price).toFixed(2)}</span>
+                        <div className="flex flex-wrap gap-2">
+                          {Object.entries(item.allergens)
+                            .filter(([_, value]) => value)
+                            .map(([key]) => (
+                              <span
+                                key={key}
+                                className="px-2 py-1 bg-primary/10 text-primary text-xs rounded-full capitalize"
+                              >
+                                {key}
+                              </span>
+                            ))}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>
