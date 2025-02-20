@@ -13,9 +13,9 @@ import { ProtectedRoute } from "./lib/protected-route";
 function Router() {
   return (
     <Switch>
+      <Route path="/menu/:restaurantId" component={PublicMenuPage} />
       <ProtectedRoute path="/" component={HomePage} />
       <ProtectedRoute path="/menu" component={MenuPage} />
-      <Route path="/menu/:restaurantId" component={PublicMenuPage} />
       <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />
     </Switch>
