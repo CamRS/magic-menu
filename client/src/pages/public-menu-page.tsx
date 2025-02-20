@@ -6,20 +6,26 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 
 export default function PublicMenuPage() {
-  const [, params] = useRoute("/menu/:restaurantId");
-  const restaurantId = params?.restaurantId ? parseInt(params.restaurantId) : null;
+  const [matches, params] = useRoute("/menu/:restaurantId");
+  const restaurantId = params?.restaurantId;
 
-  const { data: restaurant } = useQuery<Restaurant>({
+  console.log("Public Menu - Route matches:", matches);
+  console.log("Public Menu - Restaurant ID:", restaurantId);
+
+  const { data: restaurant, isLoading: isLoadingRestaurant } = useQuery<Restaurant>({
     queryKey: ["/api/restaurants", restaurantId],
     enabled: !!restaurantId,
   });
 
-  const { data: menuItems, isLoading } = useQuery<MenuItem[]>({
+  const { data: menuItems, isLoading: isLoadingMenu } = useQuery<MenuItem[]>({
     queryKey: ["/api/menu-items", restaurantId],
     enabled: !!restaurantId,
   });
 
-  if (!restaurantId) {
+  console.log("Public Menu - Restaurant data:", restaurant);
+  console.log("Public Menu - Menu items:", menuItems);
+
+  if (!matches || !restaurantId) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <p className="text-muted-foreground">Restaurant not found</p>
@@ -27,10 +33,18 @@ export default function PublicMenuPage() {
     );
   }
 
-  if (isLoading) {
+  if (isLoadingRestaurant || isLoadingMenu) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  if (!restaurant) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-muted-foreground">Restaurant not found</p>
       </div>
     );
   }
@@ -51,51 +65,57 @@ export default function PublicMenuPage() {
           {restaurant?.name}
         </h1>
 
-        <div className="space-y-8">
-          {Object.entries(groupedMenuItems).map(([courseType, items]) => (
-            <div key={courseType}>
-              <h2 className="text-2xl font-semibold mb-4 text-primary">{courseType}</h2>
-              <div className="grid md:grid-cols-2 gap-6">
-                {items.map((item) => (
-                  <Card key={item.id}>
-                    <CardContent className="p-6">
-                      {item.image && (
-                        <img
-                          src={item.image}
-                          alt={item.name}
-                          className="w-full h-48 object-cover rounded-md mb-4"
-                        />
-                      )}
-                      <h3 className="text-xl font-semibold mb-2">{item.name}</h3>
-                      <p className="text-muted-foreground mb-4">{item.description}</p>
-                      <div className="flex justify-between items-center">
-                        <span className="font-semibold">${parseFloat(item.price).toFixed(2)}</span>
-                        <div className="flex flex-wrap gap-2">
-                          {item.customTags?.map((tag, index) => (
-                            <Badge key={index} variant="secondary">
-                              {tag}
-                            </Badge>
-                          ))}
-                          {Object.entries(item.allergens)
-                            .filter(([_, value]) => value)
-                            .map(([key]) => (
-                              <Badge
-                                key={key}
-                                variant="default"
-                                className="bg-primary/10 text-primary hover:bg-primary/20"
-                              >
-                                {key}
+        {Object.keys(groupedMenuItems).length === 0 ? (
+          <div className="text-center text-muted-foreground">
+            No menu items available
+          </div>
+        ) : (
+          <div className="space-y-8">
+            {Object.entries(groupedMenuItems).map(([courseType, items]) => (
+              <div key={courseType}>
+                <h2 className="text-2xl font-semibold mb-4 text-primary">{courseType}</h2>
+                <div className="grid md:grid-cols-2 gap-6">
+                  {items.map((item) => (
+                    <Card key={item.id}>
+                      <CardContent className="p-6">
+                        {item.image && (
+                          <img
+                            src={item.image}
+                            alt={item.name}
+                            className="w-full h-48 object-cover rounded-md mb-4"
+                          />
+                        )}
+                        <h3 className="text-xl font-semibold mb-2">{item.name}</h3>
+                        <p className="text-muted-foreground mb-4">{item.description}</p>
+                        <div className="flex justify-between items-center">
+                          <span className="font-semibold">${parseFloat(item.price).toFixed(2)}</span>
+                          <div className="flex flex-wrap gap-2">
+                            {item.customTags?.map((tag, index) => (
+                              <Badge key={index} variant="secondary">
+                                {tag}
                               </Badge>
                             ))}
+                            {Object.entries(item.allergens)
+                              .filter(([_, value]) => value)
+                              .map(([key]) => (
+                                <Badge
+                                  key={key}
+                                  variant="default"
+                                  className="bg-primary/10 text-primary hover:bg-primary/20"
+                                >
+                                  {key}
+                                </Badge>
+                              ))}
+                          </div>
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
