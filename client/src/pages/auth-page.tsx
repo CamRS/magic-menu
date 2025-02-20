@@ -53,10 +53,10 @@ export default function AuthPage() {
   }
 
   return (
-    <div className="min-h-screen flex">
-      <div className="flex-1 p-8">
-        <div className="max-w-md mx-auto">
-          <Tabs defaultValue="login">
+    <div className="min-h-screen flex items-center">
+      <div className="flex-1 flex justify-center items-center p-8">
+        <div className="w-full max-w-md">
+          <Tabs defaultValue="login" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="login">Login</TabsTrigger>
               <TabsTrigger value="register">Register</TabsTrigger>
@@ -163,7 +163,7 @@ export default function AuthPage() {
         </div>
       </div>
 
-      <div className="hidden lg:block flex-1 bg-cover bg-center" style={{ backgroundImage: `url(${encodeURI('https://images.unsplash.com/photo-1517248135467-4c7edcad34c4')})` }}>
+      <div className="hidden lg:block flex-1 h-screen bg-cover bg-center" style={{ backgroundImage: `url(${encodeURI('https://images.unsplash.com/photo-1517248135467-4c7edcad34c4')})` }}>
         <div className="h-full w-full bg-black/50 p-12 flex items-center">
           <div className="text-white max-w-md">
             <h1 className="text-4xl font-bold mb-4">Menu Management Made Simple</h1>
