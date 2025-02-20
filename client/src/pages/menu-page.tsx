@@ -444,25 +444,43 @@ export default function MenuPage() {
               className={`relative ${
                 selectedItems.includes(item.id) ? "ring-2 ring-primary" : ""
               }`}
-              onClick={() => toggleItemSelection(item.id)}
+              onClick={(e) => {
+                // Only toggle selection if we didn't click the dropdown menu
+                if (!(e.target as HTMLElement).closest('[data-dropdown-trigger="true"]')) {
+                  toggleItemSelection(item.id);
+                }
+              }}
             >
               <CardContent className="p-6">
-                <div className="absolute top-4 right-4">
+                <div className="absolute top-4 right-4 z-10">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon">
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        data-dropdown-trigger="true"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <MoreVertical className="h-4 w-4" />
                         <span className="sr-only">Open menu</span>
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => setEditItem(item)}>
+                      <DropdownMenuItem 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditItem(item);
+                        }}
+                      >
                         <Pencil className="mr-2 h-4 w-4" />
                         Edit
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         className="text-destructive focus:text-destructive"
-                        onClick={() => deleteMutation.mutate([item.id])}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteMutation.mutate([item.id]);
+                        }}
                       >
                         <Trash2 className="mr-2 h-4 w-4" />
                         Delete
