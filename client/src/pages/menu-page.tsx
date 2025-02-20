@@ -18,6 +18,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -25,16 +31,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Loader2, PlusCircle, Download, Trash2, Pencil } from "lucide-react";
+import { Loader2, PlusCircle, Download, Trash2, Pencil, MoreVertical } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
-import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuTrigger,
-} from "@/components/ui/context-menu";
 
 type AllergenInfo = {
   milk: boolean;
@@ -439,67 +439,75 @@ export default function MenuPage() {
 
         <div className="grid md:grid-cols-2 gap-6">
           {menuItems?.map((item) => (
-            <ContextMenu key={item.id}>
-              <ContextMenuTrigger asChild>
-                <Card
-                  className={`relative ${
-                    selectedItems.includes(item.id) ? "ring-2 ring-primary" : ""
-                  } cursor-context-menu`}
-                  onClick={() => toggleItemSelection(item.id)}
-                >
-                  <CardContent className="p-6">
-                    {item.image ? (
-                      <img
-                        src={item.image}
-                        alt={item.name}
-                        className="w-full h-48 object-cover rounded-md mb-4"
-                      />
-                    ) : (
-                      <div className="w-full h-48 bg-gray-100 rounded-md mb-4 flex items-center justify-center">
-                        <span className="text-gray-400">No image</span>
-                      </div>
-                    )}
-                    <h3 className="text-xl font-semibold mb-2">{item.name}</h3>
-                    <p className="text-muted-foreground mb-4">{item.description}</p>
-                    <div className="flex justify-between items-center">
-                      <span className="font-semibold">${parseFloat(item.price).toFixed(2)}</span>
-                      <div className="flex flex-wrap gap-2">
-                        <Badge variant="outline">{item.courseType}</Badge>
-                        {item.customTags?.map((tag, index) => (
-                          <Badge key={index} variant="secondary">
-                            {tag}
-                          </Badge>
-                        ))}
-                        {Object.entries(item.allergens)
-                          .filter(([_, value]) => value)
-                          .map(([key]) => (
-                            <Badge
-                              key={key}
-                              variant="default"
-                              className="bg-primary/10 text-primary hover:bg-primary/20"
-                            >
-                              {key}
-                            </Badge>
-                          ))}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </ContextMenuTrigger>
-              <ContextMenuContent>
-                <ContextMenuItem onSelect={() => setEditItem(item)}>
-                  <Pencil className="mr-2 h-4 w-4" />
-                  Edit
-                </ContextMenuItem>
-                <ContextMenuItem
-                  className="text-destructive focus:text-destructive"
-                  onSelect={() => deleteMutation.mutate([item.id])}
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete
-                </ContextMenuItem>
-              </ContextMenuContent>
-            </ContextMenu>
+            <Card
+              key={item.id}
+              className={`relative ${
+                selectedItems.includes(item.id) ? "ring-2 ring-primary" : ""
+              }`}
+              onClick={() => toggleItemSelection(item.id)}
+            >
+              <CardContent className="p-6">
+                <div className="absolute top-4 right-4">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon">
+                        <MoreVertical className="h-4 w-4" />
+                        <span className="sr-only">Open menu</span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => setEditItem(item)}>
+                        <Pencil className="mr-2 h-4 w-4" />
+                        Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="text-destructive focus:text-destructive"
+                        onClick={() => deleteMutation.mutate([item.id])}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+
+                {item.image ? (
+                  <img
+                    src={item.image}
+                    alt={item.name}
+                    className="w-full h-48 object-cover rounded-md mb-4"
+                  />
+                ) : (
+                  <div className="w-full h-48 bg-gray-100 rounded-md mb-4 flex items-center justify-center">
+                    <span className="text-gray-400">No image</span>
+                  </div>
+                )}
+                <h3 className="text-xl font-semibold mb-2">{item.name}</h3>
+                <p className="text-muted-foreground mb-4">{item.description}</p>
+                <div className="flex justify-between items-center">
+                  <span className="font-semibold">${parseFloat(item.price).toFixed(2)}</span>
+                  <div className="flex flex-wrap gap-2">
+                    <Badge variant="outline">{item.courseType}</Badge>
+                    {item.customTags?.map((tag, index) => (
+                      <Badge key={index} variant="secondary">
+                        {tag}
+                      </Badge>
+                    ))}
+                    {Object.entries(item.allergens)
+                      .filter(([_, value]) => value)
+                      .map(([key]) => (
+                        <Badge
+                          key={key}
+                          variant="default"
+                          className="bg-primary/10 text-primary hover:bg-primary/20"
+                        >
+                          {key}
+                        </Badge>
+                      ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           ))}
         </div>
       </div>
