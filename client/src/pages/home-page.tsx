@@ -14,7 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Store, PlusCircle, ChevronDown, Loader2, Download, Trash2, MoreVertical, Pencil } from "lucide-react";
+import { Copy, Store, PlusCircle, ChevronDown, Loader2, Download, Trash2, MoreVertical, Pencil, Globe } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { type Restaurant, type MenuItem, type InsertMenuItem, insertMenuItemSchema, insertRestaurantSchema, courseTypes } from "@shared/schema";
 import { useState, useEffect } from "react";
@@ -294,6 +294,28 @@ export default function HomePage() {
     return groups;
   }, {} as Record<string, MenuItem[]>) || {};
 
+  const getPublicMenuUrl = (restaurantId: number) => {
+    const baseUrl = window.location.origin;
+    return `${baseUrl}/menu/${restaurantId}`;
+  };
+
+  const copyMenuUrl = async (restaurantId: number) => {
+    const url = getPublicMenuUrl(restaurantId);
+    try {
+      await navigator.clipboard.writeText(url);
+      toast({
+        title: "Success",
+        description: "Menu URL copied to clipboard",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to copy URL",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (!restaurants?.length) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -322,7 +344,20 @@ export default function HomePage() {
                       key={restaurant.id}
                       onClick={() => setSelectedRestaurant(restaurant)}
                     >
-                      {restaurant.name}
+                      <div className="flex items-center justify-between w-full">
+                        <span>{restaurant.name}</span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            copyMenuUrl(restaurant.id);
+                          }}
+                        >
+                          <Globe className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </DropdownMenuItem>
                   ))}
                   <DropdownMenuSeparator />
@@ -334,6 +369,16 @@ export default function HomePage() {
               </DropdownMenu>
             </h1>
             <div className="flex gap-2">
+              {selectedRestaurant && (
+                <Button
+                  variant="outline"
+                  className="flex items-center gap-2"
+                  onClick={() => copyMenuUrl(selectedRestaurant.id)}
+                >
+                  <Globe className="h-4 w-4" />
+                  Copy Menu URL
+                </Button>
+              )}
               <Button onClick={() => setCreateMenuItemOpen(true)}>
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Add Menu Item
