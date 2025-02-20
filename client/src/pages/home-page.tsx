@@ -14,13 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuTrigger,
-} from "@/components/ui/context-menu";
-import { Store, PlusCircle, ChevronDown, Loader2, Download, Trash2 } from "lucide-react";
+import { Store, PlusCircle, ChevronDown, Loader2, Download, Trash2, MoreVertical, Pencil } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { type Restaurant, type MenuItem, type InsertMenuItem, insertMenuItemSchema, insertRestaurantSchema, courseTypes } from "@shared/schema";
 import { useState, useEffect } from "react";
@@ -49,6 +43,7 @@ export default function HomePage() {
   const [isCreateMenuItemOpen, setCreateMenuItemOpen] = useState(false);
   const [isCreateRestaurantOpen, setCreateRestaurantOpen] = useState(false);
   const [selectedItems, setSelectedItems] = useState<number[]>([]);
+  const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
 
   const { data: restaurants } = useQuery<Restaurant[]>({
     queryKey: ["/api/restaurants"],
@@ -112,6 +107,61 @@ export default function HomePage() {
       },
     },
   });
+
+  useEffect(() => {
+    if (editingItem) {
+      form.reset({
+        ...editingItem,
+        price: editingItem.price.toString(),
+      });
+      setCreateMenuItemOpen(true);
+    }
+  }, [editingItem, form]);
+
+  const updateMutation = useMutation({
+    mutationFn: async (data: InsertMenuItem & { id: number }) => {
+      const { id, ...updateData } = data;
+      const response = await apiRequest("PATCH", `/api/menu-items/${id}`, updateData);
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to update menu item");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/menu-items", selectedRestaurant?.id] });
+      setCreateMenuItemOpen(false);
+      setEditingItem(null);
+      form.reset();
+      toast({
+        title: "Success",
+        description: "Menu item updated successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSubmit = (data: InsertMenuItem) => {
+    if (editingItem) {
+      updateMutation.mutate({ ...data, id: editingItem.id });
+    } else {
+      createMutation.mutate(data);
+    }
+  };
+
+  const handleDialogOpenChange = (open: boolean) => {
+    setCreateMenuItemOpen(open);
+    if (!open) {
+      setEditingItem(null);
+      form.reset();
+    }
+  };
 
   const createMutation = useMutation({
     mutationFn: async (data: InsertMenuItem) => {
@@ -331,12 +381,12 @@ export default function HomePage() {
           </DialogContent>
         </Dialog>
 
-        <Dialog open={isCreateMenuItemOpen} onOpenChange={setCreateMenuItemOpen}>
+        <Dialog open={isCreateMenuItemOpen} onOpenChange={handleDialogOpenChange}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Add Menu Item</DialogTitle>
+              <DialogTitle>{editingItem ? 'Edit Menu Item' : 'Add Menu Item'}</DialogTitle>
             </DialogHeader>
-            <form onSubmit={form.handleSubmit((data) => createMutation.mutate(data))} className="space-y-4">
+            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
               <div>
                 <Label htmlFor="name">Name</Label>
                 <Input {...form.register("name")} />
@@ -440,12 +490,12 @@ export default function HomePage() {
               <Button
                 type="submit"
                 className="w-full"
-                disabled={createMutation.isPending}
+                disabled={createMutation.isPending || updateMutation.isPending}
               >
-                {createMutation.isPending && (
+                {(createMutation.isPending || updateMutation.isPending) && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 )}
-                Add Item
+                {editingItem ? 'Update Item' : 'Add Item'}
               </Button>
             </form>
           </DialogContent>
@@ -462,45 +512,74 @@ export default function HomePage() {
             </div>
           ) : (
             menuItems?.map((item) => (
-              <ContextMenu key={item.id}>
-                <ContextMenuTrigger>
-                  <Card
-                    className={`relative ${
-                      selectedItems.includes(item.id) ? "ring-2 ring-primary" : ""
-                    }`}
-                    onClick={() => toggleItemSelection(item.id)}
-                  >
-                    <CardContent className="p-6">
-                      <h3 className="text-xl font-semibold mb-2">{item.name}</h3>
-                      <p className="text-muted-foreground mb-4">{item.description}</p>
-                      <div className="flex justify-between items-center">
-                        <span className="font-semibold">${parseFloat(item.price).toFixed(2)}</span>
-                        <div className="flex flex-wrap gap-2">
-                          {Object.entries(item.allergens)
-                            .filter(([_, value]) => value)
-                            .map(([key]) => (
-                              <span
-                                key={key}
-                                className="px-2 py-1 bg-primary/10 text-primary text-xs rounded-full capitalize"
-                              >
-                                {key}
-                              </span>
-                            ))}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </ContextMenuTrigger>
-                <ContextMenuContent>
-                  <ContextMenuItem
-                    className="text-destructive focus:text-destructive"
-                    onClick={() => deleteMutation.mutate([item.id])}
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Delete
-                  </ContextMenuItem>
-                </ContextMenuContent>
-              </ContextMenu>
+              <Card
+                key={item.id}
+                className={`relative ${
+                  selectedItems.includes(item.id) ? "ring-2 ring-primary" : ""
+                }`}
+                onClick={(e) => {
+                  if (!(e.target as HTMLElement).closest('[data-dropdown-trigger="true"]')) {
+                    toggleItemSelection(item.id);
+                  }
+                }}
+              >
+                <CardContent className="p-6">
+                  <div className="absolute top-4 right-4 z-10">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          data-dropdown-trigger="true"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                          <span className="sr-only">Open menu</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingItem(item);
+                          }}
+                        >
+                          <Pencil className="mr-2 h-4 w-4" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="text-destructive focus:text-destructive"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteMutation.mutate([item.id]);
+                          }}
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+
+                  <h3 className="text-xl font-semibold mb-2">{item.name}</h3>
+                  <p className="text-muted-foreground mb-4">{item.description}</p>
+                  <div className="flex justify-between items-center">
+                    <span className="font-semibold">${parseFloat(item.price).toFixed(2)}</span>
+                    <div className="flex flex-wrap gap-2">
+                      {Object.entries(item.allergens)
+                        .filter(([_, value]) => value)
+                        .map(([key]) => (
+                          <span
+                            key={key}
+                            className="px-2 py-1 bg-primary/10 text-primary text-xs rounded-full capitalize"
+                          >
+                            {key}
+                          </span>
+                        ))}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             ))
           )}
         </div>
