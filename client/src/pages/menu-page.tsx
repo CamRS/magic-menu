@@ -1,5 +1,14 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { MenuItem, Restaurant, insertMenuItemSchema } from "@shared/schema";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { X } from "lucide-react";
+import { courseTypes, type MenuItem, type InsertMenuItem, insertMenuItemSchema, type Restaurant } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -55,13 +64,14 @@ export default function MenuPage() {
     enabled: !!restaurantId
   });
 
-  const form = useForm({
+  const form = useForm<InsertMenuItem>({
     resolver: zodResolver(insertMenuItemSchema),
     defaultValues: {
       name: "",
       description: "",
       price: "",
-      category: "",
+      courseType: "Appetizers",
+      customTags: [],
       restaurantId: parseInt(restaurantId || "0"),
       image: "",
       allergens: {
@@ -245,14 +255,65 @@ export default function MenuPage() {
                           )}
                         </div>
                         <div>
-                          <Label htmlFor="category">Category</Label>
-                          <Input id="category" {...form.register("category")} />
-                          {form.formState.errors.category && (
+                          <Label htmlFor="courseType">Course Type</Label>
+                          <Select
+                            onValueChange={(value) => form.setValue("courseType", value as any)}
+                            defaultValue={form.getValues("courseType")}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select course type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {courseTypes.map((type) => (
+                                <SelectItem key={type} value={type}>
+                                  {type}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {form.formState.errors.courseType && (
                             <p className="text-sm text-destructive mt-1">
-                              {form.formState.errors.category.message}
+                              {form.formState.errors.courseType.message}
                             </p>
                           )}
                         </div>
+                        {form.watch("courseType") === "Custom" && (
+                          <div>
+                            <Label htmlFor="customTag">Custom Tags</Label>
+                            <div className="flex gap-2 mb-2">
+                              {form.watch("customTags").map((tag, index) => (
+                                <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                                  {tag}
+                                  <X
+                                    className="h-3 w-3 cursor-pointer"
+                                    onClick={() => {
+                                      const newTags = [...form.getValues("customTags")];
+                                      newTags.splice(index, 1);
+                                      form.setValue("customTags", newTags);
+                                    }}
+                                  />
+                                </Badge>
+                              ))}
+                            </div>
+                            <div className="flex gap-2">
+                              <Input
+                                id="customTag"
+                                placeholder="Add a custom tag"
+                                onKeyPress={(e) => {
+                                  if (e.key === "Enter") {
+                                    e.preventDefault();
+                                    const input = e.currentTarget;
+                                    const value = input.value.trim();
+                                    if (value && !form.getValues("customTags").includes(value)) {
+                                      form.setValue("customTags", [...form.getValues("customTags"), value]);
+                                      input.value = "";
+                                    }
+                                  }
+                                }}
+                              />
+                            </div>
+                          </div>
+                        )}
                         <div>
                           <Label htmlFor="image">Image</Label>
                           <Input
@@ -342,15 +403,22 @@ export default function MenuPage() {
                     <div className="flex justify-between items-center">
                       <span className="font-semibold">${parseFloat(item.price).toFixed(2)}</span>
                       <div className="flex flex-wrap gap-2">
+                        <Badge variant="outline">{item.courseType}</Badge>
+                        {item.customTags?.map((tag, index) => (
+                          <Badge key={index} variant="secondary">
+                            {tag}
+                          </Badge>
+                        ))}
                         {Object.entries(item.allergens)
                           .filter(([_, value]) => value)
                           .map(([key]) => (
-                            <span
+                            <Badge
                               key={key}
-                              className="px-2 py-1 bg-primary/10 text-primary text-xs rounded-full capitalize"
+                              variant="default"
+                              className="bg-primary/10 text-primary hover:bg-primary/20"
                             >
                               {key}
-                            </span>
+                            </Badge>
                           ))}
                       </div>
                     </div>

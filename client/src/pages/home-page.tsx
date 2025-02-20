@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/context-menu";
 import { Store, PlusCircle, ChevronDown, Loader2, Download, Trash2 } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Restaurant, MenuItem, insertMenuItemSchema, type InsertMenuItem, insertRestaurantSchema } from "@shared/schema";
+import { type Restaurant, type MenuItem, type InsertMenuItem, insertMenuItemSchema, insertRestaurantSchema, courseTypes } from "@shared/schema";
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -32,6 +32,15 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { X } from "lucide-react";
 
 export default function HomePage() {
   const { user, logoutMutation } = useAuth();
@@ -87,8 +96,10 @@ export default function HomePage() {
       name: "",
       description: "",
       price: "",
-      category: "",
+      courseType: "Appetizers",
+      customTags: [],
       restaurantId: 0,
+      image: "",
       allergens: {
         milk: false,
         eggs: false,
@@ -348,12 +359,65 @@ export default function HomePage() {
                 )}
               </div>
               <div>
-                <Label htmlFor="category">Category</Label>
-                <Input {...form.register("category")} />
-                {form.formState.errors.category && (
-                  <p className="text-sm text-destructive mt-1">{form.formState.errors.category.message}</p>
+                <Label htmlFor="courseType">Course Type</Label>
+                <Select
+                  onValueChange={(value) => form.setValue("courseType", value as any)}
+                  defaultValue={form.getValues("courseType")}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select course type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {courseTypes.map((type) => (
+                      <SelectItem key={type} value={type}>
+                        {type}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {form.formState.errors.courseType && (
+                  <p className="text-sm text-destructive mt-1">
+                    {form.formState.errors.courseType.message}
+                  </p>
                 )}
               </div>
+              {form.watch("courseType") === "Custom" && (
+                <div>
+                  <Label htmlFor="customTag">Custom Tags</Label>
+                  <div className="flex gap-2 mb-2">
+                    {form.watch("customTags").map((tag, index) => (
+                      <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                        {tag}
+                        <X
+                          className="h-3 w-3 cursor-pointer"
+                          onClick={() => {
+                            const newTags = [...form.getValues("customTags")];
+                            newTags.splice(index, 1);
+                            form.setValue("customTags", newTags);
+                          }}
+                        />
+                      </Badge>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <Input
+                      id="customTag"
+                      placeholder="Add a custom tag"
+                      onKeyPress={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          const input = e.currentTarget;
+                          const value = input.value.trim();
+                          if (value && !form.getValues("customTags").includes(value)) {
+                            form.setValue("customTags", [...form.getValues("customTags"), value]);
+                            input.value = "";
+                          }
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
               <div>
                 <Label>Allergens</Label>
                 <div className="grid grid-cols-2 gap-4 mt-2">

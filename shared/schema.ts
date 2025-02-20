@@ -21,7 +21,8 @@ export const menuItems = pgTable("menu_items", {
   description: text("description").notNull(),
   price: text("price").notNull(),
   image: text("image").default(''),
-  category: text("category").notNull(),
+  courseType: text("course_type").notNull(),
+  customTags: text("custom_tags").array().default([]),
   allergens: jsonb("allergens").$type<{
     milk: boolean;
     eggs: boolean;
@@ -46,9 +47,22 @@ export const menuItems = pgTable("menu_items", {
 export const insertUserSchema = createInsertSchema(users);
 export const insertRestaurantSchema = createInsertSchema(restaurants);
 
+export const courseTypes = [
+  "Appetizers",
+  "Mains",
+  "Desserts",
+  "Alcoholic",
+  "Non-Alcoholic",
+  "Custom"
+] as const;
+
 export const insertMenuItemSchema = createInsertSchema(menuItems).extend({
   price: z.string().min(1, "Price is required"),
-  category: z.string().min(1, "Category is required"),
+  courseType: z.enum(courseTypes, {
+    required_error: "Course type is required",
+    invalid_type_error: "Invalid course type",
+  }),
+  customTags: z.array(z.string()).default([]),
   description: z.string().min(1, "Description is required"),
   image: z.string().optional().default(''),
   allergens: z.object({
