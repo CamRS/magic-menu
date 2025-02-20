@@ -1,8 +1,55 @@
 import type { Express } from "express";
+import { z } from "zod";
 import { createServer, type Server } from "http";
 import { setupAuth } from "./auth.js";
 import { storage } from "./storage";
-import { insertMenuItemSchema, insertRestaurantSchema } from "@shared/schema";
+import { insertMenuItemSchema, insertRestaurantSchema, courseTypes } from "@shared/schema";
+
+// Helper function to parse CSV data
+function parseCSV(csvText: string): string[][] {
+  const rows: string[][] = [];
+  let currentRow: string[] = [];
+  let currentCell = '';
+  let insideQuotes = false;
+
+  for (let i = 0; i < csvText.length; i++) {
+    const char = csvText[i];
+    const nextChar = csvText[i + 1];
+
+    if (char === '"') {
+      if (insideQuotes && nextChar === '"') {
+        // Handle escaped quotes
+        currentCell += '"';
+        i++; // Skip next quote
+      } else {
+        // Toggle quote state
+        insideQuotes = !insideQuotes;
+      }
+    } else if (char === ',' && !insideQuotes) {
+      // End of cell
+      currentRow.push(currentCell);
+      currentCell = '';
+    } else if (char === '\n' && !insideQuotes) {
+      // End of row
+      currentRow.push(currentCell);
+      rows.push(currentRow);
+      currentRow = [];
+      currentCell = '';
+    } else {
+      currentCell += char;
+    }
+  }
+
+  // Handle last cell and row
+  if (currentCell) {
+    currentRow.push(currentCell);
+  }
+  if (currentRow.length > 0) {
+    rows.push(currentRow);
+  }
+
+  return rows;
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   setupAuth(app);
@@ -82,9 +129,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const parsed = insertMenuItemSchema.safeParse(req.body);
 
       if (!parsed.success) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           message: "Invalid menu item data",
-          errors: parsed.error.errors 
+          errors: parsed.error.errors
         });
       }
 
@@ -208,6 +255,99 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.send(csv);
     } catch (error) {
       console.error('Error exporting menu:', error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Add new CSV import endpoint
+  app.post("/api/restaurants/:id/menu/import", async (req, res) => {
+    try {
+      if (!req.user) return res.sendStatus(401);
+
+      const restaurantId = parseInt(req.params.id);
+      if (isNaN(restaurantId)) {
+        return res.status(400).json({ message: "Invalid restaurant ID" });
+      }
+
+      // Verify restaurant belongs to user
+      const restaurant = await storage.getRestaurant(restaurantId);
+      if (!restaurant || restaurant.userId !== req.user.id) {
+        return res.status(403).json({ message: "Unauthorized access to restaurant" });
+      }
+
+      // Check if csv data is present in request body
+      if (!req.body.csvData) {
+        return res.status(400).json({ message: "No CSV data provided" });
+      }
+
+      const rows = parseCSV(req.body.csvData);
+      if (rows.length < 2) {
+        return res.status(400).json({ message: "CSV file is empty or invalid" });
+      }
+
+      // Verify header row
+      const expectedHeaders = ["Name", "Description", "Price", "Course Type", "Custom Tags", "Allergens"];
+      const headers = rows[0];
+      if (!expectedHeaders.every((header, i) => header === headers[i])) {
+        return res.status(400).json({ message: "Invalid CSV format. Please use the template from the export function." });
+      }
+
+      const results = {
+        success: 0,
+        failed: 0,
+        errors: [] as string[],
+      };
+
+      // Process each row (skip header)
+      for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
+        if (row.length !== 6) continue; // Skip invalid rows
+
+        try {
+          const customTags = row[4] ? row[4].split(';').map(tag => tag.trim()) : [];
+          const allergens = row[5].split(';').reduce((acc, allergen) => {
+            const key = allergen.trim().toLowerCase();
+            if (key) acc[key] = true;
+            return acc;
+          }, {
+            milk: false,
+            eggs: false,
+            peanuts: false,
+            nuts: false,
+            shellfish: false,
+            fish: false,
+            soy: false,
+            gluten: false,
+          });
+
+          const menuItem = {
+            restaurantId,
+            name: row[0],
+            description: row[1],
+            price: row[2],
+            courseType: row[3],
+            customTags,
+            allergens,
+          };
+
+          const parsed = insertMenuItemSchema.safeParse(menuItem);
+          if (!parsed.success) {
+            results.failed++;
+            results.errors.push(`Row ${i}: ${parsed.error.errors.map(e => e.message).join(', ')}`);
+            continue;
+          }
+
+          await storage.createMenuItem(parsed.data);
+          results.success++;
+        } catch (error) {
+          results.failed++;
+          results.errors.push(`Row ${i}: Failed to process row`);
+        }
+      }
+
+      res.json(results);
+    } catch (error) {
+      console.error('Error importing menu:', error);
       res.status(500).json({ message: "Internal server error" });
     }
   });

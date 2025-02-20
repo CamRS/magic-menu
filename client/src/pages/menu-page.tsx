@@ -31,7 +31,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Loader2, PlusCircle, Download, Trash2, Pencil, MoreVertical } from "lucide-react";
+import { Loader2, PlusCircle, Download, Upload, Trash2, Pencil, MoreVertical } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
@@ -205,6 +205,62 @@ export default function MenuPage() {
       toast({
         title: "Error",
         description: "Failed to export menu",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleImportCSV = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !restaurantId) return;
+
+    try {
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        try {
+          const csvData = event.target?.result;
+
+          const response = await fetch(`/api/restaurants/${restaurantId}/menu/import`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ csvData }),
+          });
+
+          const result = await response.json();
+
+          if (!response.ok) {
+            throw new Error(result.message || 'Failed to import menu items');
+          }
+
+          e.target.value = '';
+
+          toast({
+            title: "Import Complete",
+            description: `Successfully imported ${result.success} items. ${
+              result.failed > 0 ? `Failed to import ${result.failed} items.` : ''
+            }`,
+            variant: result.failed > 0 ? "destructive" : "default",
+          });
+
+          queryClient.invalidateQueries({ queryKey: ["/api/menu-items", restaurantId] });
+        } catch (error) {
+          console.error('Error importing CSV:', error);
+          toast({
+            title: "Error",
+            description: error instanceof Error ? error.message : "Failed to import menu items",
+            variant: "destructive",
+          });
+        }
+      };
+
+      reader.readAsText(file);
+    } catch (error) {
+      console.error('Error reading file:', error);
+      toast({
+        title: "Error",
+        description: "Failed to read the CSV file",
         variant: "destructive",
       });
     }
@@ -430,10 +486,22 @@ export default function MenuPage() {
                   Delete Selected ({selectedItems.length})
                 </Button>
               )}
-              <Button variant="outline" onClick={handleExportCSV}>
-                <Download className="mr-2 h-4 w-4" />
-                Export CSV
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={handleExportCSV}>
+                  <Download className="mr-2 h-4 w-4" />
+                  Export CSV
+                </Button>
+                <Button variant="outline" className="relative">
+                  <input
+                    type="file"
+                    accept=".csv"
+                    onChange={handleImportCSV}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  />
+                  <Upload className="mr-2 h-4 w-4" />
+                  Import CSV
+                </Button>
+              </div>
             </div>
           </div>
         </div>
@@ -446,7 +514,6 @@ export default function MenuPage() {
                 selectedItems.includes(item.id) ? "ring-2 ring-primary" : ""
               }`}
               onClick={(e) => {
-                // Only toggle selection if we didn't click the dropdown menu
                 if (!(e.target as HTMLElement).closest('[data-dropdown-trigger="true"]')) {
                   toggleItemSelection(item.id);
                 }
