@@ -23,27 +23,17 @@ export default function PublicMenuPage() {
   const [matches, params] = useRoute("/menu/:restaurantId");
   const restaurantId = params?.restaurantId;
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCourse, setSelectedCourse] = useState<string>("");
+  const [selectedCourse, setSelectedCourse] = useState<string>("all");
   const [selectedAllergens, setSelectedAllergens] = useState<AllergenType[]>([]);
 
   const { data: restaurant, isLoading: isLoadingRestaurant } = useQuery<Restaurant>({
     queryKey: ["/api/restaurants", restaurantId],
-    queryFn: async () => {
-      const response = await fetch(`/api/restaurants/${restaurantId}`);
-      if (!response.ok) throw new Error('Failed to fetch restaurant');
-      return response.json();
-    },
-    enabled: !!restaurantId,
+    enabled: !!restaurantId
   });
 
   const { data: menuItems, isLoading: isLoadingMenu } = useQuery<MenuItem[]>({
     queryKey: ["/api/menu-items", restaurantId],
-    queryFn: async () => {
-      const response = await fetch(`/api/menu-items?restaurantId=${restaurantId}`);
-      if (!response.ok) throw new Error('Failed to fetch menu items');
-      return response.json();
-    },
-    enabled: !!restaurantId,
+    enabled: !!restaurantId
   });
 
   const filteredItems = useMemo(() => {
@@ -56,7 +46,7 @@ export default function PublicMenuPage() {
         item.description.toLowerCase().includes(searchTerm.toLowerCase());
 
       // Course filter
-      const matchesCourse = selectedCourse === "" || item.courseType === selectedCourse;
+      const matchesCourse = selectedCourse === "all" || item.courseType === selectedCourse;
 
       // Allergen filter - exclude items that contain any selected allergen
       const matchesAllergens = selectedAllergens.length === 0 || 
@@ -105,7 +95,7 @@ export default function PublicMenuPage() {
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-4xl mx-auto">
         <h1 className="text-4xl font-bold mb-8 text-center">
-          {restaurant?.name}
+          {restaurant.name}
         </h1>
 
         <div className="bg-white rounded-lg shadow p-6 mb-8">
@@ -133,7 +123,7 @@ export default function PublicMenuPage() {
                   <SelectValue placeholder="All Courses" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Courses</SelectItem>
+                  <SelectItem value="all">All Courses</SelectItem>
                   {courseTypes.map((type) => (
                     <SelectItem key={type} value={type}>
                       {type}
