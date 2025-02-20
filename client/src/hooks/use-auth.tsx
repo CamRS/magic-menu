@@ -20,6 +20,7 @@ type AuthContextType = {
 type LoginData = {
   email: string;
   password: string;
+  rememberMe?: boolean;
 };
 
 export const AuthContext = createContext<AuthContextType | null>(null);
@@ -32,6 +33,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   } = useQuery<SelectUser | undefined, Error>({
     queryKey: ["/api/user"],
     queryFn: getQueryFn({ on401: "returnNull" }),
+    staleTime: 0, // Don't cache user data
+    cacheTime: 0, // Remove from cache immediately
   });
 
   const loginMutation = useMutation({
@@ -52,7 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
 
   const registerMutation = useMutation({
-    mutationFn: async (credentials: InsertUser) => {
+    mutationFn: async (credentials: InsertUser & { restaurantName: string }) => {
       const res = await apiRequest("POST", "/api/register", credentials);
       return await res.json();
     },
@@ -73,6 +76,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await apiRequest("POST", "/api/logout");
     },
     onSuccess: () => {
+      // Clear all queries from the cache on logout
+      queryClient.clear();
+      // Reset the user state
       queryClient.setQueryData(["/api/user"], null);
     },
     onError: (error: Error) => {

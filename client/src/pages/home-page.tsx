@@ -45,8 +45,10 @@ export default function HomePage() {
   const [selectedItems, setSelectedItems] = useState<number[]>([]);
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
 
-  const { data: restaurants } = useQuery<Restaurant[]>({
+  const { data: restaurants, isLoading: isLoadingRestaurants } = useQuery<Restaurant[]>({
     queryKey: ["/api/restaurants"],
+    enabled: !!user?.id, // Only fetch if user is logged in
+    staleTime: 0, // Don't cache restaurant data
   });
 
   const { data: menuItems, isLoading: isLoadingMenuItems } = useQuery<MenuItem[]>({
@@ -57,7 +59,8 @@ export default function HomePage() {
       if (!response.ok) throw new Error("Failed to fetch menu items");
       return response.json();
     },
-    enabled: !!selectedRestaurant?.id,
+    enabled: !!selectedRestaurant?.id && !!user?.id, // Only fetch if restaurant is selected and user is logged in
+    staleTime: 0, // Don't cache menu items
   });
 
   const handleExportCSV = async () => {
@@ -317,12 +320,20 @@ export default function HomePage() {
     }
   };
 
-  if (!restaurants?.length) {
+  if (!restaurants?.length && !isLoadingRestaurants) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <p className="text-muted-foreground">Please create a restaurant first</p>
       </div>
     );
+  }
+
+  if (isLoadingRestaurants || isLoadingMenuItems) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="animate-spin h-12 w-12" />
+      </div>
+    )
   }
 
   return (
@@ -386,7 +397,7 @@ export default function HomePage() {
                 Copy Menu URL
               </Button>
             )}
-            <Button 
+            <Button
               onClick={() => setCreateMenuItemOpen(true)}
               className="w-full sm:w-auto"
             >
@@ -406,8 +417,8 @@ export default function HomePage() {
                 Delete Selected ({selectedItems.length})
               </Button>
             )}
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={handleExportCSV}
               className="w-full sm:w-auto"
             >
