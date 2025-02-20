@@ -11,11 +11,12 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Store, PlusCircle, Loader2 } from "lucide-react";
+import { Store, PlusCircle, ChevronDown, Loader2 } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Restaurant, MenuItem, insertMenuItemSchema, type InsertMenuItem } from "@shared/schema";
+import { Restaurant, MenuItem, insertMenuItemSchema, type InsertMenuItem, insertRestaurantSchema } from "@shared/schema";
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -31,6 +32,7 @@ export default function HomePage() {
   const { toast } = useToast();
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
   const [isCreateMenuItemOpen, setCreateMenuItemOpen] = useState(false);
+  const [isCreateRestaurantOpen, setCreateRestaurantOpen] = useState(false);
 
   const { data: restaurants } = useQuery<Restaurant[]>({
     queryKey: ["/api/restaurants"],
@@ -104,7 +106,46 @@ export default function HomePage() {
     },
   });
 
-  // Set initial restaurant if none selected
+  const createRestaurantForm = useForm({
+    resolver: zodResolver(insertRestaurantSchema),
+    defaultValues: {
+      name: "",
+      userId: user?.id || 0,
+    },
+  });
+
+  const createRestaurantMutation = useMutation({
+    mutationFn: async (data: { name: string }) => {
+      const restaurant = {
+        ...data,
+        userId: user?.id || 0,
+      };
+
+      const response = await apiRequest("POST", "/api/restaurants", restaurant);
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to create restaurant");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/restaurants"] });
+      setCreateRestaurantOpen(false);
+      createRestaurantForm.reset();
+      toast({
+        title: "Success",
+        description: "Restaurant created successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   useEffect(() => {
     if (!selectedRestaurant && restaurants?.length) {
       setSelectedRestaurant(restaurants[0]);
@@ -128,11 +169,12 @@ export default function HomePage() {
               <Store className="h-8 w-8" />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="font-bold text-xl">
-                    {selectedRestaurant?.name || restaurants[0].name}
+                  <Button variant="ghost" className="font-bold text-xl flex items-center gap-2">
+                    {selectedRestaurant?.name || restaurants?.[0]?.name}
+                    <ChevronDown className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="start">
+                <DropdownMenuContent align="start" className="w-[200px]">
                   {restaurants?.map((restaurant) => (
                     <DropdownMenuItem
                       key={restaurant.id}
@@ -141,6 +183,11 @@ export default function HomePage() {
                       {restaurant.name}
                     </DropdownMenuItem>
                   ))}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => setCreateRestaurantOpen(true)}>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Add New Restaurant
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </h1>
@@ -153,6 +200,35 @@ export default function HomePage() {
             Logout
           </Button>
         </div>
+
+        <Dialog open={isCreateRestaurantOpen} onOpenChange={setCreateRestaurantOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Add New Restaurant</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={createRestaurantForm.handleSubmit((data) => createRestaurantMutation.mutate(data))} className="space-y-4">
+              <div>
+                <Label htmlFor="name">Restaurant Name</Label>
+                <Input id="name" {...createRestaurantForm.register("name")} />
+                {createRestaurantForm.formState.errors.name && (
+                  <p className="text-sm text-destructive mt-1">
+                    {createRestaurantForm.formState.errors.name.message}
+                  </p>
+                )}
+              </div>
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={createRestaurantMutation.isPending}
+              >
+                {createRestaurantMutation.isPending && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                Create Restaurant
+              </Button>
+            </form>
+          </DialogContent>
+        </Dialog>
 
         <Dialog open={isCreateMenuItemOpen} onOpenChange={setCreateMenuItemOpen}>
           <DialogContent>
