@@ -88,16 +88,17 @@ export default function MenuPage() {
     },
   });
 
-  useEffect(() => {
-    if (editItem) {
-      form.reset({
-        ...editItem,
-        price: editItem.price.toString(),
-        image: editItem.image || undefined,
-      });
-      setOpen(true);
-    }
-  }, [editItem, form]);
+useEffect(() => {
+  if (editItem) {
+    form.reset({
+      ...editItem,
+      price: editItem.price.toString(),
+      image: editItem.image || undefined,
+      courseType: editItem.courseType as "Appetizers" | "Mains" | "Desserts" | "Alcoholic" | "Non-Alcoholic" | "Custom",
+    });
+    setOpen(true);
+  }
+}, [editItem, form]);
 
   const createMutation = useMutation({
     mutationFn: async (data: any) => {

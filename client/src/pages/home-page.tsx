@@ -184,6 +184,7 @@ export default function HomePage() {
         ...editingItem,
         price: editingItem.price.toString(),
         image: editingItem.image || undefined,
+        courseType: editingItem.courseType as "Appetizers" | "Mains" | "Desserts" | "Alcoholic" | "Non-Alcoholic" | "Custom",
       });
       setCreateMenuItemOpen(true);
     }
