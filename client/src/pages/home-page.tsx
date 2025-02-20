@@ -113,6 +113,7 @@ export default function HomePage() {
       form.reset({
         ...editingItem,
         price: editingItem.price.toString(),
+        image: editingItem.image || undefined,
       });
       setCreateMenuItemOpen(true);
     }
@@ -325,11 +326,11 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
+    <div className="min-h-screen bg-gray-50 p-4 md:p-8">
       <div className="max-w-4xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <div className="flex items-center gap-4">
-            <h1 className="text-3xl font-bold flex items-center gap-2">
+        <div className="flex flex-col gap-4 mb-8">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div className="flex items-center gap-2">
               <Store className="h-8 w-8" />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -367,43 +368,53 @@ export default function HomePage() {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-            </h1>
-            <div className="flex gap-2">
-              {selectedRestaurant && (
-                <Button
-                  variant="outline"
-                  className="flex items-center gap-2"
-                  onClick={() => copyMenuUrl(selectedRestaurant.id)}
-                >
-                  <Globe className="h-4 w-4" />
-                  Copy Menu URL
-                </Button>
-              )}
-              <Button onClick={() => setCreateMenuItemOpen(true)}>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Add Menu Item
-              </Button>
-              {selectedItems.length > 0 && (
-                <Button
-                  variant="destructive"
-                  onClick={handleDeleteSelected}
-                  disabled={deleteMutation.isPending}
-                >
-                  {deleteMutation.isPending && (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  )}
-                  Delete Selected ({selectedItems.length})
-                </Button>
-              )}
-              <Button variant="outline" onClick={handleExportCSV}>
-                <Download className="mr-2 h-4 w-4" />
-                Export CSV
-              </Button>
             </div>
+
+            <Button variant="outline" onClick={() => logoutMutation.mutate()} className="md:ml-auto">
+              Logout
+            </Button>
           </div>
-          <Button variant="outline" onClick={() => logoutMutation.mutate()}>
-            Logout
-          </Button>
+
+          <div className="flex flex-col sm:flex-row gap-2 flex-wrap">
+            {selectedRestaurant && (
+              <Button
+                variant="outline"
+                className="flex items-center gap-2 w-full sm:w-auto"
+                onClick={() => copyMenuUrl(selectedRestaurant.id)}
+              >
+                <Globe className="h-4 w-4" />
+                Copy Menu URL
+              </Button>
+            )}
+            <Button 
+              onClick={() => setCreateMenuItemOpen(true)}
+              className="w-full sm:w-auto"
+            >
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Add Menu Item
+            </Button>
+            {selectedItems.length > 0 && (
+              <Button
+                variant="destructive"
+                onClick={handleDeleteSelected}
+                disabled={deleteMutation.isPending}
+                className="w-full sm:w-auto"
+              >
+                {deleteMutation.isPending && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                Delete Selected ({selectedItems.length})
+              </Button>
+            )}
+            <Button 
+              variant="outline" 
+              onClick={handleExportCSV}
+              className="w-full sm:w-auto"
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Export CSV
+            </Button>
+          </div>
         </div>
 
         <Dialog open={isCreateRestaurantOpen} onOpenChange={setCreateRestaurantOpen}>
