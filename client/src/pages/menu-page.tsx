@@ -440,11 +440,11 @@ export default function MenuPage() {
         <div className="grid md:grid-cols-2 gap-6">
           {menuItems?.map((item) => (
             <ContextMenu key={item.id}>
-              <ContextMenuTrigger>
+              <ContextMenuTrigger asChild>
                 <Card
                   className={`relative ${
                     selectedItems.includes(item.id) ? "ring-2 ring-primary" : ""
-                  }`}
+                  } cursor-context-menu`}
                   onClick={() => toggleItemSelection(item.id)}
                 >
                   <CardContent className="p-6">
@@ -487,13 +487,13 @@ export default function MenuPage() {
                 </Card>
               </ContextMenuTrigger>
               <ContextMenuContent>
-                <ContextMenuItem onClick={() => setEditItem(item)}>
+                <ContextMenuItem onSelect={() => setEditItem(item)}>
                   <Pencil className="mr-2 h-4 w-4" />
                   Edit
                 </ContextMenuItem>
                 <ContextMenuItem
                   className="text-destructive focus:text-destructive"
-                  onClick={() => deleteMutation.mutate([item.id])}
+                  onSelect={() => deleteMutation.mutate([item.id])}
                 >
                   <Trash2 className="mr-2 h-4 w-4" />
                   Delete
