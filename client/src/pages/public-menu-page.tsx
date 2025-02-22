@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useRoute } from "wouter";
-import { type MenuItem, type Restaurant, courseTypes } from "@shared/schema";
+import { type MenuItem, type Restaurant } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { ChevronDown, Loader2, Search } from "lucide-react";
@@ -26,19 +26,19 @@ const allergensList: AllergenType[] = ['milk', 'eggs', 'peanuts', 'nuts', 'shell
 
 export default function PublicMenuPage() {
   const [matches, params] = useRoute("/menu/:restaurantId");
-  const restaurantId = params?.restaurantId;
+  const restaurantId = params?.restaurantId ? parseInt(params.restaurantId) : null;
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCourse, setSelectedCourse] = useState<string>("all");
   const [selectedAllergens, setSelectedAllergens] = useState<AllergenType[]>([]);
 
-  const { data: restaurant } = useQuery<Restaurant>({
+  const { data: restaurant, isLoading: isLoadingRestaurant } = useQuery<Restaurant>({
     queryKey: ["/api/restaurants", restaurantId],
     enabled: !!restaurantId,
   });
 
-  const { data: menuItems } = useQuery<MenuItem[]>({
+  const { data: menuItems, isLoading: isLoadingMenu } = useQuery<MenuItem[]>({
     queryKey: ["/api/menu-items", restaurantId],
-    enabled: !!restaurantId
+    enabled: !!restaurantId,
   });
 
   const filteredItems = useMemo(() => {
@@ -58,7 +58,23 @@ export default function PublicMenuPage() {
     });
   }, [menuItems, searchTerm, selectedCourse, selectedAllergens]);
 
-  if (!matches || !restaurantId || !restaurant) {
+  if (!matches || !restaurantId) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-black text-white">
+        <p className="text-gray-400">Restaurant not found</p>
+      </div>
+    );
+  }
+
+  if (isLoadingRestaurant || isLoadingMenu) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-black text-white">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  if (!restaurant) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-black text-white">
         <p className="text-gray-400">Restaurant not found</p>

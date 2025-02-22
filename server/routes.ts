@@ -77,7 +77,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/menu-items", async (req, res) => {
     try {
       const restaurantId = parseInt(req.query.restaurantId as string);
-      if (isNaN(restaurantId)) {
+      if (isNaN(restaurantId) || restaurantId <=0) { //Added check for <=0
         return res.status(400).json({ message: "Invalid restaurant ID" });
       }
 
