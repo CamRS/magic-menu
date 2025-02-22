@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { X } from "lucide-react";
-import { courseTypes, type MenuItem, type InsertMenuItem, insertMenuItemSchema } from "@shared/schema";
+import { courseTypes, type MenuItem, type InsertMenuItem, insertMenuItemSchema, type Restaurant } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -606,45 +606,6 @@ export default function MenuPage() {
               </div>
             </div>
           </div>
-        </div>
-
-        <div className="space-y-4">
-          {filteredMenuItems?.map((item) => (
-            <Card
-              key={item.id}
-              className="bg-[#1E1E1E]/80 border-none text-white overflow-hidden"
-            >
-              <CardContent className="p-4">
-                {item.image ? (
-                  <img
-                    src={item.image}
-                    alt={item.name}
-                    className="w-full h-48 object-cover rounded-lg mb-4"
-                  />
-                ) : null}
-                <div className="space-y-2">
-                  <div className="flex justify-between items-start">
-                    <h3 className="text-xl font-bold">{item.name}</h3>
-                    <span className="text-lg font-semibold text-white">${parseFloat(item.price).toFixed(2)}</span>
-                  </div>
-                  <p className="text-gray-300">{item.description}</p>
-                  <div className="flex flex-wrap gap-2">
-                    {Object.entries(item.allergens)
-                      .filter(([_, value]) => value)
-                      .map(([key]) => (
-                        <Badge
-                          key={key}
-                          variant="outline"
-                          className="bg-transparent border-gray-600 text-gray-300"
-                        >
-                          Contains {key}
-                        </Badge>
-                      ))}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
         </div>
       </div>
     </div>
