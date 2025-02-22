@@ -35,13 +35,6 @@ import { Loader2, PlusCircle, Download, Upload, Trash2, Pencil, MoreVertical } f
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-} from "@/components/ui/carousel";
 
 type AllergenInfo = {
   milk: boolean;
@@ -96,16 +89,17 @@ export default function MenuPage() {
   });
 
 useEffect(() => {
-  if (editItem) {
-    form.reset({
-      ...editItem,
-      price: editItem.price.toString(),
-      image: editItem.image || undefined,
-      courseType: editItem.courseType as "Appetizers" | "Mains" | "Desserts" | "Alcoholic" | "Non-Alcoholic" | "Custom",
-    });
-    setOpen(true);
-  }
-}, [editItem, form]);
+    if (editItem) {
+      form.reset({
+        ...editItem,
+        price: editItem.price.toString(),
+        image: editItem.image || undefined,
+        courseType: editItem.courseType as "Appetizers" | "Mains" | "Desserts" | "Alcoholic" | "Non-Alcoholic" | "Custom",
+        customTags: editItem.customTags || [], // Handle null case
+      });
+      setOpen(true);
+    }
+  }, [editItem, form]);
 
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -327,11 +321,11 @@ useEffect(() => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
+    <div className="min-h-screen bg-gray-800 p-8">
       <div className="max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <div className="flex items-center gap-4">
-            <h1 className="text-3xl font-bold">Menu Items</h1>
+            <h1 className="text-3xl font-bold text-white">Menu Items</h1>
             <div className="flex gap-2">
               <Dialog open={open} onOpenChange={(isOpen) => {
                 setOpen(isOpen);
@@ -342,11 +336,11 @@ useEffect(() => {
               }}>
                 <DialogTrigger asChild>
                   <Button>
-                    <PlusCircle className="mr-2 h-4 w-4" />
+                    <PlusCircle className="mr-2 h-4 w-4 text-white" />
                     Add Item
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-2xl">
+                <DialogContent className="max-w-2xl bg-gray-700 text-white">
                   <DialogHeader>
                     <DialogTitle>{editItem ? "Edit Menu Item" : "Add Menu Item"}</DialogTitle>
                   </DialogHeader>
@@ -357,7 +351,7 @@ useEffect(() => {
                           <Label htmlFor="name">Name</Label>
                           <Input id="name" {...form.register("name")} />
                           {form.formState.errors.name && (
-                            <p className="text-sm text-destructive mt-1">
+                            <p className="text-sm text-red-500 mt-1">
                               {form.formState.errors.name.message}
                             </p>
                           )}
@@ -366,7 +360,7 @@ useEffect(() => {
                           <Label htmlFor="description">Description</Label>
                           <Textarea id="description" {...form.register("description")} />
                           {form.formState.errors.description && (
-                            <p className="text-sm text-destructive mt-1">
+                            <p className="text-sm text-red-500 mt-1">
                               {form.formState.errors.description.message}
                             </p>
                           )}
@@ -375,7 +369,7 @@ useEffect(() => {
                           <Label htmlFor="price">Price</Label>
                           <Input id="price" {...form.register("price")} />
                           {form.formState.errors.price && (
-                            <p className="text-sm text-destructive mt-1">
+                            <p className="text-sm text-red-500 mt-1">
                               {form.formState.errors.price.message}
                             </p>
                           )}
@@ -398,7 +392,7 @@ useEffect(() => {
                             </SelectContent>
                           </Select>
                           {form.formState.errors.courseType && (
-                            <p className="text-sm text-destructive mt-1">
+                            <p className="text-sm text-red-500 mt-1">
                               {form.formState.errors.courseType.message}
                             </p>
                           )}
@@ -411,7 +405,7 @@ useEffect(() => {
                                 <Badge key={index} variant="secondary" className="flex items-center gap-1">
                                   {tag}
                                   <X
-                                    className="h-3 w-3 cursor-pointer"
+                                    className="h-3 w-3 cursor-pointer text-white"
                                     onClick={() => {
                                       const newTags = [...form.getValues("customTags")];
                                       newTags.splice(index, 1);
@@ -475,7 +469,7 @@ useEffect(() => {
                       disabled={createMutation.isPending || updateMutation.isPending}
                     >
                       {(createMutation.isPending || updateMutation.isPending) && (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin text-white" />
                       )}
                       {editItem ? "Update Item" : "Add Item"}
                     </Button>
@@ -496,7 +490,7 @@ useEffect(() => {
               )}
               <div className="flex gap-2">
                 <Button variant="outline" onClick={handleExportCSV}>
-                  <Download className="mr-2 h-4 w-4" />
+                  <Download className="mr-2 h-4 w-4 text-white" />
                   Export CSV
                 </Button>
                 <Button variant="outline" className="relative">
@@ -506,7 +500,7 @@ useEffect(() => {
                     onChange={handleImportCSV}
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                   />
-                  <Upload className="mr-2 h-4 w-4" />
+                  <Upload className="mr-2 h-4 w-4 text-white" />
                   Import CSV
                 </Button>
               </div>
@@ -514,105 +508,99 @@ useEffect(() => {
           </div>
         </div>
 
-        {/* Replace the grid layout with Carousel */}
         <div className="w-full">
-          <Carousel className="w-full">
-            <CarouselContent className="gap-4">
-              {menuItems?.map((item) => (
-                <CarouselItem key={item.id} className="basis-full sm:basis-1/2 md:basis-1/3 lg:basis-1/4">
-                  <Card
-                    className={`relative transform transition-all duration-200 hover:scale-105 ${
-                      selectedItems.includes(item.id) ? "ring-2 ring-primary" : ""
-                    }`}
-                    onClick={(e) => {
-                      if (!(e.target as HTMLElement).closest('[data-dropdown-trigger="true"]')) {
-                        toggleItemSelection(item.id);
-                      }
-                    }}
-                  >
-                    <CardContent className="p-4">
-                      <div className="absolute top-2 right-2 z-10">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              data-dropdown-trigger="true"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <MoreVertical className="h-4 w-4" />
-                              <span className="sr-only">Open menu</span>
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setEditItem(item);
-                              }}
-                            >
-                              <Pencil className="mr-2 h-4 w-4" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              className="text-destructive focus:text-destructive"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                deleteMutation.mutate([item.id]);
-                              }}
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
+          {menuItems?.map((item) => (
+            <Card
+              key={item.id}
+              className={`relative mb-6 transform transition-all duration-200 hover:scale-[1.02] ${
+                selectedItems.includes(item.id) ? "ring-2 ring-primary" : ""
+              }`}
+              onClick={(e) => {
+                if (!(e.target as HTMLElement).closest('[data-dropdown-trigger="true"]')) {
+                  toggleItemSelection(item.id);
+                }
+              }}
+            >
+              <CardContent className="p-6">
+                <div className="absolute top-4 right-4 z-10">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        data-dropdown-trigger="true"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <MoreVertical className="h-4 w-4 text-white" />
+                        <span className="sr-only">Open menu</span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditItem(item);
+                        }}
+                      >
+                        <Pencil className="mr-2 h-4 w-4" />
+                        Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="text-destructive focus:text-destructive"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteMutation.mutate([item.id]);
+                        }}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
 
-                      {item.image ? (
-                        <img
-                          src={item.image}
-                          alt={item.name}
-                          className="w-full h-48 object-cover rounded-lg mb-4"
-                        />
-                      ) : (
-                        <div className="w-full h-48 bg-gray-100 rounded-lg mb-4 flex items-center justify-center">
-                          <span className="text-gray-400">No image</span>
-                        </div>
-                      )}
-                      <h3 className="text-xl font-semibold mb-2">{item.name}</h3>
-                      <p className="text-muted-foreground mb-4 line-clamp-2">{item.description}</p>
-                      <div className="flex justify-between items-center">
-                        <span className="text-lg font-bold text-primary">${parseFloat(item.price).toFixed(2)}</span>
-                        <div className="flex flex-wrap gap-1">
-                          <Badge variant="outline" className="text-xs">{item.courseType}</Badge>
-                          {item.customTags?.map((tag, index) => (
-                            <Badge key={index} variant="secondary" className="text-xs">
-                              {tag}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                      <div className="mt-2 flex flex-wrap gap-1">
-                        {Object.entries(item.allergens)
-                          .filter(([_, value]) => value)
-                          .map(([key]) => (
-                            <Badge
-                              key={key}
-                              variant="default"
-                              className="bg-primary/10 text-primary hover:bg-primary/20 text-xs"
-                            >
-                              {key}
-                            </Badge>
-                          ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </CarouselItem>
-              ))}
-            </CarouselContent>
-            <CarouselPrevious />
-            <CarouselNext />
-          </Carousel>
+                {item.image ? (
+                  <img
+                    src={item.image}
+                    alt={item.name}
+                    className="w-full h-60 object-cover rounded-lg mb-4"
+                  />
+                ) : (
+                  <div className="w-full h-60 bg-gray-100 rounded-lg mb-4 flex items-center justify-center">
+                    <span className="text-gray-400">No image</span>
+                  </div>
+                )}
+                <div className="flex flex-col space-y-2">
+                  <div className="flex justify-between items-start">
+                    <h3 className="text-2xl font-bold text-white">{item.name}</h3>
+                    <span className="text-xl font-bold text-primary">${parseFloat(item.price).toFixed(2)}</span>
+                  </div>
+                  <p className="text-muted-foreground text-lg text-white">{item.description}</p>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    <Badge variant="outline" className="text-sm text-white">{item.courseType}</Badge>
+                    {item.customTags?.map((tag, index) => (
+                      <Badge key={index} variant="secondary" className="text-sm text-white">
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {Object.entries(item.allergens)
+                      .filter(([_, value]) => value)
+                      .map(([key]) => (
+                        <Badge
+                          key={key}
+                          variant="default"
+                          className="bg-primary/10 text-primary hover:bg-primary/20 text-sm text-white"
+                        >
+                          {key}
+                        </Badge>
+                      ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       </div>
     </div>
