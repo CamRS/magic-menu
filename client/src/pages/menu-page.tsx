@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { X } from "lucide-react";
-import { courseTypes, type MenuItem, type InsertMenuItem, insertMenuItemSchema, type Restaurant } from "@shared/schema";
+import { courseTypes, type MenuItem, type InsertMenuItem, insertMenuItemSchema } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -51,6 +51,8 @@ export default function MenuPage() {
   const [open, setOpen] = useState(false);
   const [editItem, setEditItem] = useState<MenuItem | null>(null);
   const [selectedItems, setSelectedItems] = useState<number[]>([]);
+  const [selectedCourse, setSelectedCourse] = useState("All Courses");
+  const [selectedAllergens, setSelectedAllergens] = useState<string[]>([]);
   const [location] = useLocation();
   const { toast } = useToast();
   const restaurantId = new URLSearchParams(location.split('?')[1]).get('restaurantId');
@@ -88,14 +90,14 @@ export default function MenuPage() {
     },
   });
 
-useEffect(() => {
+  useEffect(() => {
     if (editItem) {
       form.reset({
         ...editItem,
         price: editItem.price.toString(),
         image: editItem.image || undefined,
         courseType: editItem.courseType as "Appetizers" | "Mains" | "Desserts" | "Alcoholic" | "Non-Alcoholic" | "Custom",
-        customTags: editItem.customTags || [], // Handle null case
+        customTags: editItem.customTags || [],
       });
       setOpen(true);
     }
@@ -304,6 +306,13 @@ useEffect(() => {
     }
   };
 
+  const filteredMenuItems = menuItems?.filter(item => {
+    const matchesCourse = selectedCourse === "All Courses" || item.courseType === selectedCourse;
+    const matchesAllergens = selectedAllergens.length === 0 || 
+      !selectedAllergens.some(allergen => item.allergens[allergen as keyof AllergenInfo]);
+    return matchesCourse && matchesAllergens;
+  });
+
   if (!restaurantId) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -321,8 +330,99 @@ useEffect(() => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-800 p-8">
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen bg-[#121212] p-4">
+      <div className="max-w-3xl mx-auto">
+        <div className="mb-8">
+          <div className="flex flex-col gap-6">
+            <Input
+              type="search"
+              placeholder="Search menu"
+              className="bg-[#1E1E1E] border-none text-white placeholder:text-gray-400"
+            />
+
+            <div>
+              <p className="text-white mb-2">I'm allergic to</p>
+              <div className="flex flex-wrap gap-2">
+                {Object.keys(form.getValues().allergens).map((allergen) => (
+                  <Button
+                    key={allergen}
+                    variant={selectedAllergens.includes(allergen) ? "default" : "outline"}
+                    className={`rounded-full ${
+                      selectedAllergens.includes(allergen)
+                        ? "bg-blue-600 text-white"
+                        : "bg-[#1E1E1E] text-white hover:bg-[#2E2E2E]"
+                    }`}
+                    onClick={() => {
+                      setSelectedAllergens(prev =>
+                        prev.includes(allergen)
+                          ? prev.filter(a => a !== allergen)
+                          : [...prev, allergen]
+                      );
+                    }}
+                  >
+                    {allergen}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            <Select
+              value={selectedCourse}
+              onValueChange={setSelectedCourse}
+            >
+              <SelectTrigger className="bg-[#1E1E1E] border-none text-white w-full">
+                <SelectValue placeholder="All Courses" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="All Courses">All Courses</SelectItem>
+                {courseTypes.map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {type}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          {filteredMenuItems?.map((item) => (
+            <Card
+              key={item.id}
+              className="bg-[#1E1E1E]/80 border-none text-white overflow-hidden"
+            >
+              <CardContent className="p-4">
+                {item.image ? (
+                  <img
+                    src={item.image}
+                    alt={item.name}
+                    className="w-full h-48 object-cover rounded-lg mb-4"
+                  />
+                ) : null}
+                <div className="space-y-2">
+                  <div className="flex justify-between items-start">
+                    <h3 className="text-xl font-bold">{item.name}</h3>
+                    <span className="text-lg font-semibold text-white">${parseFloat(item.price).toFixed(2)}</span>
+                  </div>
+                  <p className="text-gray-300">{item.description}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {Object.entries(item.allergens)
+                      .filter(([_, value]) => value)
+                      .map(([key]) => (
+                        <Badge
+                          key={key}
+                          variant="outline"
+                          className="bg-transparent border-gray-600 text-gray-300"
+                        >
+                          Contains {key}
+                        </Badge>
+                      ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
         <div className="flex justify-between items-center mb-8">
           <div className="flex items-center gap-4">
             <h1 className="text-3xl font-bold text-white">Menu Items</h1>
@@ -508,92 +608,36 @@ useEffect(() => {
           </div>
         </div>
 
-        <div className="w-full">
-          {menuItems?.map((item) => (
+        <div className="space-y-4">
+          {filteredMenuItems?.map((item) => (
             <Card
               key={item.id}
-              className={`relative mb-6 transform transition-all duration-200 hover:scale-[1.02] ${
-                selectedItems.includes(item.id) ? "ring-2 ring-primary" : ""
-              }`}
-              onClick={(e) => {
-                if (!(e.target as HTMLElement).closest('[data-dropdown-trigger="true"]')) {
-                  toggleItemSelection(item.id);
-                }
-              }}
+              className="bg-[#1E1E1E]/80 border-none text-white overflow-hidden"
             >
-              <CardContent className="p-6">
-                <div className="absolute top-4 right-4 z-10">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        data-dropdown-trigger="true"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <MoreVertical className="h-4 w-4 text-white" />
-                        <span className="sr-only">Open menu</span>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setEditItem(item);
-                        }}
-                      >
-                        <Pencil className="mr-2 h-4 w-4" />
-                        Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="text-destructive focus:text-destructive"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          deleteMutation.mutate([item.id]);
-                        }}
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-
+              <CardContent className="p-4">
                 {item.image ? (
                   <img
                     src={item.image}
                     alt={item.name}
-                    className="w-full h-60 object-cover rounded-lg mb-4"
+                    className="w-full h-48 object-cover rounded-lg mb-4"
                   />
-                ) : (
-                  <div className="w-full h-60 bg-gray-100 rounded-lg mb-4 flex items-center justify-center">
-                    <span className="text-gray-400">No image</span>
-                  </div>
-                )}
-                <div className="flex flex-col space-y-2">
+                ) : null}
+                <div className="space-y-2">
                   <div className="flex justify-between items-start">
-                    <h3 className="text-2xl font-bold text-white">{item.name}</h3>
-                    <span className="text-xl font-bold text-primary">${parseFloat(item.price).toFixed(2)}</span>
+                    <h3 className="text-xl font-bold">{item.name}</h3>
+                    <span className="text-lg font-semibold text-white">${parseFloat(item.price).toFixed(2)}</span>
                   </div>
-                  <p className="text-muted-foreground text-lg text-white">{item.description}</p>
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    <Badge variant="outline" className="text-sm text-white">{item.courseType}</Badge>
-                    {item.customTags?.map((tag, index) => (
-                      <Badge key={index} variant="secondary" className="text-sm text-white">
-                        {tag}
-                      </Badge>
-                    ))}
-                  </div>
-                  <div className="flex flex-wrap gap-2 mt-2">
+                  <p className="text-gray-300">{item.description}</p>
+                  <div className="flex flex-wrap gap-2">
                     {Object.entries(item.allergens)
                       .filter(([_, value]) => value)
                       .map(([key]) => (
                         <Badge
                           key={key}
-                          variant="default"
-                          className="bg-primary/10 text-primary hover:bg-primary/20 text-sm text-white"
+                          variant="outline"
+                          className="bg-transparent border-gray-600 text-gray-300"
                         >
-                          {key}
+                          Contains {key}
                         </Badge>
                       ))}
                   </div>
