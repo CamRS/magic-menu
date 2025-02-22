@@ -36,19 +36,13 @@ export default function PublicMenuPage() {
     enabled: !!restaurantId,
   });
 
-  const { data: menuItems = [], isLoading, error } = useQuery<MenuItem[]>({
+  const { data: menuItems } = useQuery<MenuItem[]>({
     queryKey: ["/api/menu-items", restaurantId],
-    enabled: !!restaurantId,
-    retry: 3,
-    staleTime: 30000,
+    enabled: !!restaurantId
   });
 
-  console.log('Restaurant ID:', restaurantId);
-  console.log('Menu Items:', menuItems);
-  console.log('Query Error:', error);
-
   const filteredItems = useMemo(() => {
-    if (!menuItems?.length) return [];
+    if (!menuItems) return [];
 
     return menuItems.filter(item => {
       const matchesSearch = searchTerm === "" || 
@@ -68,22 +62,6 @@ export default function PublicMenuPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-black text-white">
         <p className="text-gray-400">Restaurant not found</p>
-      </div>
-    );
-  }
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-black text-white">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-black text-white">
-        <p className="text-gray-400">Error loading menu items</p>
       </div>
     );
   }
@@ -154,11 +132,7 @@ export default function PublicMenuPage() {
         )}
 
         <div className="mt-8">
-          {!menuItems?.length ? (
-            <div className="text-center py-8 text-gray-400">
-              No menu items available
-            </div>
-          ) : filteredItems.length === 0 ? (
+          {filteredItems.length === 0 ? (
             <div className="text-center py-8 text-gray-400">
               No menu items match your filters
             </div>
