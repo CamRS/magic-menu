@@ -5,8 +5,6 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { ChevronDown, Loader2, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -14,12 +12,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import { Button } from "@/components/ui/button";
 import {
   Carousel,
   CarouselContent,
@@ -38,16 +30,15 @@ export default function PublicMenuPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCourse, setSelectedCourse] = useState<string>("all");
   const [selectedAllergens, setSelectedAllergens] = useState<AllergenType[]>([]);
-  const [isFiltersOpen, setIsFiltersOpen] = useState(true);
 
-  const { data: restaurant, isLoading: isLoadingRestaurant } = useQuery<Restaurant>({
+  const { data: restaurant } = useQuery<Restaurant>({
     queryKey: ["/api/restaurants", restaurantId],
-    enabled: !!restaurantId
+    enabled: !!restaurantId,
   });
 
-  const { data: menuItems, isLoading: isLoadingMenu } = useQuery<MenuItem[]>({
+  const { data: menuItems = [], isLoading } = useQuery<MenuItem[]>({
     queryKey: ["/api/menu-items", restaurantId],
-    enabled: !!restaurantId
+    enabled: !!restaurantId,
   });
 
   const filteredItems = useMemo(() => {
@@ -75,7 +66,7 @@ export default function PublicMenuPage() {
     );
   }
 
-  if (isLoadingRestaurant || isLoadingMenu) {
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-black text-white">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -85,77 +76,75 @@ export default function PublicMenuPage() {
 
   return (
     <div className="min-h-screen bg-black text-white">
-      <div className="max-w-6xl mx-auto px-4">
-        <h1 className="text-4xl font-bold pt-8 pb-6 text-center">
+      <div className="max-w-6xl mx-auto p-4">
+        <h1 className="text-4xl font-bold text-center mb-8">
           {restaurant.name}
         </h1>
 
-        <div className="mb-8">
-          <div className="space-y-4">
-            {/* Search Menu */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-              <Input
-                placeholder="Search menu"
-                className="w-full pl-10 py-6 bg-gray-900 border-gray-800 text-white placeholder:text-gray-400"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-
-            {/* Allergen Filters */}
-            <div className="flex flex-wrap gap-2">
-              <span className="text-sm text-gray-400 mr-2 flex items-center">I'm allergic to</span>
-              {allergensList.map((allergen) => (
-                <button
-                  key={allergen}
-                  onClick={() => {
-                    setSelectedAllergens(prev => 
-                      prev.includes(allergen)
-                        ? prev.filter(a => a !== allergen)
-                        : [...prev, allergen]
-                    );
-                  }}
-                  className={`px-4 py-2 rounded-full text-sm ${
-                    selectedAllergens.includes(allergen)
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-800 text-gray-300'
-                  }`}
-                >
-                  {allergen}
-                </button>
-              ))}
-            </div>
-
-            {/* Course Type Dropdown */}
-            <Select value={selectedCourse} onValueChange={setSelectedCourse}>
-              <SelectTrigger className="bg-gray-900 border-gray-800 text-white">
-                <SelectValue placeholder="All Courses" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Courses</SelectItem>
-                {courseTypes.map((type) => (
-                  <SelectItem key={type} value={type}>
-                    {type}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        <div className="space-y-6">
+          {/* Search Bar */}
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <Input
+              placeholder="Search menu"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-12 py-6 bg-gray-900 border-gray-800 text-white placeholder:text-gray-400 rounded-xl"
+            />
           </div>
+
+          {/* Allergen Filters */}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm text-gray-400">I'm allergic to</span>
+            {allergensList.map((allergen) => (
+              <button
+                key={allergen}
+                onClick={() => {
+                  setSelectedAllergens(prev => 
+                    prev.includes(allergen)
+                      ? prev.filter(a => a !== allergen)
+                      : [...prev, allergen]
+                  );
+                }}
+                className={`px-4 py-2 rounded-full text-sm transition-colors ${
+                  selectedAllergens.includes(allergen)
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                }`}
+              >
+                {allergen}
+              </button>
+            ))}
+          </div>
+
+          {/* Course Type Dropdown */}
+          <Select value={selectedCourse} onValueChange={setSelectedCourse}>
+            <SelectTrigger className="bg-gray-900 border-gray-800 text-white w-full rounded-xl">
+              <SelectValue placeholder="All Courses" />
+            </SelectTrigger>
+            <SelectContent className="bg-gray-900 border-gray-800">
+              <SelectItem value="all">All Courses</SelectItem>
+              {courseTypes.map((type) => (
+                <SelectItem key={type} value={type} className="text-white">
+                  {type}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {selectedAllergens.length > 0 && (
-          <div className="mb-4 text-sm text-gray-400">
+          <div className="mt-4 text-sm text-gray-400">
             Showing options free of {selectedAllergens.join(', ')}
           </div>
         )}
 
-        {filteredItems.length === 0 ? (
-          <div className="text-center py-8 text-gray-400">
-            No menu items match your filters
-          </div>
-        ) : (
-          <div className="w-full">
+        <div className="mt-8">
+          {filteredItems.length === 0 ? (
+            <div className="text-center py-8 text-gray-400">
+              No menu items match your filters
+            </div>
+          ) : (
             <Carousel className="w-full">
               <CarouselContent className="-ml-4">
                 {filteredItems.map((item) => (
@@ -205,8 +194,8 @@ export default function PublicMenuPage() {
               <CarouselPrevious className="bg-gray-800 text-white border-gray-700" />
               <CarouselNext className="bg-gray-800 text-white border-gray-700" />
             </Carousel>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
