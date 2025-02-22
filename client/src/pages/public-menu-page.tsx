@@ -69,163 +69,132 @@ export default function PublicMenuPage() {
 
   if (!matches || !restaurantId || !restaurant) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-muted-foreground">Restaurant not found</p>
+      <div className="min-h-screen flex items-center justify-center bg-black text-white">
+        <p className="text-gray-400">Restaurant not found</p>
       </div>
     );
   }
 
   if (isLoadingRestaurant || isLoadingMenu) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-black text-white">
         <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     );
   }
 
-  const activeFiltersCount = (selectedAllergens.length > 0 ? 1 : 0) + (selectedCourse !== "all" ? 1 : 0);
-
   return (
-    <div className="min-h-screen bg-background p-4">
-      <div className="max-w-6xl mx-auto">
-        <h1 className="text-4xl font-bold mb-8 text-center">
+    <div className="min-h-screen bg-black text-white">
+      <div className="max-w-6xl mx-auto px-4">
+        <h1 className="text-4xl font-bold pt-8 pb-6 text-center">
           {restaurant.name}
         </h1>
 
-        <Collapsible
-          open={isFiltersOpen}
-          onOpenChange={setIsFiltersOpen}
-          className="mb-8 bg-white rounded-lg shadow-sm"
-        >
-          <CollapsibleTrigger asChild>
-            <Button
-              variant="ghost"
-              className="w-full flex items-center justify-between p-4 hover:bg-transparent"
-            >
-              <div className="flex items-center gap-2">
-                <span className="font-semibold">Filters</span>
-                {activeFiltersCount > 0 && (
-                  <Badge variant="secondary">{activeFiltersCount} active</Badge>
-                )}
-              </div>
-              <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isFiltersOpen ? 'transform rotate-180' : ''}`} />
-            </Button>
-          </CollapsibleTrigger>
-
-          <CollapsibleContent>
-            <div className="p-4 border-t space-y-4">
-              {/* Search Menu */}
-              <div>
-                <Label htmlFor="search">Search Menu</Label>
-                <div className="relative">
-                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="search"
-                    placeholder="Search by name or description..."
-                    className="pl-8"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              {/* Course Type Filter */}
-              <div>
-                <Label>Filter by Course</Label>
-                <Select value={selectedCourse} onValueChange={setSelectedCourse}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="All Courses" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Courses</SelectItem>
-                    {courseTypes.map((type) => (
-                      <SelectItem key={type} value={type}>
-                        {type}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Allergen Filters */}
-              <div>
-                <Label className="mb-2 block">Exclude Allergens</Label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  {allergensList.map((allergen) => (
-                    <div
-                      key={allergen}
-                      className="flex items-center space-x-2 p-2 rounded hover:bg-gray-50"
-                    >
-                      <Checkbox
-                        id={allergen}
-                        checked={selectedAllergens.includes(allergen)}
-                        onCheckedChange={(checked) => {
-                          setSelectedAllergens(prev => 
-                            checked
-                              ? [...prev, allergen]
-                              : prev.filter(a => a !== allergen)
-                          );
-                        }}
-                      />
-                      <Label
-                        htmlFor={allergen}
-                        className="capitalize text-sm cursor-pointer select-none"
-                      >
-                        {allergen}
-                      </Label>
-                    </div>
-                  ))}
-                </div>
-              </div>
+        <div className="mb-8">
+          <div className="space-y-4">
+            {/* Search Menu */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <Input
+                placeholder="Search menu"
+                className="w-full pl-10 py-6 bg-gray-900 border-gray-800 text-white placeholder:text-gray-400"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
             </div>
-          </CollapsibleContent>
-        </Collapsible>
+
+            {/* Allergen Filters */}
+            <div className="flex flex-wrap gap-2">
+              <span className="text-sm text-gray-400 mr-2 flex items-center">I'm allergic to</span>
+              {allergensList.map((allergen) => (
+                <button
+                  key={allergen}
+                  onClick={() => {
+                    setSelectedAllergens(prev => 
+                      prev.includes(allergen)
+                        ? prev.filter(a => a !== allergen)
+                        : [...prev, allergen]
+                    );
+                  }}
+                  className={`px-4 py-2 rounded-full text-sm ${
+                    selectedAllergens.includes(allergen)
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-800 text-gray-300'
+                  }`}
+                >
+                  {allergen}
+                </button>
+              ))}
+            </div>
+
+            {/* Course Type Dropdown */}
+            <Select value={selectedCourse} onValueChange={setSelectedCourse}>
+              <SelectTrigger className="bg-gray-900 border-gray-800 text-white">
+                <SelectValue placeholder="All Courses" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Courses</SelectItem>
+                {courseTypes.map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {type}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {selectedAllergens.length > 0 && (
+          <div className="mb-4 text-sm text-gray-400">
+            Showing options free of {selectedAllergens.join(', ')}
+          </div>
+        )}
 
         {filteredItems.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
+          <div className="text-center py-8 text-gray-400">
             No menu items match your filters
           </div>
         ) : (
           <div className="w-full">
             <Carousel className="w-full">
-              <CarouselContent className="-ml-2 md:-ml-4">
+              <CarouselContent className="-ml-4">
                 {filteredItems.map((item) => (
-                  <CarouselItem key={item.id} className="pl-2 md:pl-4 basis-full sm:basis-1/2 md:basis-1/3 lg:basis-1/4">
-                    <Card className="overflow-hidden">
+                  <CarouselItem key={item.id} className="pl-4 basis-full md:basis-1/2 lg:basis-1/3">
+                    <Card className="bg-gray-900 border-gray-800 overflow-hidden">
                       <CardContent className="p-0">
                         {item.image ? (
                           <img
                             src={item.image}
                             alt={item.name}
-                            className="w-full h-48 object-cover"
+                            className="w-full h-64 object-cover"
                           />
                         ) : (
-                          <div className="w-full h-48 bg-muted flex items-center justify-center">
-                            <span className="text-muted-foreground">No image</span>
+                          <div className="w-full h-64 bg-gray-800 flex items-center justify-center">
+                            <span className="text-gray-600">No image</span>
                           </div>
                         )}
-                        <div className="p-4">
-                          <h3 className="text-lg font-semibold mb-2">{item.name}</h3>
-                          <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+                        <div className="p-6">
+                          <h3 className="text-xl font-semibold mb-2">{item.name}</h3>
+                          <p className="text-gray-400 mb-4 line-clamp-2">
                             {item.description}
                           </p>
-                          <div className="flex items-center justify-between">
-                            <span className="text-lg font-bold text-primary">
+                          <div className="flex items-center justify-between mb-4">
+                            <span className="text-2xl font-bold">
                               ${parseFloat(item.price).toFixed(2)}
                             </span>
-                            <div className="flex flex-wrap gap-1">
-                              {Object.entries(item.allergens)
-                                .filter(([_, value]) => value)
-                                .map(([key]) => (
-                                  <Badge
-                                    key={key}
-                                    variant="outline"
-                                    className="text-xs capitalize"
-                                  >
-                                    {key}
-                                  </Badge>
-                                ))}
-                            </div>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {Object.entries(item.allergens)
+                              .filter(([_, value]) => value)
+                              .map(([key]) => (
+                                <Badge
+                                  key={key}
+                                  variant="outline"
+                                  className="bg-gray-800 text-gray-300 border-gray-700"
+                                >
+                                  Contains {key}
+                                </Badge>
+                              ))}
                           </div>
                         </div>
                       </CardContent>
@@ -233,8 +202,8 @@ export default function PublicMenuPage() {
                   </CarouselItem>
                 ))}
               </CarouselContent>
-              <CarouselPrevious />
-              <CarouselNext />
+              <CarouselPrevious className="bg-gray-800 text-white border-gray-700" />
+              <CarouselNext className="bg-gray-800 text-white border-gray-700" />
             </Carousel>
           </div>
         )}
