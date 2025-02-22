@@ -98,6 +98,11 @@ export default function PublicMenuPage() {
           <div className="h-1 w-24 bg-[#FFFFFF] mx-auto"></div>
         </div>
 
+        {/* Menu Title */}
+        <div className="mb-8">
+          <h2 className="text-4xl font-bold text-[#FFFFFF]">Menu</h2>
+        </div>
+
         {/* Filters Section */}
         <Collapsible
           open={isFiltersOpen}
