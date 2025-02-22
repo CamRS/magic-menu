@@ -166,7 +166,7 @@ export default function PublicMenuPage() {
             <Carousel className="w-full">
               <CarouselContent className="-ml-4">
                 {filteredItems.map((item) => (
-                  <CarouselItem key={item.id} className="pl-4 basis-full md:basis-1/2 lg:basis-1/3">
+                  <CarouselItem key={item.id} className="pl-4 basis-full sm:basis-1/2 md:basis-1/3 lg:basis-1/4">
                     <Card className="bg-gray-900 border-gray-800 overflow-hidden">
                       <CardContent className="p-0">
                         {item.image ? (
