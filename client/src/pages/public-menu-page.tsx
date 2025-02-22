@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useRoute } from "wouter";
-import { type MenuItem, type Restaurant } from "@shared/schema";
+import { type MenuItem, type Restaurant, courseTypes } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { ChevronDown, Loader2, Search } from "lucide-react";
@@ -132,7 +132,7 @@ export default function PublicMenuPage() {
             </SelectTrigger>
             <SelectContent className="bg-gray-900 border-gray-800">
               <SelectItem value="all">All Courses</SelectItem>
-              {courseTypes.map((type) => (
+              {courseTypes.map((type: string) => (
                 <SelectItem key={type} value={type} className="text-white">
                   {type}
                 </SelectItem>
