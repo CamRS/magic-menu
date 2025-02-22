@@ -12,13 +12,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-} from "@/components/ui/carousel";
 import { useState, useMemo } from "react";
 
 type AllergenType = keyof MenuItem['allergens'];
@@ -67,50 +60,50 @@ export default function PublicMenuPage() {
 
   if (!matches || !restaurantId) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-black text-white">
-        <p className="text-gray-400">Restaurant not found</p>
+      <div className="min-h-screen flex items-center justify-center bg-black">
+        <p className="text-[#FFFFFF]">Restaurant not found</p>
       </div>
     );
   }
 
   if (isLoadingRestaurant || isLoadingMenu) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-black text-white">
-        <Loader2 className="h-8 w-8 animate-spin" />
+      <div className="min-h-screen flex items-center justify-center bg-black">
+        <Loader2 className="h-8 w-8 animate-spin text-[#FFFFFF]" />
       </div>
     );
   }
 
   if (!restaurant) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-black text-white">
-        <p className="text-gray-400">Restaurant not found</p>
+      <div className="min-h-screen flex items-center justify-center bg-black">
+        <p className="text-[#FFFFFF]">Restaurant not found</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-black">
       <div className="max-w-6xl mx-auto p-4">
-        <h1 className="text-4xl font-bold text-center mb-8">
+        <h1 className="text-4xl font-bold text-center mb-8 text-[#FFFFFF]">
           {restaurant.name}
         </h1>
 
         <div className="space-y-6">
           {/* Search Bar */}
           <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[#FFFFFF]" />
             <Input
               placeholder="Search menu"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-12 py-6 bg-gray-900 border-gray-800 text-white placeholder:text-gray-400 rounded-xl"
+              className="w-full pl-12 py-6 bg-gray-900 border-gray-800 text-[#FFFFFF] placeholder:text-[#FFFFFF]/60 rounded-xl"
             />
           </div>
 
           {/* Allergen Filters */}
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm text-gray-400">I'm allergic to</span>
+            <span className="text-sm text-[#FFFFFF]">I'm allergic to</span>
             {allergensList.map((allergen) => (
               <button
                 key={allergen}
@@ -123,8 +116,8 @@ export default function PublicMenuPage() {
                 }}
                 className={`px-4 py-2 rounded-full text-sm transition-colors ${
                   selectedAllergens.includes(allergen)
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                    ? 'bg-blue-600 text-[#FFFFFF]'
+                    : 'bg-gray-800 text-[#FFFFFF] hover:bg-gray-700'
                 }`}
               >
                 {allergen}
@@ -134,13 +127,13 @@ export default function PublicMenuPage() {
 
           {/* Course Type Dropdown */}
           <Select value={selectedCourse} onValueChange={setSelectedCourse}>
-            <SelectTrigger className="bg-gray-900 border-gray-800 text-white w-full rounded-xl">
+            <SelectTrigger className="bg-gray-900 border-gray-800 text-[#FFFFFF] w-full rounded-xl">
               <SelectValue placeholder="All Courses" />
             </SelectTrigger>
             <SelectContent className="bg-gray-900 border-gray-800">
-              <SelectItem value="all">All Courses</SelectItem>
+              <SelectItem value="all" className="text-[#FFFFFF]">All Courses</SelectItem>
               {courseTypes.map((type: string) => (
-                <SelectItem key={type} value={type} className="text-white">
+                <SelectItem key={type} value={type} className="text-[#FFFFFF]">
                   {type}
                 </SelectItem>
               ))}
@@ -149,66 +142,56 @@ export default function PublicMenuPage() {
         </div>
 
         {selectedAllergens.length > 0 && (
-          <div className="mt-4 text-sm text-gray-400">
+          <div className="mt-4 text-sm text-[#FFFFFF]">
             Showing options free of {selectedAllergens.join(', ')}
           </div>
         )}
 
-        <div className="mt-8">
+        <div className="mt-8 space-y-6">
           {filteredItems.length === 0 ? (
-            <div className="text-center py-8 text-gray-400">
+            <div className="text-center py-8 text-[#FFFFFF]">
               No menu items match your filters
             </div>
           ) : (
-            <Carousel className="w-full">
-              <CarouselContent className="-ml-4">
-                {filteredItems.map((item) => (
-                  <CarouselItem key={item.id} className="pl-4 basis-full sm:basis-1/2 md:basis-1/3 lg:basis-1/4">
-                    <Card className="bg-gray-900 border-gray-800 overflow-hidden">
-                      <CardContent className="p-0">
-                        {item.image ? (
-                          <img
-                            src={item.image}
-                            alt={item.name}
-                            className="w-full h-64 object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-64 bg-gray-800 flex items-center justify-center">
-                            <span className="text-gray-600">No image</span>
-                          </div>
-                        )}
-                        <div className="p-6">
-                          <h3 className="text-xl font-semibold mb-2">{item.name}</h3>
-                          <p className="text-gray-400 mb-4 line-clamp-2">
-                            {item.description}
-                          </p>
-                          <div className="flex items-center justify-between mb-4">
-                            <span className="text-2xl font-bold">
-                              ${parseFloat(item.price).toFixed(2)}
-                            </span>
-                          </div>
-                          <div className="flex flex-wrap gap-2">
-                            {Object.entries(item.allergens)
-                              .filter(([_, value]) => value)
-                              .map(([key]) => (
-                                <Badge
-                                  key={key}
-                                  variant="outline"
-                                  className="bg-gray-800 text-gray-300 border-gray-700"
-                                >
-                                  Contains {key}
-                                </Badge>
-                              ))}
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </CarouselItem>
-                ))}
-              </CarouselContent>
-              <CarouselPrevious className="bg-gray-800 text-white border-gray-700" />
-              <CarouselNext className="bg-gray-800 text-white border-gray-700" />
-            </Carousel>
+            <div className="space-y-6">
+              {filteredItems.map((item) => (
+                <Card key={item.id} className="bg-gray-900 border-gray-800 overflow-hidden">
+                  <CardContent className="p-6">
+                    {item.image && (
+                      <img
+                        src={item.image}
+                        alt={item.name}
+                        className="w-full h-64 object-cover rounded-lg mb-4"
+                      />
+                    )}
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-start">
+                        <h3 className="text-2xl font-semibold text-[#FFFFFF]">{item.name}</h3>
+                        <span className="text-2xl font-bold text-[#FFFFFF]">
+                          ${parseFloat(item.price).toFixed(2)}
+                        </span>
+                      </div>
+                      <p className="text-[#FFFFFF]/80 text-lg">
+                        {item.description}
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {Object.entries(item.allergens)
+                          .filter(([_, value]) => value)
+                          .map(([key]) => (
+                            <Badge
+                              key={key}
+                              variant="outline"
+                              className="bg-transparent border-[#FFFFFF]/20 text-[#FFFFFF]"
+                            >
+                              Contains {key}
+                            </Badge>
+                          ))}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           )}
         </div>
       </div>
