@@ -35,6 +35,13 @@ import { Loader2, PlusCircle, Download, Upload, Trash2, Pencil, MoreVertical } f
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
 
 type AllergenInfo = {
   milk: boolean;
@@ -321,7 +328,7 @@ useEffect(() => {
 
   return (
     <div className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <div className="flex items-center gap-4">
             <h1 className="text-3xl font-bold">Menu Items</h1>
@@ -507,95 +514,105 @@ useEffect(() => {
           </div>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-6">
-          {menuItems?.map((item) => (
-            <Card
-              key={item.id}
-              className={`relative ${
-                selectedItems.includes(item.id) ? "ring-2 ring-primary" : ""
-              }`}
-              onClick={(e) => {
-                if (!(e.target as HTMLElement).closest('[data-dropdown-trigger="true"]')) {
-                  toggleItemSelection(item.id);
-                }
-              }}
-            >
-              <CardContent className="p-6">
-                <div className="absolute top-4 right-4 z-10">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        data-dropdown-trigger="true"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <MoreVertical className="h-4 w-4" />
-                        <span className="sr-only">Open menu</span>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setEditItem(item);
-                        }}
-                      >
-                        <Pencil className="mr-2 h-4 w-4" />
-                        Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="text-destructive focus:text-destructive"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          deleteMutation.mutate([item.id]);
-                        }}
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
+        {/* Replace the grid layout with Carousel */}
+        <div className="w-full">
+          <Carousel className="w-full">
+            <CarouselContent className="gap-4">
+              {menuItems?.map((item) => (
+                <CarouselItem key={item.id} className="basis-full sm:basis-1/2 md:basis-1/3 lg:basis-1/4">
+                  <Card
+                    className={`relative transform transition-all duration-200 hover:scale-105 ${
+                      selectedItems.includes(item.id) ? "ring-2 ring-primary" : ""
+                    }`}
+                    onClick={(e) => {
+                      if (!(e.target as HTMLElement).closest('[data-dropdown-trigger="true"]')) {
+                        toggleItemSelection(item.id);
+                      }
+                    }}
+                  >
+                    <CardContent className="p-4">
+                      <div className="absolute top-2 right-2 z-10">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              data-dropdown-trigger="true"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <MoreVertical className="h-4 w-4" />
+                              <span className="sr-only">Open menu</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditItem(item);
+                              }}
+                            >
+                              <Pencil className="mr-2 h-4 w-4" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="text-destructive focus:text-destructive"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                deleteMutation.mutate([item.id]);
+                              }}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
 
-                {item.image ? (
-                  <img
-                    src={item.image}
-                    alt={item.name}
-                    className="w-full h-48 object-cover rounded-md mb-4"
-                  />
-                ) : (
-                  <div className="w-full h-48 bg-gray-100 rounded-md mb-4 flex items-center justify-center">
-                    <span className="text-gray-400">No image</span>
-                  </div>
-                )}
-                <h3 className="text-xl font-semibold mb-2">{item.name}</h3>
-                <p className="text-muted-foreground mb-4">{item.description}</p>
-                <div className="flex justify-between items-center">
-                  <span className="font-semibold">${parseFloat(item.price).toFixed(2)}</span>
-                  <div className="flex flex-wrap gap-2">
-                    <Badge variant="outline">{item.courseType}</Badge>
-                    {item.customTags?.map((tag, index) => (
-                      <Badge key={index} variant="secondary">
-                        {tag}
-                      </Badge>
-                    ))}
-                    {Object.entries(item.allergens)
-                      .filter(([_, value]) => value)
-                      .map(([key]) => (
-                        <Badge
-                          key={key}
-                          variant="default"
-                          className="bg-primary/10 text-primary hover:bg-primary/20"
-                        >
-                          {key}
-                        </Badge>
-                      ))}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                      {item.image ? (
+                        <img
+                          src={item.image}
+                          alt={item.name}
+                          className="w-full h-48 object-cover rounded-lg mb-4"
+                        />
+                      ) : (
+                        <div className="w-full h-48 bg-gray-100 rounded-lg mb-4 flex items-center justify-center">
+                          <span className="text-gray-400">No image</span>
+                        </div>
+                      )}
+                      <h3 className="text-xl font-semibold mb-2">{item.name}</h3>
+                      <p className="text-muted-foreground mb-4 line-clamp-2">{item.description}</p>
+                      <div className="flex justify-between items-center">
+                        <span className="text-lg font-bold text-primary">${parseFloat(item.price).toFixed(2)}</span>
+                        <div className="flex flex-wrap gap-1">
+                          <Badge variant="outline" className="text-xs">{item.courseType}</Badge>
+                          {item.customTags?.map((tag, index) => (
+                            <Badge key={index} variant="secondary" className="text-xs">
+                              {tag}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {Object.entries(item.allergens)
+                          .filter(([_, value]) => value)
+                          .map(([key]) => (
+                            <Badge
+                              key={key}
+                              variant="default"
+                              className="bg-primary/10 text-primary hover:bg-primary/20 text-xs"
+                            >
+                              {key}
+                            </Badge>
+                          ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </CarouselItem>
+              ))}
+            </CarouselContent>
+            <CarouselPrevious />
+            <CarouselNext />
+          </Carousel>
         </div>
       </div>
     </div>
