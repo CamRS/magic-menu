@@ -19,7 +19,6 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { useState, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 
 type AllergenType = keyof MenuItem['allergens'];
 const allergensList: AllergenType[] = ['milk', 'eggs', 'peanuts', 'nuts', 'shellfish', 'fish', 'soy', 'gluten'];
@@ -31,7 +30,6 @@ export default function PublicMenuPage() {
   const [selectedCourse, setSelectedCourse] = useState<string>("all");
   const [selectedAllergens, setSelectedAllergens] = useState<AllergenType[]>([]);
   const [isFiltersOpen, setIsFiltersOpen] = useState(true);
-  const [items, setItems] = useState<MenuItem[]>([]);
 
   const { data: restaurant, isLoading: isLoadingRestaurant } = useQuery<Restaurant>({
     queryKey: ["/api/restaurants", restaurantId],
@@ -48,15 +46,12 @@ export default function PublicMenuPage() {
       return response.json();
     },
     enabled: !!restaurantId,
-    onSuccess: (data) => {
-      setItems(data);
-    }
   });
 
   const filteredItems = useMemo(() => {
-    if (!items) return [];
+    if (!menuItems) return [];
 
-    return items.filter(item => {
+    return menuItems.filter(item => {
       const matchesSearch = searchTerm === "" || 
         item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.description.toLowerCase().includes(searchTerm.toLowerCase());
@@ -68,15 +63,7 @@ export default function PublicMenuPage() {
 
       return matchesSearch && matchesCourse && matchesAllergens;
     });
-  }, [items, searchTerm, selectedCourse, selectedAllergens]);
-
-  const handleDragEnd = (index: number) => {
-    const draggedItem = items[index];
-    const newItems = [...items];
-    newItems.splice(index, 1);
-    newItems.push(draggedItem);
-    setItems(newItems);
-  };
+  }, [menuItems, searchTerm, selectedCourse, selectedAllergens]);
 
   if (!matches || !restaurantId) {
     return (
@@ -198,71 +185,52 @@ export default function PublicMenuPage() {
         </Collapsible>
 
         {/* Menu Items */}
-        <div className="relative h-[600px] overflow-hidden">
-          <AnimatePresence>
-            {filteredItems.length === 0 ? (
-              <div className="text-center py-8 text-[#FFFFFF]">
-                No menu items match your filters
-              </div>
-            ) : (
-              filteredItems.map((item, index) => (
-                <motion.div
-                  key={item.id}
-                  className="absolute w-full"
-                  initial={{ scale: 0.95, y: index * 4 }}
-                  animate={{ 
-                    scale: 1 - (index * 0.05),
-                    y: index * 4,
-                    zIndex: filteredItems.length - index
-                  }}
-                  exit={{ x: -1000 }}
-                  drag="y"
-                  dragConstraints={{ top: 0, bottom: 0 }}
-                  onDragEnd={() => handleDragEnd(index)}
-                  whileDrag={{ cursor: "grabbing" }}
-                  style={{
-                    zIndex: filteredItems.length - index,
-                  }}
-                >
-                  <Card className="bg-gray-900 border-gray-800 overflow-hidden">
-                    <CardContent className="p-6">
-                      {item.image && (
-                        <img
-                          src={item.image}
-                          alt={item.name}
-                          className="w-full h-64 object-cover rounded-lg mb-4"
-                        />
-                      )}
-                      <div className="space-y-4">
-                        <div className="flex justify-between items-start">
-                          <h3 className="text-2xl font-semibold text-[#FFFFFF]">{item.name}</h3>
-                          <span className="text-2xl font-bold text-[#FFFFFF]">
-                            ${parseFloat(item.price).toFixed(2)}
-                          </span>
-                        </div>
-                        <p className="text-[#FFFFFF]/80 text-lg">
-                          {item.description}
-                        </p>
-                        <div className="flex flex-wrap gap-2">
-                          {Object.entries(item.allergens)
-                            .filter(([_, value]) => value)
-                            .map(([key]) => (
-                              <Badge
-                                key={key}
-                                variant="outline"
-                                className="bg-transparent border-[#FFFFFF]/20 text-[#FFFFFF]"
-                              >
-                                Contains {key}
-                              </Badge>
-                            ))}
-                        </div>
+        <div className="space-y-6">
+          {filteredItems.length === 0 ? (
+            <div className="text-center py-8 text-[#FFFFFF]">
+              No menu items match your filters
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {filteredItems.map((item) => (
+                <Card key={item.id} className="bg-gray-900 border-gray-800 overflow-hidden">
+                  <CardContent className="p-6">
+                    {item.image && (
+                      <img
+                        src={item.image}
+                        alt={item.name}
+                        className="w-full h-64 object-cover rounded-lg mb-4"
+                      />
+                    )}
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-start">
+                        <h3 className="text-2xl font-semibold text-[#FFFFFF]">{item.name}</h3>
+                        <span className="text-2xl font-bold text-[#FFFFFF]">
+                          ${parseFloat(item.price).toFixed(2)}
+                        </span>
                       </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              ))
-            )}
-          </AnimatePresence>
+                      <p className="text-[#FFFFFF]/80 text-lg">
+                        {item.description}
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {Object.entries(item.allergens)
+                          .filter(([_, value]) => value)
+                          .map(([key]) => (
+                            <Badge
+                              key={key}
+                              variant="outline"
+                              className="bg-transparent border-[#FFFFFF]/20 text-[#FFFFFF]"
+                            >
+                              Contains {key}
+                            </Badge>
+                          ))}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
