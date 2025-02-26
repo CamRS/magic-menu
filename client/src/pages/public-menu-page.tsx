@@ -18,7 +18,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 type AllergenType = keyof MenuItem['allergens'];
@@ -31,7 +31,7 @@ export default function PublicMenuPage() {
   const [selectedCourse, setSelectedCourse] = useState<string>("all");
   const [selectedAllergens, setSelectedAllergens] = useState<AllergenType[]>([]);
   const [isFiltersOpen, setIsFiltersOpen] = useState(true);
-  const [activeIndex, setActiveIndex] = useState(0);
+  const [cardOrder, setCardOrder] = useState<MenuItem[]>([]);
 
   const { data: restaurant, isLoading: isLoadingRestaurant } = useQuery<Restaurant>({
     queryKey: ["/api/restaurants", restaurantId],
@@ -67,12 +67,19 @@ export default function PublicMenuPage() {
     });
   }, [menuItems, searchTerm, selectedCourse, selectedAllergens]);
 
-  const handleSwipe = (direction: number) => {
-    if (filteredItems.length <= 1) return;
+  // Update card order when filtered items change
+  useEffect(() => {
+    setCardOrder(filteredItems);
+  }, [filteredItems]);
 
-    setActiveIndex((prev) => {
-      const next = (prev + direction + filteredItems.length) % filteredItems.length;
-      return next;
+  const handleSwipe = (direction: number) => {
+    if (cardOrder.length <= 1) return;
+
+    setCardOrder(prev => {
+      const newOrder = [...prev];
+      const [removed] = newOrder.splice(0, 1);
+      newOrder.push(removed);
+      return newOrder;
     });
   };
 
@@ -104,10 +111,10 @@ export default function PublicMenuPage() {
     <motion.div
       initial={{ scale: 0.8, y: 50, opacity: 0 }}
       animate={{ 
-        scale: index === activeIndex ? 1 : 0.95 - (index - activeIndex) * 0.05,
-        y: index === activeIndex ? 0 : 30 + (index - activeIndex) * 10,
+        scale: index === 0 ? 1 : 0.95 - index * 0.05,
+        y: index === 0 ? 0 : 30 + index * 10,
         opacity: 1,
-        zIndex: filteredItems.length - index
+        zIndex: cardOrder.length - index
       }}
       exit={{ x: 300, opacity: 0 }}
       transition={{ type: "spring", stiffness: 300, damping: 20 }}
@@ -120,7 +127,7 @@ export default function PublicMenuPage() {
       }}
       className="absolute w-full cursor-grab active:cursor-grabbing"
       style={{
-        pointerEvents: index === activeIndex ? "auto" : "none"
+        pointerEvents: index === 0 ? "auto" : "none"
       }}
     >
       <Card className="bg-gray-900 border-gray-800 overflow-hidden mx-4 my-2">
@@ -258,15 +265,15 @@ export default function PublicMenuPage() {
 
         {/* Menu Items Card Stack */}
         <div className="w-full h-[calc(100vh-400px)] relative">
-          {filteredItems.length === 0 ? (
+          {cardOrder.length === 0 ? (
             <div className="text-center py-8 text-[#FFFFFF]">
               No menu items match your filters
             </div>
           ) : (
             <div className="relative w-full h-full">
-              <AnimatePresence initial={false} custom={{ direction: 1 }}>
-                {[...filteredItems].reverse().map((item, index) => (
-                  <MenuCard key={item.id} item={item} index={filteredItems.length - 1 - index} />
+              <AnimatePresence initial={false} mode="popLayout">
+                {cardOrder.map((item, index) => (
+                  <MenuCard key={item.id} item={item} index={index} />
                 ))}
               </AnimatePresence>
             </div>
