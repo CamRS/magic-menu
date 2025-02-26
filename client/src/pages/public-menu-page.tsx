@@ -39,7 +39,7 @@ export default function PublicMenuPage() {
   });
 
   const { data: menuItems, isLoading: isLoadingMenu } = useQuery<MenuItem[]>({
-    queryKey: ["/api/menu-items"],
+    queryKey: ["/api/menu-items", restaurantId],
     queryFn: async () => {
       const response = await fetch(`/api/menu-items?restaurantId=${restaurantId}`);
       if (!response.ok) {
