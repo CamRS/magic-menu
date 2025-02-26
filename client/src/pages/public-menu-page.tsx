@@ -40,13 +40,6 @@ export default function PublicMenuPage() {
 
   const { data: menuItems, isLoading: isLoadingMenu } = useQuery<MenuItem[]>({
     queryKey: ["/api/menu-items", restaurantId],
-    queryFn: async () => {
-      const response = await fetch(`/api/menu-items?restaurantId=${restaurantId}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch menu items');
-      }
-      return response.json();
-    },
     enabled: !!restaurantId,
     onSuccess: (data) => {
       console.log("Menu items loaded:", data);
