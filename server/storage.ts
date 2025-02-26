@@ -1,8 +1,8 @@
-import { User, InsertUser, MenuItem, InsertMenuItem, Restaurant, InsertRestaurant } from "@shared/schema";
+import { User, InsertUser, MenuItem, InsertMenuItem, Restaurant, InsertRestaurant, Image, InsertImage } from "@shared/schema";
 import session from "express-session";
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";
-import { users, restaurants, menuItems } from "@shared/schema";
+import { users, restaurants, menuItems, images } from "@shared/schema";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
 
@@ -24,6 +24,11 @@ export interface IStorage {
   updateMenuItem(id: number, item: Partial<InsertMenuItem>): Promise<MenuItem>;
   updateMenuItemsForRestaurants(restaurantIds: number[], updates: Partial<InsertMenuItem>): Promise<void>;
   deleteMenuItem(id: number): Promise<void>;
+
+  // New image-related methods
+  getImage(id: number): Promise<Image | undefined>;
+  createImage(image: InsertImage): Promise<Image>;
+  deleteImage(id: number): Promise<void>;
 
   sessionStore: session.Store;
 }
@@ -199,6 +204,35 @@ export class DatabaseStorage implements IStorage {
     }
 
     await db.delete(menuItems).where(eq(menuItems.id, id));
+  }
+
+  // New image-related method implementations
+  async getImage(id: number): Promise<Image | undefined> {
+    console.log("Getting image by ID:", id);
+    const [image] = await db
+      .select()
+      .from(images)
+      .where(eq(images.id, id));
+    console.log("Found image:", image ? { ...image, data: '[BASE64]' } : 'null');
+    return image;
+  }
+
+  async createImage(image: InsertImage): Promise<Image> {
+    console.log("Creating image with data:", { ...image, data: '[BASE64]' });
+    const [newImage] = await db
+      .insert(images)
+      .values(image)
+      .returning();
+    console.log("Created image:", { ...newImage, data: '[BASE64]' });
+    return newImage;
+  }
+
+  async deleteImage(id: number): Promise<void> {
+    console.log("Deleting image:", id);
+    await db
+      .delete(images)
+      .where(eq(images.id, id));
+    console.log("Deleted image:", id);
   }
 }
 

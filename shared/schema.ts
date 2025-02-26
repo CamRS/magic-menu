@@ -14,6 +14,15 @@ export const restaurants = pgTable("restaurants", {
   name: text("name").notNull(),
 });
 
+export const images = pgTable("images", {
+  id: serial("id").primaryKey(),
+  restaurantId: integer("restaurant_id").notNull().references(() => restaurants.id),
+  fileName: text("file_name").notNull(),
+  contentType: text("content_type").notNull(),
+  data: text("data").notNull(), // We'll store base64 encoded data
+  createdAt: text("created_at").notNull().default(new Date().toISOString()),
+});
+
 export const menuItems = pgTable("menu_items", {
   id: serial("id").primaryKey(),
   restaurantId: integer("restaurant_id").notNull().references(() => restaurants.id),
@@ -21,6 +30,7 @@ export const menuItems = pgTable("menu_items", {
   description: text("description").notNull(),
   price: text("price").notNull(),
   image: text("image").default(''),
+  imageId: integer("image_id").references(() => images.id),
   courseType: text("course_type").notNull(),
   customTags: text("custom_tags").array().default([]),
   allergens: jsonb("allergens").$type<{
@@ -56,6 +66,8 @@ export const courseTypes = [
   "Custom"
 ] as const;
 
+export const insertImageSchema = createInsertSchema(images);
+
 export const insertMenuItemSchema = createInsertSchema(menuItems).extend({
   price: z.string().min(1, "Price is required"),
   courseType: z.enum(courseTypes, {
@@ -65,6 +77,7 @@ export const insertMenuItemSchema = createInsertSchema(menuItems).extend({
   customTags: z.array(z.string()).default([]),
   description: z.string().min(1, "Description is required"),
   image: z.string().optional().default(''),
+  imageId: z.number().optional(),
   allergens: z.object({
     milk: z.boolean().default(false),
     eggs: z.boolean().default(false),
@@ -92,3 +105,5 @@ export type Restaurant = typeof restaurants.$inferSelect;
 export type MenuItem = typeof menuItems.$inferSelect;
 export type InsertMenuItem = z.infer<typeof insertMenuItemSchema>;
 export type InsertRestaurant = z.infer<typeof insertRestaurantSchema>;
+export type Image = typeof images.$inferSelect;
+export type InsertImage = z.infer<typeof insertImageSchema>;
