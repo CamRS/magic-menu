@@ -49,6 +49,7 @@ export default function PublicMenuPage() {
     },
     enabled: !!restaurantId,
     onSuccess: (data) => {
+      console.log("Menu items loaded:", data);
       setItems(data);
     }
   });
@@ -104,6 +105,8 @@ export default function PublicMenuPage() {
       </div>
     );
   }
+
+  console.log("Filtered items:", filteredItems);
 
   return (
     <div className="min-h-screen bg-black">
