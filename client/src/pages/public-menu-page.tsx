@@ -131,15 +131,13 @@ export default function PublicMenuPage() {
       }}
     >
       <Card className="bg-gray-900 border-gray-800 overflow-hidden mx-4 my-2">
-        <CardContent className="p-6">
-          {item.image && (
-            <img
-              src={item.image}
-              alt={item.name}
-              className="w-full h-64 object-cover rounded-lg mb-4"
-            />
-          )}
-          <div className="space-y-4">
+        <CardContent className="p-0">
+          <img
+            src={`https://picsum.photos/seed/${item.id}/800/600`}
+            alt={`${item.name} presentation`}
+            className="w-full h-[400px] object-cover"
+          />
+          <div className="p-6 space-y-4">
             <div className="flex justify-between items-start">
               <h3 className="text-2xl font-semibold text-[#FFFFFF]">{item.name}</h3>
               <span className="text-2xl font-bold text-[#FFFFFF]">
