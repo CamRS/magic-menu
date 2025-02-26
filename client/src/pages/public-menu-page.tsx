@@ -265,8 +265,8 @@ export default function PublicMenuPage() {
           ) : (
             <div className="relative w-full h-full">
               <AnimatePresence initial={false} custom={{ direction: 1 }}>
-                {filteredItems.map((item, index) => (
-                  <MenuCard key={item.id} item={item} index={index} />
+                {[...filteredItems].reverse().map((item, index) => (
+                  <MenuCard key={item.id} item={item} index={filteredItems.length - 1 - index} />
                 ))}
               </AnimatePresence>
             </div>
