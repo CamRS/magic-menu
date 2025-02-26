@@ -143,13 +143,13 @@ export default function PublicMenuPage() {
       exit={{ x: 300, opacity: 0 }}
       transition={{ 
         type: "spring", 
-        stiffness: 200, // Reduced from 300 for smoother movement
-        damping: 25,    // Increased from 20 for less bounce
-        mass: 0.8      // Added mass for more natural physics
+        stiffness: 200, 
+        damping: 25,    
+        mass: 0.8      
       }}
-      drag="x"
-      dragConstraints={{ left: -100, right: 100 }} // Limited drag area
-      dragElastic={0.7} // Added elasticity to drag
+      drag={index === 0 ? "x" : false}
+      dragConstraints={{ left: -100, right: 100 }} 
+      dragElastic={0.7} 
       onDragEnd={(e, { offset, velocity }) => {
         if (Math.abs(offset.x) > 100 || Math.abs(velocity.x) > 500) {
           handleSwipe(offset.x > 0 ? 1 : -1);
