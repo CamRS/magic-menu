@@ -111,8 +111,8 @@ export default function PublicMenuPage() {
     <motion.div
       initial={{ scale: 0.8, y: 50, opacity: 0 }}
       animate={{ 
-        scale: index === 0 ? 1 : 0.95 - index * 0.05,
-        y: index === 0 ? 0 : 30 + index * 10,
+        scale: index === 0 ? 1 : 0.98 - index * 0.02,
+        y: index === 0 ? 0 : 8 + index * 4,
         opacity: 1,
         zIndex: cardOrder.length - index
       }}
