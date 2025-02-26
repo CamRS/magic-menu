@@ -19,6 +19,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { useState, useMemo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 
 type AllergenType = keyof MenuItem['allergens'];
 const allergensList: AllergenType[] = ['milk', 'eggs', 'peanuts', 'nuts', 'shellfish', 'fish', 'soy', 'gluten'];
@@ -30,6 +31,7 @@ export default function PublicMenuPage() {
   const [selectedCourse, setSelectedCourse] = useState<string>("all");
   const [selectedAllergens, setSelectedAllergens] = useState<AllergenType[]>([]);
   const [isFiltersOpen, setIsFiltersOpen] = useState(true);
+  const [activeIndex, setActiveIndex] = useState(0);
 
   const { data: restaurant, isLoading: isLoadingRestaurant } = useQuery<Restaurant>({
     queryKey: ["/api/restaurants", restaurantId],
@@ -65,6 +67,15 @@ export default function PublicMenuPage() {
     });
   }, [menuItems, searchTerm, selectedCourse, selectedAllergens]);
 
+  const handleSwipe = (direction: number) => {
+    if (filteredItems.length <= 1) return;
+
+    setActiveIndex((prev) => {
+      const next = (prev + direction + filteredItems.length) % filteredItems.length;
+      return next;
+    });
+  };
+
   if (!matches || !restaurantId) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-black">
@@ -88,6 +99,67 @@ export default function PublicMenuPage() {
       </div>
     );
   }
+
+  const MenuCard = ({ item, index }: { item: MenuItem; index: number }) => (
+    <motion.div
+      initial={{ scale: 0.8, y: 50, opacity: 0 }}
+      animate={{ 
+        scale: index === activeIndex ? 1 : 0.95 - (index - activeIndex) * 0.05,
+        y: index === activeIndex ? 0 : 30 + (index - activeIndex) * 10,
+        opacity: 1,
+        zIndex: filteredItems.length - index
+      }}
+      exit={{ x: 300, opacity: 0 }}
+      transition={{ type: "spring", stiffness: 300, damping: 20 }}
+      drag="x"
+      dragConstraints={{ left: 0, right: 0 }}
+      onDragEnd={(e, { offset }) => {
+        if (Math.abs(offset.x) > 100) {
+          handleSwipe(offset.x > 0 ? 1 : -1);
+        }
+      }}
+      className="absolute w-full cursor-grab active:cursor-grabbing"
+      style={{
+        pointerEvents: index === activeIndex ? "auto" : "none"
+      }}
+    >
+      <Card className="bg-gray-900 border-gray-800 overflow-hidden mx-4 my-2">
+        <CardContent className="p-6">
+          {item.image && (
+            <img
+              src={item.image}
+              alt={item.name}
+              className="w-full h-64 object-cover rounded-lg mb-4"
+            />
+          )}
+          <div className="space-y-4">
+            <div className="flex justify-between items-start">
+              <h3 className="text-2xl font-semibold text-[#FFFFFF]">{item.name}</h3>
+              <span className="text-2xl font-bold text-[#FFFFFF]">
+                ${parseFloat(item.price).toFixed(2)}
+              </span>
+            </div>
+            <p className="text-[#FFFFFF]/80 text-lg">
+              {item.description}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {Object.entries(item.allergens)
+                .filter(([_, value]) => value)
+                .map(([key]) => (
+                  <Badge
+                    key={key}
+                    variant="outline"
+                    className="bg-transparent border-[#FFFFFF]/20 text-[#FFFFFF]"
+                  >
+                    Contains {key}
+                  </Badge>
+                ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
 
   return (
     <div className="min-h-screen bg-black">
@@ -184,51 +256,19 @@ export default function PublicMenuPage() {
           </CollapsibleContent>
         </Collapsible>
 
-        {/* Menu Items */}
-        <div className="space-y-6">
+        {/* Menu Items Card Stack */}
+        <div className="w-full h-[calc(100vh-400px)] relative">
           {filteredItems.length === 0 ? (
             <div className="text-center py-8 text-[#FFFFFF]">
               No menu items match your filters
             </div>
           ) : (
-            <div className="space-y-6">
-              {filteredItems.map((item) => (
-                <Card key={item.id} className="bg-gray-900 border-gray-800 overflow-hidden">
-                  <CardContent className="p-6">
-                    {item.image && (
-                      <img
-                        src={item.image}
-                        alt={item.name}
-                        className="w-full h-64 object-cover rounded-lg mb-4"
-                      />
-                    )}
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-start">
-                        <h3 className="text-2xl font-semibold text-[#FFFFFF]">{item.name}</h3>
-                        <span className="text-2xl font-bold text-[#FFFFFF]">
-                          ${parseFloat(item.price).toFixed(2)}
-                        </span>
-                      </div>
-                      <p className="text-[#FFFFFF]/80 text-lg">
-                        {item.description}
-                      </p>
-                      <div className="flex flex-wrap gap-2">
-                        {Object.entries(item.allergens)
-                          .filter(([_, value]) => value)
-                          .map(([key]) => (
-                            <Badge
-                              key={key}
-                              variant="outline"
-                              className="bg-transparent border-[#FFFFFF]/20 text-[#FFFFFF]"
-                            >
-                              Contains {key}
-                            </Badge>
-                          ))}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+            <div className="relative w-full h-full">
+              <AnimatePresence initial={false} custom={{ direction: 1 }}>
+                {filteredItems.map((item, index) => (
+                  <MenuCard key={item.id} item={item} index={index} />
+                ))}
+              </AnimatePresence>
             </div>
           )}
         </div>
