@@ -113,7 +113,7 @@ export default function PublicMenuPage() {
       animate={{ 
         scale: index === 0 ? 1 : 0.98 - index * 0.01,
         y: index === 0 ? 0 : 8 + index * 6,
-        x: index === 0 ? 0 : 4 + index * 4,
+        x: index === 0 ? 0 : 4 + index * 6,
         opacity: 1,
         zIndex: cardOrder.length - index
       }}
