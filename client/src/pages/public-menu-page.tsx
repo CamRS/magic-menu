@@ -201,7 +201,7 @@ export default function PublicMenuPage() {
         </Collapsible>
 
         {/* Menu Items */}
-        <div className="space-y-6 relative h-[600px]">
+        <div className="relative w-full" style={{ height: '80vh' }}>
           {filteredItems.length === 0 ? (
             <div className="text-center py-8 text-[#FFFFFF]">
               No menu items match your filters
@@ -214,22 +214,35 @@ export default function PublicMenuPage() {
                   style={{
                     position: 'absolute',
                     width: '100%',
-                    top: 0,
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
                     zIndex: filteredItems.length - index,
                   }}
                   initial={{ scale: 0.8, y: 100, opacity: 0 }}
-                  animate={{ scale: 1, y: 0, opacity: 1 }}
+                  animate={{ 
+                    scale: 1, 
+                    y: 0, 
+                    opacity: 1,
+                    transition: {
+                      type: "spring",
+                      stiffness: 300,
+                      damping: 20,
+                      delay: index * 0.1
+                    }
+                  }}
                   exit={{ x: -1000, opacity: 0 }}
-                  transition={{ type: "spring", stiffness: 300, damping: 20 }}
                   drag="y"
-                  dragConstraints={{ top: 0, bottom: 0 }}
+                  dragConstraints={{ top: -100, bottom: 100 }}
+                  dragElastic={0.8}
                   onDragEnd={(_, info) => {
                     if (Math.abs(info.offset.y) > 100) {
                       handleDragEnd(item.id);
                     }
                   }}
+                  whileDrag={{ scale: 1.05 }}
                 >
-                  <Card className="bg-gray-900 border-gray-800 overflow-hidden transform">
+                  <Card className="bg-gray-900 border-gray-800 overflow-hidden transform hover:shadow-xl transition-shadow duration-200">
                     <CardContent className="p-6">
                       {item.image && (
                         <img
