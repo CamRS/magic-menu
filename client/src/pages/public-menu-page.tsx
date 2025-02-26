@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { ChevronDown, Loader2, Search, ChevronUp } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Select,
   SelectContent,
@@ -30,6 +31,7 @@ export default function PublicMenuPage() {
   const [selectedCourse, setSelectedCourse] = useState<string>("all");
   const [selectedAllergens, setSelectedAllergens] = useState<AllergenType[]>([]);
   const [isFiltersOpen, setIsFiltersOpen] = useState(true);
+  const [items, setItems] = useState<MenuItem[]>([]);
 
   const { data: restaurant, isLoading: isLoadingRestaurant } = useQuery<Restaurant>({
     queryKey: ["/api/restaurants", restaurantId],
@@ -46,12 +48,15 @@ export default function PublicMenuPage() {
       return response.json();
     },
     enabled: !!restaurantId,
+    onSuccess: (data) => {
+      setItems(data);
+    }
   });
 
   const filteredItems = useMemo(() => {
-    if (!menuItems) return [];
+    if (!items) return [];
 
-    return menuItems.filter(item => {
+    return items.filter(item => {
       const matchesSearch = searchTerm === "" || 
         item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.description.toLowerCase().includes(searchTerm.toLowerCase());
@@ -63,7 +68,18 @@ export default function PublicMenuPage() {
 
       return matchesSearch && matchesCourse && matchesAllergens;
     });
-  }, [menuItems, searchTerm, selectedCourse, selectedAllergens]);
+  }, [items, searchTerm, selectedCourse, selectedAllergens]);
+
+  const handleDragEnd = (itemId: number) => {
+    setItems(prevItems => {
+      const itemIndex = prevItems.findIndex(item => item.id === itemId);
+      if (itemIndex === -1) return prevItems;
+
+      const item = prevItems[itemIndex];
+      const newItems = prevItems.filter(i => i.id !== itemId);
+      return [...newItems, item];
+    });
+  };
 
   if (!matches || !restaurantId) {
     return (
@@ -185,51 +201,72 @@ export default function PublicMenuPage() {
         </Collapsible>
 
         {/* Menu Items */}
-        <div className="space-y-6">
+        <div className="space-y-6 relative h-[600px]">
           {filteredItems.length === 0 ? (
             <div className="text-center py-8 text-[#FFFFFF]">
               No menu items match your filters
             </div>
           ) : (
-            <div className="space-y-6">
-              {filteredItems.map((item) => (
-                <Card key={item.id} className="bg-gray-900 border-gray-800 overflow-hidden">
-                  <CardContent className="p-6">
-                    {item.image && (
-                      <img
-                        src={item.image}
-                        alt={item.name}
-                        className="w-full h-64 object-cover rounded-lg mb-4"
-                      />
-                    )}
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-start">
-                        <h3 className="text-2xl font-semibold text-[#FFFFFF]">{item.name}</h3>
-                        <span className="text-2xl font-bold text-[#FFFFFF]">
-                          ${parseFloat(item.price).toFixed(2)}
-                        </span>
+            <AnimatePresence>
+              {filteredItems.map((item, index) => (
+                <motion.div
+                  key={item.id}
+                  style={{
+                    position: 'absolute',
+                    width: '100%',
+                    top: 0,
+                    zIndex: filteredItems.length - index,
+                  }}
+                  initial={{ scale: 0.8, y: 100, opacity: 0 }}
+                  animate={{ scale: 1, y: 0, opacity: 1 }}
+                  exit={{ x: -1000, opacity: 0 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                  drag="y"
+                  dragConstraints={{ top: 0, bottom: 0 }}
+                  onDragEnd={(_, info) => {
+                    if (Math.abs(info.offset.y) > 100) {
+                      handleDragEnd(item.id);
+                    }
+                  }}
+                >
+                  <Card className="bg-gray-900 border-gray-800 overflow-hidden transform">
+                    <CardContent className="p-6">
+                      {item.image && (
+                        <img
+                          src={item.image}
+                          alt={item.name}
+                          className="w-full h-64 object-cover rounded-lg mb-4"
+                        />
+                      )}
+                      <div className="space-y-4">
+                        <div className="flex justify-between items-start">
+                          <h3 className="text-2xl font-semibold text-[#FFFFFF]">{item.name}</h3>
+                          <span className="text-2xl font-bold text-[#FFFFFF]">
+                            ${parseFloat(item.price).toFixed(2)}
+                          </span>
+                        </div>
+                        <p className="text-[#FFFFFF]/80 text-lg">
+                          {item.description}
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {Object.entries(item.allergens)
+                            .filter(([_, value]) => value)
+                            .map(([key]) => (
+                              <Badge
+                                key={key}
+                                variant="outline"
+                                className="bg-transparent border-[#FFFFFF]/20 text-[#FFFFFF]"
+                              >
+                                Contains {key}
+                              </Badge>
+                            ))}
+                        </div>
                       </div>
-                      <p className="text-[#FFFFFF]/80 text-lg">
-                        {item.description}
-                      </p>
-                      <div className="flex flex-wrap gap-2">
-                        {Object.entries(item.allergens)
-                          .filter(([_, value]) => value)
-                          .map(([key]) => (
-                            <Badge
-                              key={key}
-                              variant="outline"
-                              className="bg-transparent border-[#FFFFFF]/20 text-[#FFFFFF]"
-                            >
-                              Contains {key}
-                            </Badge>
-                          ))}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
+                </motion.div>
               ))}
-            </div>
+            </AnimatePresence>
           )}
         </div>
       </div>
