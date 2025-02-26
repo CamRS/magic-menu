@@ -134,7 +134,7 @@ export default function PublicMenuPage() {
       <Card className="bg-gray-900 border-gray-800 overflow-hidden mx-4 my-2">
         <CardContent className="p-0">
           <img
-            src={`https://picsum.photos/seed/${item.id}/800/600`}
+            src={`https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800&h=600&fit=crop&q=80&auto=format`}
             alt={`${item.name} presentation`}
             className="w-full h-[400px] object-cover"
           />
