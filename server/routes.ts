@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { z } from "zod";
 import { createServer, type Server } from "http";
-import { setupAuth } from "./auth.js";
+import { setupAuth, requireAuth } from "./auth.js";
 import { storage } from "./storage";
 import { insertMenuItemSchema, insertRestaurantSchema, courseTypes } from "@shared/schema";
 
@@ -77,7 +77,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/menu-items", async (req, res) => {
     try {
       const restaurantId = parseInt(req.query.restaurantId as string);
-      if (isNaN(restaurantId) || restaurantId <=0) { //Added check for <=0
+      if (isNaN(restaurantId) || restaurantId <= 0) {
         return res.status(400).json({ message: "Invalid restaurant ID" });
       }
 
@@ -90,7 +90,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Protected routes (authentication required)
-  app.get("/api/restaurants", async (req, res) => {
+  app.get("/api/restaurants", requireAuth, async (req, res) => {
     try {
       if (!req.user) return res.sendStatus(401);
       const restaurants = await storage.getRestaurants(req.user.id);
@@ -101,7 +101,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/restaurants", async (req, res) => {
+  app.post("/api/restaurants", requireAuth, async (req, res) => {
     try {
       if (!req.user) return res.sendStatus(401);
 
@@ -122,7 +122,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/menu-items", async (req, res) => {
+  app.post("/api/menu-items", requireAuth, async (req, res) => {
     try {
       if (!req.user) return res.sendStatus(401);
 
@@ -149,7 +149,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/menu-items/:id", async (req, res) => {
+  app.patch("/api/menu-items/:id", requireAuth, async (req, res) => {
     try {
       if (!req.user) return res.sendStatus(401);
 
@@ -176,7 +176,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/menu-items/:id", async (req, res) => {
+  app.delete("/api/menu-items/:id", requireAuth, async (req, res) => {
     try {
       if (!req.user) return res.sendStatus(401);
 
@@ -204,7 +204,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Add new CSV export endpoint
-  app.get("/api/restaurants/:id/menu/export", async (req, res) => {
+  app.get("/api/restaurants/:id/menu/export", requireAuth, async (req, res) => {
     try {
       if (!req.user) return res.sendStatus(401);
 
@@ -260,7 +260,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Add new CSV import endpoint
-  app.post("/api/restaurants/:id/menu/import", async (req, res) => {
+  app.post("/api/restaurants/:id/menu/import", requireAuth, async (req, res) => {
     try {
       if (!req.user) return res.sendStatus(401);
 
