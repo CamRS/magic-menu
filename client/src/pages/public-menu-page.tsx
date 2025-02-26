@@ -46,14 +46,25 @@ export default function PublicMenuPage() {
   const [cardOrder, setCardOrder] = useState<MenuItem[]>([]);
 
   const { data: restaurant, isLoading: isLoadingRestaurant } = useQuery<Restaurant>({
-    queryKey: ["/api/restaurants", restaurantId],
+    queryKey: [`/api/restaurants/${restaurantId}`],
+    queryFn: async () => {
+      const res = await fetch(`/api/restaurants/${restaurantId}`, {
+        credentials: 'omit'
+      });
+      if (!res.ok) {
+        throw new Error(`Failed to fetch restaurant details`);
+      }
+      return res.json();
+    },
     enabled: !!restaurantId,
   });
 
   const { data: menuItems, isLoading: isLoadingMenu } = useQuery<MenuItem[]>({
     queryKey: ["/api/menu-items"],
     queryFn: async () => {
-      const response = await fetch(`/api/menu-items?restaurantId=${restaurantId}`);
+      const response = await fetch(`/api/menu-items?restaurantId=${restaurantId}`, {
+        credentials: 'omit'
+      });
       if (!response.ok) {
         throw new Error('Failed to fetch menu items');
       }

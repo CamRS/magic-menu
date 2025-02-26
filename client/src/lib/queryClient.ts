@@ -11,12 +11,13 @@ export async function apiRequest(
   method: string,
   url: string,
   data?: unknown | undefined,
+  options: { credentials?: RequestCredentials } = { credentials: 'include' }
 ): Promise<Response> {
   const res = await fetch(url, {
     method,
     headers: data ? { "Content-Type": "application/json" } : {},
     body: data ? JSON.stringify(data) : undefined,
-    credentials: "include",
+    credentials: options.credentials,
   });
 
   await throwIfResNotOk(res);
@@ -26,11 +27,12 @@ export async function apiRequest(
 type UnauthorizedBehavior = "returnNull" | "throw";
 export const getQueryFn: <T>(options: {
   on401: UnauthorizedBehavior;
+  isPublic?: boolean;
 }) => QueryFunction<T> =
-  ({ on401: unauthorizedBehavior }) =>
+  ({ on401: unauthorizedBehavior, isPublic = false }) =>
   async ({ queryKey }) => {
     const res = await fetch(queryKey[0] as string, {
-      credentials: "include",
+      credentials: isPublic ? 'omit' : 'include',
     });
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {
