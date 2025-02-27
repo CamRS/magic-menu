@@ -18,8 +18,8 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { useState, useMemo, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState, useMemo, useEffect, useCallback } from "react";
+import { motion, AnimatePresence, useAnimation } from "framer-motion";
 
 type AllergenType = keyof MenuItem['allergens'];
 const allergensList: AllergenType[] = ['milk', 'eggs', 'peanuts', 'nuts', 'shellfish', 'fish', 'soy', 'gluten'];
@@ -42,8 +42,9 @@ export default function PublicMenuPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCourse, setSelectedCourse] = useState<string>("all");
   const [selectedAllergens, setSelectedAllergens] = useState<AllergenType[]>([]);
-  const [isFiltersOpen, setIsFiltersOpen] = useState(true);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [cardOrder, setCardOrder] = useState<MenuItem[]>([]);
+  const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 });
 
   const { data: restaurant, isLoading: isLoadingRestaurant } = useQuery<Restaurant>({
     queryKey: [`/api/restaurants/${restaurantId}`],
@@ -59,56 +60,65 @@ export default function PublicMenuPage() {
     enabled: !!restaurantId,
   });
 
-  const { data: menuItems, isLoading: isLoadingMenu } = useQuery<MenuItem[]>({
-    queryKey: ["/api/menu-items"],
-    queryFn: async () => {
-      const response = await fetch(`/api/menu-items?restaurantId=${restaurantId}`, {
-        credentials: 'omit'
-      });
-      if (!response.ok) {
-        throw new Error('Failed to fetch menu items');
-      }
-      return response.json();
-    },
-    enabled: !!restaurantId,
-  });
+  const { data: menuItems, isLoading: isLoadingMenu, error } = useQuery<MenuItem[]>({
+      queryKey: ["/api/menu-items"],
+      queryFn: async () => {
+        const response = await fetch(`/api/menu-items?restaurantId=${restaurantId}`, {
+          credentials: 'omit'
+        });
+        if (!response.ok) throw new Error('Failed to fetch menu items');
+        return response.json();
+      },
+      enabled: !!restaurantId,
+      retry: 2, // Retry 2 times before failing
+      staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+    });
+
+    if (error) {
+      return <p className="text-red-500">Error loading menu items: {error.message}</p>;
+    }
+
 
   const filteredItems = useMemo(() => {
     if (!menuItems) return [];
 
-    return menuItems.filter(item => {
-      const matchesSearch = searchTerm === "" || 
-        item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const lowerSearch = searchTerm.toLowerCase();
 
-      const matchesCourse = selectedCourse === "all" || item.courseType === selectedCourse;
-
-      const matchesAllergens = selectedAllergens.length === 0 || 
-        !selectedAllergens.some(allergen => item.allergens[allergen]);
-
-      return matchesSearch && matchesCourse && matchesAllergens;
+    return menuItems.filter(({ name, description, courseType, allergens }) => {
+      return (
+        (!searchTerm || name.toLowerCase().includes(lowerSearch) || description.toLowerCase().includes(lowerSearch)) &&
+        (selectedCourse === "all" || courseType === selectedCourse) &&
+        selectedAllergens.every(allergen => !allergens[allergen]) // More efficient check
+      );
     });
   }, [menuItems, searchTerm, selectedCourse, selectedAllergens]);
 
+
   // Update card order when filtered items change
   useEffect(() => {
-    setCardOrder(filteredItems);
-  }, [filteredItems]);
+    if (menuItems?.length > 0 && cardOrder.length === 0) {
+      setCardOrder(menuItems); // Initialize card stack only once
+    }
+  }, [menuItems]); // Only re-run when `menuItems` updates
 
-  const handleSwipe = (direction: number) => {
-    if (cardOrder.length <= 1) return;
+  const handleSwipe = useCallback(
+    (direction: "left" | "right", item: MenuItem) => {
+      setCardOrder((prev) => {
+        if (prev.length <= 1) return prev; // Prevent empty list bug
 
-    setCardOrder(prev => {
-      const newOrder = [...prev];
-      const [removed] = newOrder.splice(0, 1);
-      newOrder.push(removed);
-      return newOrder;
-    });
-  };
+        if (direction === "left") {
+          return prev.filter((i) => i.id !== item.id);
+        } else {
+          return [item, ...prev];
+        }
+      });
+    },
+    []
+  );
 
   if (!matches || !restaurantId) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-black">
+      <div className="min-h-screen flex items-center justify-center bg-[#F5F5F5]">
         <p className="text-[#FFFFFF]">Restaurant not found</p>
       </div>
     );
@@ -116,159 +126,283 @@ export default function PublicMenuPage() {
 
   if (isLoadingRestaurant || isLoadingMenu) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-black">
+      <div className="min-h-screen flex items-center justify-center bg-[#F5F5F5]">
         <Loader2 className="h-8 w-8 animate-spin text-[#FFFFFF]" />
       </div>
     );
   }
+  // Updated MenuCard component
+  const MenuCard = ({ item, index }: { item: MenuItem; index: number }) => {
+    // Animation controls
+    const controls = useAnimation();
 
-  if (!restaurant) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-black">
-        <p className="text-[#FFFFFF]">Restaurant not found</p>
-      </div>
-    );
-  }
+    // State for tracking drag and animation
+    const [dragInfo, setDragInfo] = useState<{ offset: { x: number, y: number }, velocity: { x: number, y: number } | null }>({ 
+      offset: { x: 0, y: 0 }, 
+      velocity: null 
+    });
+    const [isDragging, setIsDragging] = useState(false);
 
-  const MenuCard = ({ item, index }: { item: MenuItem; index: number }) => (
-    <motion.div
-      initial={{ scale: 0.8, y: 50, opacity: 0 }}
-      animate={{ 
-        scale: index === 0 ? 1 : 0.98 - index * 0.01,
-        y: index === 0 ? 0 : 8 + index * 6,
-        x: index === 0 ? 0 : 4 + index * 6,
-        opacity: 1,
-        zIndex: cardOrder.length - index
-      }}
-      exit={{ x: 300, opacity: 0 }}
-      transition={{ 
-        type: "spring", 
-        stiffness: 200, 
-        damping: 25,    
-        mass: 0.8      
-      }}
-      drag={index === 0 ? "x" : false}
-      dragConstraints={{ left: -100, right: 100 }} 
-      dragElastic={0.7} 
-      onDragEnd={(e, { offset, velocity }) => {
-        if (Math.abs(offset.x) > 100 || Math.abs(velocity.x) > 500) {
-          handleSwipe(offset.x > 0 ? 1 : -1);
+    // Calculate card stack position
+    const scale = Math.max(0.88, 1 - index * 0.06); // More fluid shrinking
+    const translateY = index * 12; // Adds better depth
+    const opacity = Math.max(0.5, 1 - index * 0.1); // Ensures better visibility
+
+    // Use useEffect to handle animation state changes
+    useEffect(() => {
+      // Initial animation - runs once on mount
+      controls.start({
+        opacity,
+        scale,
+        y: translateY,
+        transition: { 
+          type: "spring",
+          stiffness: 180, // Less stiff for smoother animation
+          damping: 18, // Makes motion softer
+          mass: 0.9 // Prevents "snappy" behavior
         }
-      }}
-      className="absolute w-full cursor-grab active:cursor-grabbing"
-      style={{
-        pointerEvents: index === 0 ? "auto" : "none"
-      }}
-    >
-      <Card className="bg-gray-900 border-gray-800 overflow-hidden mx-4 my-2">
-        <CardContent className="p-0">
-          <img
-            src={foodImages[item.id % foodImages.length]}
-            alt={`${item.name} presentation`}
-            className="w-full h-[400px] object-cover"
+      });
+    }, [controls, index, opacity, scale,]);
+
+    // Handle animations in response to drag events
+    useEffect(() => {
+      if (!isDragging && dragInfo.velocity) {
+        const threshold = window.innerWidth * 0.15;
+        const velocity = 10;
+
+        if (dragInfo.offset.x > threshold || (dragInfo.velocity?.x && dragInfo.velocity.x > velocity)) {
+          // Swipe right
+          controls.start({
+            x: window.innerWidth,
+            transition: { duration: 0.3, ease: [0.32, 0.72, 0, 1] }
+          }).then(() => handleSwipe('right'));
+        } else if (dragInfo.offset.x < -threshold || (dragInfo.velocity?.x && dragInfo.velocity.x < -velocity)) {
+          // Swipe left
+          controls.start({
+            x: -window.innerWidth,
+            transition: { duration: 0.3, ease: [0.32, 0.72, 0, 1] }
+          }).then(() => handleSwipe('left'));
+        } else {
+          // Return to center
+          controls.start({
+            x: 0,
+            transition: { 
+              type: "spring", 
+              stiffness: 300, 
+              damping: 20,
+              restDelta: 0.5
+            }
+          });
+        }
+
+        // Reset drag info
+        setDragInfo({ offset: { x: 0, y: 0 }, velocity: null });
+      }
+    }, [controls, dragInfo, isDragging, handleSwipe]);
+
+    // Handle drag gesture
+    const handleDrag = (_, info) => {
+      requestAnimationFrame(() => {
+        setDragPosition({ x: info.offset.x, y: 0 });
+      });
+    };
+
+    // Handle drag end
+    const handleSwipe = useCallback((direction: "left" | "right") => {
+      setCardOrder((prev) => {
+        if (prev.length === 0) return prev; // Prevents errors if empty
+
+        if (direction === "left") {
+          return [...prev.slice(1), prev[0]]; // Moves first card to the end
+        } else {
+          return [prev[prev.length - 1], ...prev.slice(0, -1)]; // Moves last card to the front
+        }
+      });
+    }, []);
+
+      // Reset drag position state
+      setDragPosition({ x: 0, y: 0 });
+    };
+
+    return (
+      <motion.div
+        className="absolute w-full cursor-grab active:cursor-grabbing touch-none"
+        style={{ zIndex: cardOrder.length - index }}
+        initial={{ scale: scale, opacity: opacity, y: translateY, x: 0 }} // ✅ Now uses translateY
+        animate={{
+          scale: index === 0 ? 1 : scale,
+          opacity: index === 0 ? 1 : opacity,
+          y: index === 0 ? dragPosition.y : translateY - 20, // ✅ Moves all cards up smoothly
+          x: index === 0 ? dragPosition.x : 0,
+        }}
+        transition={{
+          type: "spring",
+          stiffness: 150, // Makes swipe feel natural
+          damping: 15, // Reduces snap-back effect
+        }}
+        drag={index <= 1 ? "x" : false} // ✅ Allows the next card to become draggable
+        dragElastic={0.5} // Reduces stiffness when dragging
+        dragMomentum={true} // Allows smooth momentum
+      >
+
+        {/* Visual feedback based on drag position */}
+        {index === 0 && (
+          <div 
+            className="absolute inset-0 rounded-xl z-10 pointer-events-none transition-opacity duration-300"
+            style={{
+              backgroundColor: dragPosition.x > 50 ? 'rgba(0, 255, 0, 0.15)' : 
+                             dragPosition.x < -50 ? 'rgba(255, 0, 0, 0.15)' : 
+                             'transparent',
+              opacity: Math.min(1, Math.abs(dragPosition.x) / 150)
+            }}
           />
-          <div className="p-6 space-y-4">
-            <div className="flex justify-between items-start">
-              <h3 className="text-2xl font-semibold text-[#FFFFFF]">{item.name}</h3>
-              <span className="text-2xl font-bold text-[#FFFFFF]">
-                ${parseFloat(item.price).toFixed(2)}
-              </span>
-            </div>
-            <p className="text-[#FFFFFF]/80 text-lg">
-              {item.description}
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {Object.entries(item.allergens)
-                .filter(([_, value]) => value)
-                .map(([key]) => (
-                  <Badge
-                    key={key}
-                    variant="outline"
-                    className="bg-transparent border-[#FFFFFF]/20 text-[#FFFFFF]"
-                  >
-                    Contains {key}
-                  </Badge>
-                ))}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </motion.div>
-  );
+        )}
 
-  return (
-    <div className="min-h-screen bg-black pb-32">
-      <div className="max-w-6xl mx-auto p-4">
-        {/* Restaurant Name */}
-        <div className="text-center mb-12">
-          <h1 className="text-5xl font-bold text-[#FFFFFF] mb-2">{restaurant?.name}</h1>
-          <div className="h-1 w-24 bg-[#FFFFFF] mx-auto"></div>
-        </div>
+        {/* Card Content */}
+        <Card className="bg-white rounded-xl overflow-hidden mx-2 my-1 shadow-lg max-w-sm w-80 mx-auto">
+            <CardContent className="p-4 space-y-1">
+            <div className="space-y-5">
+              {/* Title */}
+              <h3 className="text-2xl font-bold text-gray-900">{item.name}</h3>
 
-        {/* Menu Title */}
-        <div className="mb-8">
-          <h2 className="text-4xl font-bold text-[#FFFFFF]">Menu</h2>
-        </div>
+              {/* Allergens */}
+              <div className="flex flex-wrap gap-2 items-center mb-3">
+                <span className="text-gray-700 mr-2 text-sm">Contains</span>
+                {Object.entries(item.allergens)
+                  .filter(([_, value]) => value)
+                  .map(([key]) => (
+                      <Badge
+                        className="bg-blue-500 text-gray-800 hover:bg-blue-600 rounded-full px-2.5 py-1 text-xs"
+                      >
+                      {key}
+                    </Badge>
+                  ))}
+              </div>
 
-        {/* Filters Section */}
-        <Collapsible
-          open={isFiltersOpen}
-          onOpenChange={setIsFiltersOpen}
-          className="mb-8 space-y-4 bg-gray-900/50 p-4 rounded-xl"
-        >
-          <div className="flex items-center justify-between">
-            <h2 className="text-[#FFFFFF] text-xl font-semibold">Filters</h2>
-            <CollapsibleTrigger asChild>
-              <Button variant="ghost" size="sm" className="text-[#FFFFFF]">
-                {isFiltersOpen ? (
-                  <ChevronUp className="h-4 w-4" />
-                ) : (
-                  <ChevronDown className="h-4 w-4" />
-                )}
-              </Button>
-            </CollapsibleTrigger>
-          </div>
+              {/* Image - adjusted height and aspect ratio */}
+              <div className="mb-6">
+                <img
+                  src={foodImages[item.id % foodImages.length]}
+                  alt={`${item.name} presentation`}
+                  className="w-full h-56 object-cover rounded-lg"
+                  draggable="false"
+                />
+              </div>
 
-          <CollapsibleContent className="space-y-6">
-            {/* Search Bar */}
-            <div className="relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[#FFFFFF]" />
-              <Input
-                placeholder="Search menu"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-12 py-6 bg-gray-900 border-gray-800 text-[#FFFFFF] placeholder:text-[#FFFFFF]/60 rounded-xl"
-              />
-            </div>
+              {/* Description - smaller text */}
+              <p className="text-gray-700 text-sm min-h-[3rem]">
+                {item.description}
+              </p>
 
-            {/* Allergen Filters */}
-            <div>
-              <p className="text-[#FFFFFF] mb-2">I'm allergic to</p>
-              <div className="flex flex-wrap gap-2">
-                {allergensList.map((allergen) => (
-                  <Button
-                    key={allergen}
-                    variant={selectedAllergens.includes(allergen) ? "default" : "outline"}
-                    className={`rounded-full ${
-                      selectedAllergens.includes(allergen)
-                        ? "bg-blue-600 text-[#FFFFFF]"
-                        : "bg-gray-800 text-[#FFFFFF] hover:bg-gray-700"
-                    }`}
-                    onClick={() => {
-                      setSelectedAllergens(prev =>
-                        prev.includes(allergen)
-                          ? prev.filter(a => a !== allergen)
-                          : [...prev, allergen]
-                      );
-                    }}
-                  >
-                    {allergen}
-                  </Button>
-                ))}
+              {/* Price */}
+              <div>
+                <span className="text-gray-500 text-xl font-semibold">
+                  ${parseFloat(item.price).toFixed(2)}
+                </span>
               </div>
             </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+    );
+  };
+  return (
+      <div className="min-h-screen bg-[#F5F5F5] pb-32 antialiased">
+        <div className="w-full py-2 px-3 border-b border-gray-800 sticky top-0 bg-[#F5F5F5] z-50">
+        <div className="max-w-6xl mx-auto space-y-4">
+          {/* Toggle Button */}
+          <div className="flex justify-center mb-2">
+            <Button 
+              variant="ghost" 
+              onClick={() => setIsFiltersOpen(!isFiltersOpen)}
+              className="rounded-full px-4 py-1 bg-gray-900 text-gray-800 text-xs font-medium flex items-center gap-1 border-0 hover:bg-gray-800"
+            >
+              Filters {isFiltersOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+            </Button>
+          </div>
 
-            {/* Course Type Dropdown */}
+          {/* Current Filter Status */}
+          <div className="text-center mb-4">
+            <span className="text-blue-700 font-medium text-xs">Showing:</span>{" "}
+            <span className="text-gray-700 text-xs">
+              {filteredItems.length === menuItems?.length
+                ? "All menu items"
+                : `${filteredItems.length} filtered items`}
+            </span>
+          </div>
+        </div>
+      </div>
+        <div className="max-w-6xl mx-auto p-2 relative">
+        {/* Filters Section */}
+          
+          <Collapsible
+            open={isFiltersOpen}
+            onOpenChange={setIsFiltersOpen}
+            className={`absolute top-0 left-0 right-0 z-50 ${isFiltersOpen ? 'bg-white transform scale-100' : ''}`}
+          >
+            <CollapsibleContent className="space-y-6 px-4 py-4 flex flex-col items-center transform scale-100">
+             {/* Search Bar */}
+             <div className="w-full max-w-md">
+               <Input
+                 placeholder="Search menu"
+                 value={searchTerm}
+                 onChange={(e) => setSearchTerm(e.target.value)}
+                 className="w-full py-2 px-4 bg-white text-gray-800 placeholder:text-gray-500 rounded-full border border-gray-300 text-center"
+               />
+             </div>
+
+             {/* Allergen Filters */}
+             <div className="text-center w-full max-w-md">
+               <p className="text-gray-800 mb-3 font-medium">I'm allergic to</p>
+               <div className="flex flex-wrap gap-2 justify-center">
+                 {["Gluten", "Dairy", "Eggs", "Peanuts", "Shellfish", "Fish", "Soy"].map((allergen) => {
+                   const allergenKey = allergen.toLowerCase() as AllergenType;
+                   return (
+                     <Button
+                       variant="outline"
+                       className={`rounded-full text-xs px-3 py-1 h-auto
+                         hover:bg-gray-400 hover:text-white
+                         ${selectedAllergens.includes(allergenKey) 
+                           ? "bg-blue-600 text-white" 
+                           : "bg-gray-200 text-gray-800"}`}
+                       onClick={() => {
+                         setSelectedAllergens(prev =>
+                           prev.includes(allergenKey)
+                             ? prev.filter(a => a !== allergenKey)
+                             : [...prev, allergenKey]
+                         );
+                       }}
+                     >
+                       {allergen}
+                     </Button>
+                   );
+                 })}
+               </div>
+             </div>
+
+             {/* Dietary Preferences Section */}
+             <div className="text-center w-full max-w-md">
+               <p className="text-gray-800 mb-3 font-medium">Dietary Preferences</p>
+               <div className="flex flex-wrap gap-2 justify-center">
+                 <Button
+                   variant="outline"
+                   className="rounded-full text-xs px-3 py-1 h-auto bg-gray-200 text-gray-800 hover:bg-gray-300"
+                 >
+                   Vegetarian
+                 </Button>
+                 <Button
+                   variant="outline"
+                   className="rounded-full text-xs px-3 py-1 h-auto bg-gray-200 text-gray-800 hover:bg-gray-300"
+                 >
+                   Vegan
+                 </Button>
+               </div>
+             </div>
+           </CollapsibleContent>
+          </Collapsible>
+
+          {/* Course Type Dropdown */}
+          <div className="mb-8">
             <Select value={selectedCourse} onValueChange={setSelectedCourse}>
               <SelectTrigger className="bg-gray-900 border-gray-800 text-[#FFFFFF] w-full rounded-xl">
                 <SelectValue placeholder="All Courses" />
@@ -282,30 +416,46 @@ export default function PublicMenuPage() {
                 ))}
               </SelectContent>
             </Select>
-
-            {selectedAllergens.length > 0 && (
-              <div className="text-sm text-[#FFFFFF]">
-                Showing options free of {selectedAllergens.join(', ')}
-              </div>
-            )}
-          </CollapsibleContent>
-        </Collapsible>
-
+          </div>  
+        
         {/* Menu Items Card Stack */}
-        <div className="w-full h-[calc(100vh-400px)] relative mb-64">
+            <div className="w-full h-[calc(100vh-280px)] relative mb-16">
           {cardOrder.length === 0 ? (
             <div className="text-center py-8 text-[#FFFFFF]">
               No menu items match your filters
             </div>
           ) : (
-            <div className="relative w-full h-full">
+            <div className="relative w-full h-full touch-action-none">
               <AnimatePresence initial={false} mode="popLayout">
-                {cardOrder.map((item, index) => (
+                {cardOrder.slice(0, 5).map((item, index) => (
                   <MenuCard key={item.id} item={item} index={index} />
                 ))}
               </AnimatePresence>
             </div>
           )}
+        </div>
+      </div>
+      
+      {/* Footer navigation */}
+      <div className="fixed bottom-0 left-0 right-0 bg-[#F5F5F5] border-t border-gray-800 p-3 flex justify-between items-center z-50">
+        <div className="w-8 h-8 flex items-center justify-center">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M20 2H4C2.9 2 2 2.9 2 4V22L6 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2Z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </div>
+        <h2 className="text-lg font-bold text-gray-800">{restaurant?.name}</h2>
+        <div className="w-8 h-8 flex items-center justify-center">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="12" r="5" stroke="white" strokeWidth="2"/>
+            <path d="M12 2V4" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+            <path d="M12 20V22" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+            <path d="M4.92993 4.93005L6.33993 6.34005" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+            <path d="M17.6599 17.66L19.0699 19.07" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+            <path d="M2 12H4" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+            <path d="M20 12H22" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+            <path d="M6.33993 17.66L4.92993 19.07" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+            <path d="M19.0699 4.93005L17.6599 6.34005" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+          </svg>
         </div>
       </div>
     </div>
