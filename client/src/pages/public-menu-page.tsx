@@ -306,6 +306,7 @@ export default function PublicMenuPage() {
       </motion.div>
     );
   };
+  
   return (
       <div className="min-h-screen bg-[#F5F5F5] pb-32 antialiased">
         <div className="w-full py-2 px-3 border-b border-gray-800 sticky top-0 bg-[#F5F5F5] z-50">
