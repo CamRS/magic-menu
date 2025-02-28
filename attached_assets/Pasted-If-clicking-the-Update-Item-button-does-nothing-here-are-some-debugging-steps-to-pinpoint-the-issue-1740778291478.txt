@@ -1,0 +1,115 @@
+If clicking the Update Item button does nothing, here are some debugging steps to pinpoint the issue:
+
+1️⃣ Check if the Form Submit Event is Triggered
+Add a console.log("Submitting form", data); inside handleSubmit:
+tsx
+Copy
+Edit
+const handleSubmit = (data: InsertMenuItem) => {
+  console.log("Submitting form", data);
+  const formattedData = {
+    ...data,
+    price: data.price.toString().replace(/[^\d.-]/g, ''),
+    customTags: data.customTags || [],
+    courseType: courseTypes.includes(data.courseType) ? data.courseType : "Appetizers",
+  };
+
+  if (editingItem) {
+    const updateData = {
+      ...formattedData,
+      id: editingItem.id,
+    };
+    console.log("Updating item with data:", updateData); // Debugging
+    updateMutation.mutate(updateData);
+  } else {
+    console.log("Creating new item with data:", formattedData); // Debugging
+    createMutation.mutate(formattedData);
+  }
+};
+Expected Outcome: If nothing appears in the console, the form is not submitting.
+2️⃣ Check if Button is Disabled
+The submit button has this condition:
+tsx
+Copy
+Edit
+<Button
+  type="submit"
+  className="w-full"
+  disabled={createMutation.isPending || updateMutation.isPending}
+>
+Issue: If createMutation.isPending || updateMutation.isPending is true, the button remains disabled.
+Test: Add console.log(createMutation.isPending, updateMutation.isPending); inside your component to see if it's stuck.
+3️⃣ Ensure onSubmit is Hooked to the Form
+Ensure the form has onSubmit:
+tsx
+Copy
+Edit
+<form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+Fix: If missing, wrap handleSubmit in form.handleSubmit.
+4️⃣ Check if editingItem is Set
+useEffect should populate the form when editing:
+tsx
+Copy
+Edit
+useEffect(() => {
+  if (editingItem) {
+    console.log("Editing item:", editingItem); // Debugging
+    const formData = {
+      ...editingItem,
+      price: editingItem.price.toString(),
+      image: editingItem.image || "",
+      customTags: editingItem.customTags || [],
+      courseType: courseTypes.includes(editingItem.courseType) ? editingItem.courseType : "Appetizers",
+      allergens: editingItem.allergens || {
+        milk: false, eggs: false, peanuts: false, nuts: false,
+        shellfish: false, fish: false, soy: false, gluten: false,
+      },
+    };
+    form.reset(formData);
+    setCreateMenuItemOpen(true);
+  }
+}, [editingItem, form]);
+Test: Try console.log(editingItem); before form.reset.
+5️⃣ Check updateMutation.mutate(updateData)
+If the button is clicked but nothing happens, add a console log:
+tsx
+Copy
+Edit
+const updateMutation = useMutation({
+  mutationFn: async (data: InsertMenuItem & { id: number }) => {
+    console.log("Updating menu item:", data); // Debugging
+    const { id, ...updateData } = data;
+    
+    const response = await apiRequest("PATCH", `/api/menu-items/${id}`, updateData);
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || "Failed to update menu item");
+    }
+    return response.json();
+  },
+  onSuccess: () => {
+    console.log("Update successful"); // Debugging
+    queryClient.invalidateQueries({ queryKey: ["/api/menu-items", selectedRestaurant?.id] });
+    setCreateMenuItemOpen(false);
+    setEditingItem(null);
+    form.reset();
+    toast({ title: "Success", description: "Menu item updated successfully" });
+  },
+  onError: (error: Error) => {
+    console.error("Update failed:", error); // Debugging
+    toast({ title: "Error", description: error.message, variant: "destructive" });
+  },
+});
+If no log appears, updateMutation.mutate is never called.
+6️⃣ Test API Request Directly
+Open DevTools (F12 → Network Tab), click "Update Item", and check if an API request is sent.
+If the API request fails, check if /api/menu-items/${id} is correct.
+7️⃣ Manually Trigger Edit Mode
+Try setting editingItem manually:
+
+tsx
+Copy
+Edit
+setEditingItem(menuItems[0]); // Replace with a real item
+setCreateMenuItemOpen(true);
+If the modal doesn’t open, the state isn’t updating.

@@ -230,12 +230,14 @@ export default function HomePage() {
 
   useEffect(() => {
     if (editingItem) {
+      console.log("Setting form data for editing:", editingItem); 
       const formData = {
-        ...editingItem,
-        price: typeof editingItem.price === 'string' ? editingItem.price : editingItem.price.toString(),
+        name: editingItem.name,
+        description: editingItem.description,
+        price: editingItem.price,
         image: editingItem.image || "",
         customTags: editingItem.customTags || [],
-        courseType: courseTypes.includes(editingItem.courseType) ? editingItem.courseType : "Appetizers",
+        courseType: editingItem.courseType as typeof courseTypes[number],
         allergens: editingItem.allergens || {
           milk: false,
           eggs: false,
@@ -246,6 +248,7 @@ export default function HomePage() {
           soy: false,
           gluten: false,
         },
+        restaurantId: editingItem.restaurantId,
       };
       form.reset(formData);
       setCreateMenuItemOpen(true);
@@ -255,15 +258,9 @@ export default function HomePage() {
   const updateMutation = useMutation({
     mutationFn: async (data: InsertMenuItem & { id: number }) => {
       const { id, ...updateData } = data;
-      const transformedData: Partial<InsertMenuItem> = {
-        ...updateData,
-        courseType: updateData.courseType,
-        customTags: updateData.customTags || [],
-        price: updateData.price.toString(),
-        image: updateData.image || "",
-      };
+      console.log("Updating menu item:", { id, ...updateData }); 
 
-      const response = await apiRequest("PATCH", `/api/menu-items/${id}`, transformedData);
+      const response = await apiRequest("PATCH", `/api/menu-items/${id}`, updateData);
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.message || "Failed to update menu item");
@@ -271,6 +268,7 @@ export default function HomePage() {
       return response.json();
     },
     onSuccess: () => {
+      console.log("Update successful"); 
       queryClient.invalidateQueries({ queryKey: ["/api/menu-items", selectedRestaurant?.id] });
       setCreateMenuItemOpen(false);
       setEditingItem(null);
@@ -281,6 +279,7 @@ export default function HomePage() {
       });
     },
     onError: (error: Error) => {
+      console.error("Update failed:", error); 
       toast({
         title: "Error",
         description: error.message,
@@ -288,14 +287,6 @@ export default function HomePage() {
       });
     },
   });
-
-  const handleDialogOpenChange = (open: boolean) => {
-    setCreateMenuItemOpen(open);
-    if (!open) {
-      setEditingItem(null);
-      form.reset();
-    }
-  };
 
   const createMutation = useMutation({
     mutationFn: async (data: InsertMenuItem) => {
@@ -334,21 +325,21 @@ export default function HomePage() {
   });
 
   const handleSubmit = (data: InsertMenuItem) => {
-    const formattedData = {
-      ...data,
-      price: data.price.toString().replace(/[^\d.-]/g, ''),
-      customTags: data.customTags || [],
-      courseType: courseTypes.includes(data.courseType) ? data.courseType : "Appetizers",
-    };
+    console.log("Form submitted with data:", data); 
 
     if (editingItem) {
+      console.log("Updating existing item:", editingItem.id); 
       const updateData = {
-        ...formattedData,
+        ...data,
         id: editingItem.id,
+        restaurantId: editingItem.restaurantId,
       };
       updateMutation.mutate(updateData);
     } else {
-      createMutation.mutate(formattedData);
+      createMutation.mutate({
+        ...data,
+        restaurantId: selectedRestaurant!.id,
+      });
     }
   };
 
@@ -424,6 +415,15 @@ export default function HomePage() {
       setSelectedRestaurant(restaurants[0]);
     }
   }, [restaurants, selectedRestaurant]);
+
+  const handleDialogOpenChange = (open: boolean) => {
+    setCreateMenuItemOpen(open);
+    if (!open) {
+      console.log("Resetting form and edit state"); 
+      setEditingItem(null);
+      form.reset();
+    }
+  };
 
   const toggleItemSelection = (id: number) => {
     setSelectedItems((prev) =>
