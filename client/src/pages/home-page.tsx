@@ -26,7 +26,7 @@ import {
 import { Copy, Store, PlusCircle, ChevronDown, Loader2, Download, Upload, Trash2, MoreVertical, Pencil, Globe } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { type Restaurant, type MenuItem, type InsertMenuItem, insertMenuItemSchema, insertRestaurantSchema, courseTypes } from "@shared/schema";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Label } from "@/components/ui/label";
@@ -44,7 +44,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { X } from "lucide-react";
-import { useCallback } from "react";
+
 
 export default function HomePage() {
   const { user, logoutMutation } = useAuth();
@@ -56,6 +56,27 @@ export default function HomePage() {
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Move the handleImageDrop callback to component level
+  const handleImageDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        form.setValue("image", reader.result as string, { shouldValidate: true });
+      };
+      reader.readAsDataURL(file);
+    } else {
+      toast({
+        title: "Error",
+        description: "Please upload an image file",
+        variant: "destructive",
+      });
+    }
+  }, [form, toast]);
 
   const { data: restaurants, isLoading: isLoadingRestaurants } = useQuery<Restaurant[]>({
     queryKey: ["/api/restaurants"],
@@ -660,25 +681,7 @@ export default function HomePage() {
                       e.preventDefault();
                       e.stopPropagation();
                     }}
-                    onDrop={useCallback((e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-
-                      const file = e.dataTransfer.files[0];
-                      if (file && file.type.startsWith('image/')) {
-                        const reader = new FileReader();
-                        reader.onloadend = () => {
-                          form.setValue("image", reader.result as string, { shouldValidate: true });
-                        };
-                        reader.readAsDataURL(file);
-                      } else {
-                        toast({
-                          title: "Error",
-                          description: "Please upload an image file",
-                          variant: "destructive",
-                        });
-                      }
-                    }, [form])}
+                    onDrop={handleImageDrop}
                   >
                     <Input
                       id="image"
