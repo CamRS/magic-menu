@@ -34,12 +34,12 @@ const dietaryPreferences = ['Vegetarian', 'Vegan'] as const;
 
 const MenuCard = ({ item }: { item: MenuItem }) => {
   return (
-    <Card className="bg-white rounded-xl shadow-lg w-[300px] mx-2 mb-6 border border-gray-200">
-      <CardContent className="p-4 space-y-4 flex flex-col h-full">
-        <h3 className="text-2xl font-bold text-gray-900">{item.name}</h3>
+    <Card className="h-full bg-white rounded-xl shadow-lg border border-gray-200">
+      <CardContent className="p-6 flex flex-col h-full">
+        <h3 className="text-2xl font-bold text-gray-900 mb-4">{item.name}</h3>
 
         {/* Allergens and Dietary Tags */}
-        <div className="flex flex-wrap gap-1 items-center mb-3">
+        <div className="flex flex-wrap gap-1 items-center mb-4">
           {Object.entries(item.allergens)
             .filter(([_, value]) => value)
             .map(([key]) => (
@@ -51,31 +51,22 @@ const MenuCard = ({ item }: { item: MenuItem }) => {
                 {key}
               </Badge>
             ))}
-          {item.dietaryPreferences?.map((pref) => (
-            <Badge
-              key={pref}
-              variant="outline"
-              className="bg-green-50 text-green-700 border-green-200 rounded-full px-2 py-0.5 text-xs"
-            >
-              {pref}
-            </Badge>
-          ))}
         </div>
 
-        <div className="min-h-[120px] max-h-[200px] h-auto">
+        <div className="flex-grow mb-4">
           <img
             src={foodImages[item.id % foodImages.length]}
             alt={`${item.name} presentation`}
-            className="w-full h-full object-cover rounded-lg"
+            className="w-full h-48 object-cover rounded-lg"
             draggable="false"
           />
         </div>
 
-        <p className="text-gray-700 text-sm font-medium line-clamp-2">
+        <p className="text-gray-700 text-sm font-medium mb-4 line-clamp-2">
           {item.description}
         </p>
 
-        <div className="mt-auto pt-2">
+        <div className="mt-auto">
           <span className="text-gray-800 text-xl font-bold">
             ${parseFloat(item.price).toFixed(2)}
           </span>
@@ -324,8 +315,8 @@ export default function PublicMenuPage() {
         </Collapsible>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
-        <div className="h-full flex items-center justify-center px-4 py-2">
+      <div className="flex-1 relative overflow-hidden">
+        <div className="absolute inset-0 flex items-center justify-center px-4">
           {filteredItems.length === 0 ? (
             <div className="text-center py-8 text-gray-800">
               No menu items match your filters
@@ -340,7 +331,7 @@ export default function PublicMenuPage() {
             >
               <CarouselContent className="-ml-2 md:-ml-4">
                 {filteredItems.map((item) => (
-                  <CarouselItem key={item.id} className="pl-2 md:pl-4 md:basis-1/2 lg:basis-1/3">
+                  <CarouselItem key={item.id} className="pl-2 md:pl-4 md:basis-1/2 lg:basis-1/3 h-[600px]">
                     <MenuCard item={item} />
                   </CarouselItem>
                 ))}
