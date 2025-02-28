@@ -96,8 +96,7 @@ export default function PublicMenuPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCourse, setSelectedCourse] = useState<string>("all");
   const [selectedAllergens, setSelectedAllergens] = useState<AllergenType[]>([]);
-  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
-  const [isCourseOpen, setIsCourseOpen] = useState(false);
+  const [activeDropdown, setActiveDropdown] = useState<"filters" | "courses" | null>(null);
 
   const { data: restaurant, isLoading: isLoadingRestaurant } = useQuery<Restaurant>({
     queryKey: [`/api/restaurants/${restaurantId}`],
@@ -161,39 +160,45 @@ export default function PublicMenuPage() {
     );
   }
 
+  const toggleDropdown = (dropdown: "filters" | "courses") => {
+    setActiveDropdown(activeDropdown === dropdown ? null : dropdown);
+  };
+
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-[#FFFFFF]">
       {/* Header with filters toggle and status */}
       <div className="w-full border-b bg-[#FFFFFF] z-50">
         <div className="max-w-md mx-auto px-4 py-2">
-          {/* Toggle Buttons */}
-          <div className="flex justify-center gap-4 mb-2">
+          {/* Toggle Buttons Container */}
+          <div className="flex flex-col gap-2 w-full">
             {/* Filters Toggle */}
-            <Button 
-              variant="ghost" 
-              onClick={() => setIsFiltersOpen(!isFiltersOpen)}
-              className="rounded-full px-4 py-1 bg-white text-gray-800 text-lg font-semibold flex items-center gap-1 border-0 hover:bg-white shadow-none ring-0 outline-none"
-            >
-              Filters {isFiltersOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-            </Button>
+            <div className="w-full">
+              <Button 
+                variant="ghost" 
+                onClick={() => toggleDropdown("filters")}
+                className="w-full rounded-full px-4 py-1 bg-white text-gray-800 text-lg font-semibold flex items-center justify-center gap-1 border-0 hover:bg-white shadow-none ring-0 outline-none"
+              >
+                Filters {activeDropdown === "filters" ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+              </Button>
+            </div>
 
             {/* Course Type Toggle */}
-            <div className="relative">
+            <div className="w-full relative">
               <Button
                 variant="ghost"
-                onClick={() => setIsCourseOpen(!isCourseOpen)}
-                className="rounded-full px-4 py-1 bg-white text-gray-800 text-lg font-semibold flex items-center gap-1 border-0 hover:bg-white shadow-none ring-0 outline-none"
+                onClick={() => toggleDropdown("courses")}
+                className="w-full rounded-full px-4 py-1 bg-white text-gray-800 text-lg font-semibold flex items-center justify-center gap-1 border-0 hover:bg-white shadow-none ring-0 outline-none"
               >
                 {selectedCourse === "all" ? "All Courses" : selectedCourse}
-                <ChevronDown className={`ml-1 w-4 h-4 transition-transform ${isCourseOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown className={`ml-1 w-4 h-4 transition-transform ${activeDropdown === "courses" ? 'rotate-180' : ''}`} />
               </Button>
 
-              {isCourseOpen && (
-                <div className="absolute z-50 top-full left-1/2 -translate-x-1/2 w-48 border divide-y bg-white shadow-lg mt-2 rounded-lg">
+              {activeDropdown === "courses" && (
+                <div className="absolute z-50 top-full left-0 right-0 w-full border divide-y bg-white shadow-lg mt-2 rounded-lg">
                   <button
                     onClick={() => {
                       setSelectedCourse("all");
-                      setIsCourseOpen(false);
+                      setActiveDropdown(null);
                     }}
                     className={`w-full px-4 py-3 text-center hover:bg-gray-100 ${
                       selectedCourse === "all" ? "hidden" : "text-gray-800"
@@ -206,7 +211,7 @@ export default function PublicMenuPage() {
                       key={type}
                       onClick={() => {
                         setSelectedCourse(type);
-                        setIsCourseOpen(false);
+                        setActiveDropdown(null);
                       }}
                       className={`w-full px-4 py-3 text-center hover:bg-gray-100 ${
                         selectedCourse === type ? "hidden" : "text-gray-800"
@@ -221,7 +226,7 @@ export default function PublicMenuPage() {
           </div>
 
           {/* Current Filter Status */}
-          <div className="text-center mb-2">
+          <div className="text-center mt-2 mb-2">
             <span className="text-blue-600 font-medium text-sm">Showing: </span>
             <span className="text-gray-700 text-sm">
               {selectedAllergens.length > 0 
@@ -233,8 +238,8 @@ export default function PublicMenuPage() {
 
         {/* Filters Panel */}
         <Collapsible
-          open={isFiltersOpen}
-          onOpenChange={setIsFiltersOpen}
+          open={activeDropdown === "filters"}
+          onOpenChange={(open) => setActiveDropdown(open ? "filters" : null)}
         >
           <CollapsibleContent className="bg-white shadow-md z-40">
             <div className="max-w-md mx-auto px-4 py-6 space-y-6">
