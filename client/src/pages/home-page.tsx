@@ -625,6 +625,25 @@ export default function HomePage() {
                     </p>
                   )}
                 </div>
+                <div>
+                  <Label htmlFor="image">Image</Label>
+                  <Input
+                    id="image"
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          form.setValue("image", reader.result as string, { shouldValidate: true });
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                    className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+                  />
+                </div>
                 {form.watch("courseType") === "Custom" && (
                   <div>
                     <Label htmlFor="customTag">Custom Tags</Label>
@@ -783,6 +802,13 @@ export default function HomePage() {
                       }}
                     >
                       <CardContent className="p-6">
+                        {item.image && (
+                          <img
+                            src={item.image}
+                            alt={item.name}
+                            className="w-full h-48 object-cover rounded-lg mb-4"
+                          />
+                        )}
                         <div className="absolute top-4 right-4 z-10">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
