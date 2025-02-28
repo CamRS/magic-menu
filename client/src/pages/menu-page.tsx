@@ -18,12 +18,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -114,19 +108,17 @@ export default function MenuPage() {
 
   useEffect(() => {
     if (editItem) {
-      // Transform the data to match form expectations
       const formData = {
         name: editItem.name,
         description: editItem.description,
         price: editItem.price.toString(),
-        courseType: editItem.courseType as "Appetizers" | "Mains" | "Desserts" | "Alcoholic" | "Non-Alcoholic" | "Custom",
+        courseType: editItem.courseType,
         customTags: editItem.customTags || [],
         restaurantId: editItem.restaurantId,
         image: editItem.image || "",
         allergens: editItem.allergens,
       };
       form.reset(formData);
-      setOpen(true);
     }
   }, [editItem, form]);
 
@@ -136,7 +128,7 @@ export default function MenuPage() {
       const formattedData = {
         ...updateData,
         restaurantId: parseInt(restaurantId || "0"),
-        price: updateData.price.replace(/^\$/, ''),
+        price: updateData.price.toString().replace(/^\$/, ''),
         image: updateData.image || '',
         customTags: updateData.customTags || [],
       };
@@ -203,15 +195,19 @@ export default function MenuPage() {
     },
   });
 
-  const handleSubmit = (data: InsertMenuItem) => {
-    if (editItem) {
-      const updateData = {
-        ...data,
-        id: editItem.id,
-      };
-      updateMutation.mutate(updateData);
-    } else {
-      createMutation.mutate(data);
+  const handleSubmit = async (data: InsertMenuItem) => {
+    try {
+      if (editItem) {
+        await updateMutation.mutateAsync({
+          ...data,
+          id: editItem.id,
+          restaurantId: parseInt(restaurantId || "0"),
+        });
+      } else {
+        await createMutation.mutateAsync(data);
+      }
+    } catch (error) {
+      console.error('Form submission error:', error);
     }
   };
 
