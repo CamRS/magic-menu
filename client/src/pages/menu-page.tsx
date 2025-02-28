@@ -106,11 +106,14 @@ export default function MenuPage() {
 
   useEffect(() => {
     if (editItem) {
+      // Ensure courseType is valid before setting it
+      const courseType = courseTypes.includes(editItem.courseType) ? editItem.courseType : "Appetizers";
+
       const formData = {
         name: editItem.name,
         description: editItem.description,
         price: editItem.price.toString(),
-        courseType: editItem.courseType,
+        courseType,
         customTags: editItem.customTags || [],
         restaurantId: editItem.restaurantId,
         image: editItem.image || "",
