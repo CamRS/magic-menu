@@ -440,7 +440,7 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="sticky top-0 z-50 bg-gray-50 p-4 md:p-8 border-b">
+      <div className="fixed top-0 left-0 right-0 z-50 bg-gray-50 p-4 md:p-8 border-b">
         <div className="max-w-4xl mx-auto">
           <div className="flex flex-col gap-4">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -544,7 +544,7 @@ export default function HomePage() {
         </div>
       </div>
 
-      <div className="p-4 md:p-8 pt-4">
+      <div className="p-4 md:p-8 mt-[160px] md:mt-[160px]">
         <div className="max-w-4xl mx-auto">
           <Dialog open={isCreateRestaurantOpen} onOpenChange={setCreateRestaurantOpen}>
             <DialogContent>
