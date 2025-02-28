@@ -45,7 +45,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { X } from "lucide-react";
 
-
 export default function HomePage() {
   const { user, logoutMutation } = useAuth();
   const { toast } = useToast();
@@ -56,6 +55,29 @@ export default function HomePage() {
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const form = useForm<InsertMenuItem>({
+    resolver: zodResolver(insertMenuItemSchema),
+    defaultValues: {
+      name: "",
+      description: "",
+      price: "",
+      courseType: "Appetizers",
+      customTags: [],
+      restaurantId: 0,
+      image: "",
+      allergens: {
+        milk: false,
+        eggs: false,
+        peanuts: false,
+        nuts: false,
+        shellfish: false,
+        fish: false,
+        soy: false,
+        gluten: false,
+      },
+    },
+  });
 
   // Move the handleImageDrop callback to component level
   const handleImageDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
@@ -209,28 +231,6 @@ export default function HomePage() {
     };
   };
 
-  const form = useForm<InsertMenuItem>({
-    resolver: zodResolver(insertMenuItemSchema),
-    defaultValues: {
-      name: "",
-      description: "",
-      price: "",
-      courseType: "Appetizers",
-      customTags: [],
-      restaurantId: 0,
-      image: "",
-      allergens: {
-        milk: false,
-        eggs: false,
-        peanuts: false,
-        nuts: false,
-        shellfish: false,
-        fish: false,
-        soy: false,
-        gluten: false,
-      },
-    },
-  });
 
   useEffect(() => {
     if (editingItem) {
@@ -675,7 +675,7 @@ export default function HomePage() {
                 </div>
                 <div>
                   <Label htmlFor="image">Image</Label>
-                  <div 
+                  <div
                     className="border-2 border-dashed border-gray-300 rounded-lg p-6 cursor-pointer hover:border-primary transition-colors"
                     onDragOver={(e) => {
                       e.preventDefault();
@@ -703,9 +703,9 @@ export default function HomePage() {
                       Drag and drop an image here or click to select
                     </p>
                     {form.watch("image") && (
-                      <img 
-                        src={form.watch("image")} 
-                        alt="Preview" 
+                      <img
+                        src={form.watch("image")}
+                        alt="Preview"
                         className="mt-4 max-h-40 rounded-lg"
                       />
                     )}
@@ -800,7 +800,7 @@ export default function HomePage() {
                 <div className="bg-amber-100 p-4 rounded-md border border-amber-200">
                   <h3 className="font-medium mb-2">Important: Use the Export Template</h3>
                   <p className="text-sm">
-                    For best results, first click "Export CSV" to download a template with the correct format. 
+                    For best results, first click "Export CSV" to download a template with the correct format.
                     Then add your new items to this file.
                   </p>
                 </div>

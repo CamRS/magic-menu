@@ -32,7 +32,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Loader2, PlusCircle, Download, Upload, Trash2, Pencil, MoreVertical } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 
@@ -57,16 +57,6 @@ export default function MenuPage() {
   const { toast } = useToast();
   const restaurantId = new URLSearchParams(location.split('?')[1]).get('restaurantId');
 
-  const { data: restaurant } = useQuery<Restaurant>({
-    queryKey: ["/api/restaurants", restaurantId],
-    enabled: !!restaurantId,
-  });
-
-  const { data: menuItems, isLoading } = useQuery<MenuItem[]>({
-    queryKey: ["/api/menu-items", restaurantId],
-    enabled: !!restaurantId
-  });
-
   const form = useForm<InsertMenuItem>({
     resolver: zodResolver(insertMenuItemSchema),
     defaultValues: {
@@ -90,56 +80,50 @@ export default function MenuPage() {
     },
   });
 
+  // Handle image drop
+  const handleImageDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        form.setValue("image", reader.result as string, { shouldValidate: true });
+      };
+      reader.readAsDataURL(file);
+    } else {
+      toast({
+        title: "Error",
+        description: "Please upload an image file",
+        variant: "destructive",
+      });
+    }
+  }, [form, toast]);
+
+  const { data: restaurant } = useQuery<Restaurant>({
+    queryKey: ["/api/restaurants", restaurantId],
+    enabled: !!restaurantId,
+  });
+
+  const { data: menuItems, isLoading } = useQuery<MenuItem[]>({
+    queryKey: ["/api/menu-items", restaurantId],
+    enabled: !!restaurantId
+  });
+
   useEffect(() => {
     if (editItem) {
-      // Destructure editItem to only include properties defined in InsertMenuItem
-      const {
-        name,
-        description,
-        price,
-        courseType,
-        customTags,
-        allergens,
-        image,
-        restaurantId
-      } = editItem;
-
-      form.reset({
-        name,
-        description,
-        price: price.toString(),
-        courseType: courseType as "Appetizers" | "Mains" | "Desserts" | "Alcoholic" | "Non-Alcoholic" | "Custom",
-        customTags: customTags || [],
-        allergens,
-        image: image || undefined,
-        restaurantId
-      });
+      const formData = {
+        ...editItem,
+        price: editItem.price.toString(),
+        image: editItem.image || "",
+        customTags: editItem.customTags || [],
+        courseType: editItem.courseType as "Appetizers" | "Mains" | "Desserts" | "Alcoholic" | "Non-Alcoholic" | "Custom",
+      };
+      form.reset(formData);
       setOpen(true);
     }
   }, [editItem, form]);
-
-  const createMutation = useMutation({
-    mutationFn: async (data: any) => {
-      const formattedData = {
-        ...data,
-        restaurantId: parseInt(restaurantId || "0"),
-        price: data.price.replace(/^\$/, ''),
-        image: data.image || '',
-      };
-
-      const res = await apiRequest("POST", "/api/menu-items", formattedData);
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.message || "Failed to create menu item");
-      }
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/menu-items", restaurantId] });
-      setOpen(false);
-      form.reset();
-    },
-  });
 
   const updateMutation = useMutation({
     mutationFn: async (data: InsertMenuItem & { id: number }) => {
@@ -149,6 +133,7 @@ export default function MenuPage() {
         restaurantId: parseInt(restaurantId || "0"),
         price: updateData.price.replace(/^\$/, ''),
         image: updateData.image || '',
+        customTags: updateData.customTags || [],
       };
 
       const res = await apiRequest("PATCH", `/api/menu-items/${id}`, formattedData);
@@ -169,6 +154,7 @@ export default function MenuPage() {
       });
     },
     onError: (error: Error) => {
+      console.error('Update mutation error:', error);
       toast({
         title: "Error",
         description: error.message,
@@ -177,22 +163,30 @@ export default function MenuPage() {
     },
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: async (ids: number[]) => {
-      const results = await Promise.all(
-        ids.map((id) => apiRequest("DELETE", `/api/menu-items/${id}`))
-      );
-      const errors = results.filter((res) => !res.ok);
-      if (errors.length > 0) {
-        throw new Error(`Failed to delete ${errors.length} items`);
+  const createMutation = useMutation({
+    mutationFn: async (data: InsertMenuItem) => {
+      const formattedData = {
+        ...data,
+        restaurantId: parseInt(restaurantId || "0"),
+        price: data.price.replace(/^\$/, ''),
+        image: data.image || '',
+        customTags: data.customTags || [],
+      };
+
+      const res = await apiRequest("POST", "/api/menu-items", formattedData);
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to create menu item");
       }
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/menu-items", restaurantId] });
-      setSelectedItems([]);
+      setOpen(false);
+      form.reset();
       toast({
         title: "Success",
-        description: "Selected items have been deleted",
+        description: "Menu item created successfully",
       });
     },
     onError: (error: Error) => {
@@ -203,6 +197,34 @@ export default function MenuPage() {
       });
     },
   });
+
+  const handleSubmit = (data: InsertMenuItem) => {
+    if (editItem) {
+      const updateData = {
+        ...data,
+        id: editItem.id,
+        customTags: data.customTags || [],
+      };
+      updateMutation.mutate(updateData);
+    } else {
+      createMutation.mutate(data);
+    }
+  };
+
+  const handleAllergenChange = (key: keyof AllergenInfo, checked: boolean) => {
+    form.setValue(`allergens.${key}`, checked, { shouldValidate: true });
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        form.setValue("image", reader.result as string, { shouldValidate: true });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleExportCSV = async () => {
     if (!restaurantId) return;
@@ -285,21 +307,6 @@ export default function MenuPage() {
     }
   };
 
-  const handleAllergenChange = (key: keyof AllergenInfo, checked: boolean) => {
-    form.setValue(`allergens.${key}`, checked, { shouldValidate: true });
-  };
-
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        form.setValue("image", reader.result as string, { shouldValidate: true });
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
   const toggleItemSelection = (id: number) => {
     setSelectedItems((prev) =>
       prev.includes(id)
@@ -313,17 +320,36 @@ export default function MenuPage() {
     deleteMutation.mutate(selectedItems);
   };
 
-  const handleSubmit = (data: InsertMenuItem) => {
-    if (editItem) {
-      updateMutation.mutate({ ...data, id: editItem.id });
-    } else {
-      createMutation.mutate(data);
-    }
-  };
+  const deleteMutation = useMutation({
+    mutationFn: async (ids: number[]) => {
+      const results = await Promise.all(
+        ids.map((id) => apiRequest("DELETE", `/api/menu-items/${id}`))
+      );
+      const errors = results.filter((res) => !res.ok);
+      if (errors.length > 0) {
+        throw new Error(`Failed to delete ${errors.length} items`);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/menu-items", restaurantId] });
+      setSelectedItems([]);
+      toast({
+        title: "Success",
+        description: "Selected items have been deleted",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
 
   const filteredMenuItems = menuItems?.filter(item => {
     const matchesCourse = selectedCourse === "All Courses" || item.courseType === selectedCourse;
-    const matchesAllergens = selectedAllergens.length === 0 || 
+    const matchesAllergens = selectedAllergens.length === 0 ||
       !selectedAllergens.some(allergen => item.allergens[allergen as keyof AllergenInfo]);
     return matchesCourse && matchesAllergens;
   });
@@ -551,13 +577,37 @@ export default function MenuPage() {
                         )}
                         <div>
                           <Label htmlFor="image">Image</Label>
-                          <Input
-                            id="image"
-                            type="file"
-                            accept="image/*"
-                            onChange={handleImageUpload}
-                            className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
-                          />
+                          <div
+                            className="border-2 border-dashed border-gray-300 rounded-lg p-6 cursor-pointer hover:border-primary transition-colors"
+                            onDragOver={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                            }}
+                            onDrop={handleImageDrop}
+                          >
+                            <Input
+                              id="image"
+                              type="file"
+                              accept="image/*"
+                              onChange={handleImageUpload}
+                              className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+                            />
+                            <p className="text-sm text-muted-foreground mt-2">
+                              Drag and drop an image here or click to select
+                            </p>
+                            {form.watch("image") && (
+                              <img
+                                src={form.watch("image")}
+                                alt="Preview"
+                                className="mt-4 max-h-40 rounded-lg"
+                              />
+                            )}
+                          </div>
+                          {form.formState.errors.image && (
+                            <p className="text-sm text-destructive mt-1">
+                              {form.formState.errors.image.message}
+                            </p>
+                          )}
                         </div>
                       </div>
                       <div>
@@ -581,7 +631,7 @@ export default function MenuPage() {
                     <Button
                       type="submit"
                       className="w-full"
-                      disabled={createMutation.isPending || updateMutation.isPending}
+                      disabled={createMutation.isPending || updateMutation.isPending || !form.formState.isValid}
                     >
                       {(createMutation.isPending || updateMutation.isPending) && (
                         <Loader2 className="mr-2 h-4 w-4 animate-spin text-white" />
