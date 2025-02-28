@@ -119,7 +119,6 @@ export default function HomePage() {
             throw new Error("CSV must contain a header row and at least one data row");
           }
 
-          // Send to server with minimal processing
           const response = await fetch(`/api/restaurants/${selectedRestaurant.id}/menu/import`, {
             method: 'POST',
             headers: {
@@ -134,19 +133,28 @@ export default function HomePage() {
           }
 
           e.target.value = '';
+          setIsImportDialogOpen(false);
+
+          // Show more detailed feedback
+          const successMessage = `Successfully imported ${result.success} items.`;
+          const failureMessage = result.failed > 0 
+            ? `\nFailed to import ${result.failed} items.${
+                result.errors?.length ? `\nErrors:\n${result.errors.join('\n')}` : ''
+              }`
+            : '';
+
           toast({
-            title: "Import Complete",
-            description: `Successfully imported ${result.success} items. ${
-              result.failed > 0 ? `Failed to import ${result.failed} items.` : ''
-            }`,
+            title: result.failed > 0 ? "Import Completed with Errors" : "Import Complete",
+            description: successMessage + failureMessage,
             variant: result.failed > 0 ? "destructive" : "default",
+            duration: result.failed > 0 ? 10000 : 3000, // Show longer for errors
           });
 
           queryClient.invalidateQueries({ queryKey: ["/api/menu-items", selectedRestaurant.id] });
         } catch (error) {
           console.error('Error importing CSV:', error);
           toast({
-            title: "Error",
+            title: "Import Error",
             description: error instanceof Error ? error.message : "Failed to import menu items",
             variant: "destructive",
           });
