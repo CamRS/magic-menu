@@ -240,9 +240,7 @@ export default function HomePage() {
         price: typeof editingItem.price === 'string' ? editingItem.price : editingItem.price.toString(),
         image: editingItem.image || "",
         customTags: editingItem.customTags || [],
-        courseType: courseTypes.includes(editingItem.courseType) 
-          ? editingItem.courseType 
-          : "Appetizers",
+        courseType: courseTypes.includes(editingItem.courseType) ? editingItem.courseType : "Appetizers",
         allergens: editingItem.allergens || {
           milk: false,
           eggs: false,
@@ -264,8 +262,9 @@ export default function HomePage() {
       const { id, ...updateData } = data;
 
       // Transform the data to match expected types
-      const transformedData = {
+      const transformedData: Partial<InsertMenuItem> = {
         ...updateData,
+        courseType: updateData.courseType,
         customTags: updateData.customTags || [], // Convert null to empty array
         price: updateData.price.toString(), // Ensure price is string
         image: updateData.image || "", // Convert undefined to empty string
@@ -304,6 +303,7 @@ export default function HomePage() {
       ...data,
       price: data.price.toString().replace(/[^\d.-]/g, ''),
       customTags: data.customTags || [],
+      courseType: courseTypes.includes(data.courseType) ? data.courseType : "Appetizers",
     };
 
     if (editingItem) {
