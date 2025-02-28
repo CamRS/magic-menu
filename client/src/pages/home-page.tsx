@@ -44,6 +44,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { X } from "lucide-react";
+import { useCallback } from "react";
 
 export default function HomePage() {
   const { user, logoutMutation } = useAuth();
@@ -137,7 +138,7 @@ export default function HomePage() {
 
           // Show more detailed feedback
           const successMessage = `Successfully imported ${result.success} items.`;
-          const failureMessage = result.failed > 0 
+          const failureMessage = result.failed > 0
             ? `\nFailed to import ${result.failed} items.${
                 result.errors?.length ? `\nErrors:\n${result.errors.join('\n')}` : ''
               }`
@@ -653,22 +654,64 @@ export default function HomePage() {
                 </div>
                 <div>
                   <Label htmlFor="image">Image</Label>
-                  <Input
-                    id="image"
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
+                  <div 
+                    className="border-2 border-dashed border-gray-300 rounded-lg p-6 cursor-pointer hover:border-primary transition-colors"
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                    onDrop={useCallback((e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+
+                      const file = e.dataTransfer.files[0];
+                      if (file && file.type.startsWith('image/')) {
                         const reader = new FileReader();
                         reader.onloadend = () => {
                           form.setValue("image", reader.result as string, { shouldValidate: true });
                         };
                         reader.readAsDataURL(file);
+                      } else {
+                        toast({
+                          title: "Error",
+                          description: "Please upload an image file",
+                          variant: "destructive",
+                        });
                       }
-                    }}
-                    className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
-                  />
+                    }, [form])}
+                  >
+                    <Input
+                      id="image"
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onloadend = () => {
+                            form.setValue("image", reader.result as string, { shouldValidate: true });
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                      className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+                    />
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Drag and drop an image here or click to select
+                    </p>
+                    {form.watch("image") && (
+                      <img 
+                        src={form.watch("image")} 
+                        alt="Preview" 
+                        className="mt-4 max-h-40 rounded-lg"
+                      />
+                    )}
+                  </div>
+                  {form.formState.errors.image && (
+                    <p className="text-sm text-destructive mt-1">
+                      {form.formState.errors.image.message}
+                    </p>
+                  )}
                 </div>
                 {form.watch("courseType") === "Custom" && (
                   <div>
@@ -729,7 +772,7 @@ export default function HomePage() {
                 <Button
                   type="submit"
                   className="w-full"
-                  disabled={createMutation.isPending || updateMutation.isPending}
+                  disabled={createMutation.isPending || updateMutation.isPending || !form.formState.isValid}
                 >
                   {(createMutation.isPending || updateMutation.isPending) && (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -872,8 +915,7 @@ export default function HomePage() {
                           </DropdownMenu>
                         </div>
 
-                        <h3 className="text-xl font-semibold mb-2">{item.name}</h3>
-                        <p className="text-muted-foreground mb-4">{item.description}</p>
+                        <h3 className="text-xl font-semibold mb-2">{item.name}</h3><p className="text-muted-foreground mb-4">{item.description}</p>
                         <div className="flex justify-between items-center">
                           <span className="font-semibold">${parseFloat(item.price).toFixed(2)}</span>
                           <div className="flex flex-wrap gap-2">
