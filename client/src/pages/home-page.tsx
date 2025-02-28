@@ -52,6 +52,7 @@ export default function HomePage() {
   const [isCreateMenuItemOpen, setCreateMenuItemOpen] = useState(false);
   const [isCreateRestaurantOpen, setCreateRestaurantOpen] = useState(false);
   const [selectedItems, setSelectedItems] = useState<number[]>([]);
+  const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -227,9 +228,71 @@ export default function HomePage() {
   };
 
 
+  useEffect(() => {
+    if (editingItem) {
+      const formData = {
+        ...editingItem,
+        price: typeof editingItem.price === 'string' ? editingItem.price : editingItem.price.toString(),
+        image: editingItem.image || "",
+        customTags: editingItem.customTags || [],
+        courseType: courseTypes.includes(editingItem.courseType) ? editingItem.courseType : "Appetizers",
+        allergens: editingItem.allergens || {
+          milk: false,
+          eggs: false,
+          peanuts: false,
+          nuts: false,
+          shellfish: false,
+          fish: false,
+          soy: false,
+          gluten: false,
+        },
+      };
+      form.reset(formData);
+      setCreateMenuItemOpen(true);
+    }
+  }, [editingItem, form]);
+
+  const updateMutation = useMutation({
+    mutationFn: async (data: InsertMenuItem & { id: number }) => {
+      const { id, ...updateData } = data;
+      const transformedData: Partial<InsertMenuItem> = {
+        ...updateData,
+        courseType: updateData.courseType,
+        customTags: updateData.customTags || [],
+        price: updateData.price.toString(),
+        image: updateData.image || "",
+      };
+
+      const response = await apiRequest("PATCH", `/api/menu-items/${id}`, transformedData);
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to update menu item");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/menu-items", selectedRestaurant?.id] });
+      setCreateMenuItemOpen(false);
+      setEditingItem(null);
+      form.reset();
+      toast({
+        title: "Success",
+        description: "Menu item updated successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleDialogOpenChange = (open: boolean) => {
     setCreateMenuItemOpen(open);
     if (!open) {
+      setEditingItem(null);
       form.reset();
     }
   };
@@ -278,7 +341,15 @@ export default function HomePage() {
       courseType: courseTypes.includes(data.courseType) ? data.courseType : "Appetizers",
     };
 
-    createMutation.mutate(formattedData);
+    if (editingItem) {
+      const updateData = {
+        ...formattedData,
+        id: editingItem.id,
+      };
+      updateMutation.mutate(updateData);
+    } else {
+      createMutation.mutate(formattedData);
+    }
   };
 
   const createRestaurantForm = useForm({
@@ -564,7 +635,7 @@ export default function HomePage() {
           <Dialog open={isCreateMenuItemOpen} onOpenChange={handleDialogOpenChange}>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Add Menu Item</DialogTitle>
+                <DialogTitle>{editingItem ? 'Edit Menu Item' : 'Add Menu Item'}</DialogTitle>
               </DialogHeader>
               <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
                 <div>
@@ -713,12 +784,12 @@ export default function HomePage() {
                 <Button
                   type="submit"
                   className="w-full"
-                  disabled={createMutation.isPending}
+                  disabled={createMutation.isPending || updateMutation.isPending}
                 >
-                  {createMutation.isPending && (
+                  {(createMutation.isPending || updateMutation.isPending) && (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   )}
-                  Add Item
+                  {editingItem ? 'Update Item' : 'Add Item'}
                 </Button>
               </form>
             </DialogContent>
@@ -819,31 +890,46 @@ export default function HomePage() {
                             className="w-full h-48 object-cover rounded-lg mb-4"
                           />
                         )}
-                        <div className="flex justify-between items-start">
-                          <div className="space-y-1">
-                            <h3 className="text-lg font-semibold">{item.name}</h3>
-                            <p className="text-sm text-muted-foreground">{item.description}</p>
-                          </div>
+                        <div className="absolute top-4 right-4 z-10">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                data-dropdown-trigger="true"
+                                onClick={(e) => e.stopPropagation()}
+                              >
                                 <MoreVertical className="h-4 w-4" />
+                                <span className="sr-only">Open menu</span>
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => toggleItemSelection(item.id)}>
-                                Select
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditingItem(item);
+                                }}
+                              >
+                                <Pencil className="mr-2 h-4 w-4" />
+                                Edit
                               </DropdownMenuItem>
                               <DropdownMenuItem
-                                className="text-destructive"
-                                onClick={() => deleteMutation.mutate([item.id])}
+                                className="text-destructive focus:text-destructive"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  deleteMutation.mutate([item.id]);
+                                }}
                               >
+                                <Trash2 className="mr-2 h-4 w-4" />
                                 Delete
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </div>
-                        <div className="flex justify-between items-center mt-4">
+
+                        <h3 className="text-xl font-semibold mb-2">{item.name}</h3>
+                        <p className="text-muted-foreground mb-4">{item.description}</p>
+                        <div className="flex justify-between items-center">
                           <span className="font-semibold">${parseFloat(item.price).toFixed(2)}</span>
                           <div className="flex flex-wrap gap-2">
                             {Object.entries(item.allergens)
