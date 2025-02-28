@@ -18,8 +18,14 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { useState, useMemo, useEffect, useCallback } from "react";
-import { motion, AnimatePresence, useAnimation } from "framer-motion";
+import { useState, useMemo } from "react";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
 
 type AllergenType = keyof MenuItem['allergens'];
 const allergensList: AllergenType[] = ['milk', 'eggs', 'peanuts', 'nuts', 'shellfish', 'fish', 'soy', 'gluten'];
@@ -36,6 +42,54 @@ const foodImages = [
   'https://images.unsplash.com/photo-1484723091739-30a097e8f929?w=800&h=600&fit=crop&q=80',
 ];
 
+const MenuCard = ({ item }: { item: MenuItem }) => {
+  return (
+    <Card className="bg-white rounded-xl overflow-hidden shadow-lg w-[300px] mx-2">
+      <CardContent className="p-4 space-y-4">
+        {/* Title */}
+        <h3 className="text-2xl font-bold text-gray-900">{item.name}</h3>
+
+        {/* Allergens */}
+        <div className="flex flex-wrap gap-2 items-center mb-3">
+          <span className="text-gray-700 mr-2 text-sm">Contains</span>
+          {Object.entries(item.allergens)
+            .filter(([_, value]) => value)
+            .map(([key]) => (
+              <Badge
+                key={key}
+                className="bg-blue-500 text-gray-800 hover:bg-blue-600 rounded-full px-2.5 py-1 text-xs"
+              >
+                {key}
+              </Badge>
+            ))}
+        </div>
+
+        {/* Image */}
+        <div className="mb-4">
+          <img
+            src={foodImages[item.id % foodImages.length]}
+            alt={`${item.name} presentation`}
+            className="w-full h-48 object-cover rounded-lg"
+            draggable="false"
+          />
+        </div>
+
+        {/* Description */}
+        <p className="text-gray-700 text-sm min-h-[3rem]">
+          {item.description}
+        </p>
+
+        {/* Price */}
+        <div>
+          <span className="text-gray-500 text-xl font-semibold">
+            ${parseFloat(item.price).toFixed(2)}
+          </span>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
 export default function PublicMenuPage() {
   const [matches, params] = useRoute("/menu/:restaurantId");
   const restaurantId = params?.restaurantId ? parseInt(params.restaurantId) : null;
@@ -43,8 +97,6 @@ export default function PublicMenuPage() {
   const [selectedCourse, setSelectedCourse] = useState<string>("all");
   const [selectedAllergens, setSelectedAllergens] = useState<AllergenType[]>([]);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
-  const [cardOrder, setCardOrder] = useState<MenuItem[]>([]);
-  const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 });
 
   const { data: restaurant, isLoading: isLoadingRestaurant } = useQuery<Restaurant>({
     queryKey: [`/api/restaurants/${restaurantId}`],
@@ -61,58 +113,36 @@ export default function PublicMenuPage() {
   });
 
   const { data: menuItems, isLoading: isLoadingMenu, error } = useQuery<MenuItem[]>({
-      queryKey: ["/api/menu-items"],
-      queryFn: async () => {
-        const response = await fetch(`/api/menu-items?restaurantId=${restaurantId}`, {
-          credentials: 'omit'
-        });
-        if (!response.ok) throw new Error('Failed to fetch menu items');
-        return response.json();
-      },
-      enabled: !!restaurantId,
-      retry: 2, // Retry 2 times before failing
-      staleTime: 1000 * 60 * 5, // Cache for 5 minutes
-    });
+    queryKey: ["/api/menu-items"],
+    queryFn: async () => {
+      const response = await fetch(`/api/menu-items?restaurantId=${restaurantId}`, {
+        credentials: 'omit'
+      });
+      if (!response.ok) throw new Error('Failed to fetch menu items');
+      return response.json();
+    },
+    enabled: !!restaurantId,
+    retry: 2,
+    staleTime: 1000 * 60 * 5,
+  });
 
-    if (error) {
-      return <p className="text-red-500">Error loading menu items: {error.message}</p>;
-    }
-
+  if (error) {
+    return <p className="text-red-500">Error loading menu items: {error.message}</p>;
+  }
 
   const filteredItems = useMemo(() => {
     if (!menuItems) return [];
 
-    const selectedAllergenSet = new Set(selectedAllergens);
+    const lowerSearch = searchTerm.toLowerCase();
+
     return menuItems.filter(({ name, description, courseType, allergens }) => {
       return (
         (!searchTerm || name.toLowerCase().includes(lowerSearch) || description.toLowerCase().includes(lowerSearch)) &&
         (selectedCourse === "all" || courseType === selectedCourse) &&
-        !Object.keys(allergens).some((a) => selectedAllergenSet.has(a as AllergenType))
+        selectedAllergens.every(allergen => !allergens[allergen])
       );
     });
   }, [menuItems, searchTerm, selectedCourse, selectedAllergens]);
-
-
-  // Update card order when filtered items change
-  useEffect(() => {
-    if (menuItems && cardOrder.length === 0) {
-      setCardOrder([...menuItems]); // Ensures array reference consistency
-    }
-  }, [menuItems, cardOrder.length]);
-
-  const handleSwipe = useCallback((direction: 'left' | 'right') => {
-    setCardOrder((prev) => {
-      if (!Array.isArray(prev) || prev.length === 0) return prev;
-
-      if (direction === 'left') {
-        return prev.slice(1);
-      } else if (direction === 'right') {
-        const lastItem = menuItems?.find(item => !prev.includes(item));
-        return lastItem ? [lastItem, ...prev] : prev;
-      }
-      return prev;
-    });
-  }, []);
 
   if (!matches || !restaurantId) {
     return (
@@ -129,184 +159,10 @@ export default function PublicMenuPage() {
       </div>
     );
   }
-  // Updated MenuCard component
-  const MenuCard = ({ item, index }: { item: MenuItem; index: number }) => {
-    // Animation controls
-    const controls = useAnimation();
 
-    // State for tracking drag and animation
-    const [dragInfo, setDragInfo] = useState<{ offset: { x: number, y: number }, velocity: { x: number, y: number } | null }>({ 
-      offset: { x: 0, y: 0 }, 
-      velocity: null 
-    });
-    const [isDragging, setIsDragging] = useState(false);
-
-    // Calculate card stack position
-    const scale = Math.max(0.85, 1 - index * 0.05); // Each card is 95% the size of the one above
-    const translateY = index * 12;  // Ensures cards stack properly
-    const opacity = Math.max(0.3, 1 - index * 0.12); // Prevents cards from fading out too much
-
-
-    // Use useEffect to handle animation state changes
-    useEffect(() => {
-      // Initial animation - runs once on mount
-      controls.start({
-        opacity,
-        scale,
-        y: translateY, // ✅ Use vertical stacking instead
-      
-        transition: { 
-          type: "spring",
-          stiffness: 250,
-          damping: 30,
-          mass: 0.8
-        }
-      });
-    }, [controls, index, opacity, scale,]);
-
-    // Handle animations in response to drag events
-    useEffect(() => {
-      if (!isDragging && dragInfo.velocity) {
-        const threshold = window.innerWidth * 0.15;
-        const velocity = 10;
-
-        if (dragInfo.offset.x > threshold || (dragInfo.velocity?.x && dragInfo.velocity.x > velocity)) {
-          // Swipe right
-          controls.start({
-            x: window.innerWidth,
-            transition: { duration: 0.3, ease: [0.32, 0.72, 0, 1] }
-          }).then(() => handleSwipe('right'));
-        } else if (dragInfo.offset.x < -threshold || (dragInfo.velocity?.x && dragInfo.velocity.x < -velocity)) {
-          // Swipe left
-          controls.start({
-            x: -window.innerWidth,
-            transition: { duration: 0.3, ease: [0.32, 0.72, 0, 1] }
-          }).then(() => handleSwipe('left'));
-        } else {
-          // Return to center
-          controls.start({
-            x: 0,
-            transition: { 
-              type: "spring", 
-              stiffness: 300, 
-              damping: 20,
-              restDelta: 0.5
-            }
-          });
-        }
-
-        // Reset drag info
-        setDragInfo({ offset: { x: 0, y: 0 }, velocity: null });
-      }
-    }, [controls, dragInfo, isDragging, handleSwipe]);
-
-    // Handle drag gesture
-    const handleDrag = useCallback((_, info) => {
-      requestAnimationFrame(() => {
-        setDragPosition((prev) => ({
-          x: prev.x !== info.offset.x ? info.offset.x : prev.x,
-          y: 0
-        }));
-      });
-    }, []);
-
-    // Handle drag end
-    const handleDragEnd = (_, info) => {
-      setIsDragging(false);
-      setDragInfo({
-        offset: info.offset,
-        velocity: info.velocity
-      });
-
-      // Reset drag position state
-      setDragPosition({ x: 0, y: 0 });
-    };
-
-    return (
-      <motion.div
-        className="absolute w-full cursor-grab active:cursor-grabbing touch-none"
-        style={{ zIndex: cardOrder.length - index }}
-        initial={{ scale: scale, opacity: opacity, y: translateY, x: 0 }} // ✅ Now uses translateY
-        animate={{
-          scale: index === 0 ? 1 : scale,
-          opacity: index === 0 ? 1 : opacity,
-          y: translateY,
-          x: 0,
-        }}
-        transition={{
-          type: "spring",
-          stiffness: 150, // Makes swipe feel natural
-          damping: 15, // Reduces snap-back effect
-        }}
-        drag={index === 0 ? "x" : false} // Only the top card is draggable
-        dragElastic={0.5} // Reduces stiffness when dragging
-        dragMomentum={true} // Allows smooth momentum
-      >
-
-        {/* Visual feedback based on drag position */}
-        {index === 0 && (
-          <div 
-            className="absolute inset-0 rounded-xl z-10 pointer-events-none transition-opacity duration-300"
-            style={{
-              backgroundColor: dragPosition.x > 50 ? 'rgba(0, 255, 0, 0.15)' : 
-                             dragPosition.x < -50 ? 'rgba(255, 0, 0, 0.15)' : 
-                             'transparent',
-              opacity: Math.min(1, Math.abs(dragPosition.x) / 150)
-            }}
-          />
-        )}
-
-        {/* Card Content */}
-        <Card className="bg-white rounded-xl overflow-hidden mx-2 my-1 shadow-lg max-w-sm w-80 mx-auto">
-            <CardContent className="p-4 space-y-1">
-            <div className="space-y-5">
-              {/* Title */}
-              <h3 className="text-2xl font-bold text-gray-900">{item.name}</h3>
-
-              {/* Allergens */}
-              <div className="flex flex-wrap gap-2 items-center mb-3">
-                <span className="text-gray-700 mr-2 text-sm">Contains</span>
-                {Object.entries(item.allergens)
-                  .filter(([_, value]) => value)
-                  .map(([key]) => (
-                      <Badge
-                        className="bg-blue-500 text-gray-800 hover:bg-blue-600 rounded-full px-2.5 py-1 text-xs"
-                      >
-                      {key}
-                    </Badge>
-                  ))}
-              </div>
-
-              {/* Image - adjusted height and aspect ratio */}
-              <div className="mb-6">
-                <img
-                  src={foodImages[item.id % foodImages.length]}
-                  alt={`${item.name} presentation`}
-                  className="w-full h-56 object-cover rounded-lg"
-                  draggable="false"
-                />
-              </div>
-
-              {/* Description - smaller text */}
-              <p className="text-gray-700 text-sm min-h-[3rem]">
-                {item.description}
-              </p>
-
-              {/* Price */}
-              <div>
-                <span className="text-gray-500 text-xl font-semibold">
-                  ${parseFloat(item.price).toFixed(2)}
-                </span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
-    );
-  };
   return (
-      <div className="min-h-screen bg-[#F5F5F5] pb-32 antialiased">
-        <div className="w-full py-2 px-3 border-b border-gray-800 sticky top-0 bg-[#F5F5F5] z-50">
+    <div className="min-h-screen bg-[#F5F5F5] pb-32 antialiased">
+      <div className="w-full py-2 px-3 border-b border-gray-800 sticky top-0 bg-[#F5F5F5] z-50">
         <div className="max-w-6xl mx-auto space-y-4">
           {/* Toggle Button */}
           <div className="flex justify-center mb-2">
@@ -330,110 +186,99 @@ export default function PublicMenuPage() {
           </div>
         </div>
       </div>
-        <div className="max-w-6xl mx-auto p-2 relative">
+
+      <div className="max-w-6xl mx-auto p-2 relative">
         {/* Filters Section */}
-          
-          <Collapsible
-            open={isFiltersOpen}
-            onOpenChange={setIsFiltersOpen}
-            className={`absolute top-0 left-0 right-0 z-50 ${isFiltersOpen ? 'bg-white/90 backdrop-blur-lg transform scale-100' : ''}`}
-          >
-            <CollapsibleContent className="space-y-6 px-4 py-4 flex flex-col items-center transform scale-100">
-             {/* Search Bar */}
-             <div className="w-full max-w-md">
-               <Input
-                 placeholder="Search menu"
-                 value={searchTerm}
-                 onChange={(e) => setSearchTerm(e.target.value)}
-                 className="w-full py-2 px-4 bg-white text-gray-800 placeholder:text-gray-500 rounded-full border border-gray-300 text-center"
-               />
-             </div>
+        <Collapsible
+          open={isFiltersOpen}
+          onOpenChange={setIsFiltersOpen}
+          className={`absolute top-0 left-0 right-0 z-50 ${isFiltersOpen ? 'bg-white/90 backdrop-blur-lg transform scale-100' : ''}`}
+        >
+          <CollapsibleContent className="space-y-6 px-4 py-4 flex flex-col items-center transform scale-100">
+            {/* Search Bar */}
+            <div className="w-full max-w-md">
+              <Input
+                placeholder="Search menu"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full py-2 px-4 bg-white text-gray-800 placeholder:text-gray-500 rounded-full border border-gray-300 text-center"
+              />
+            </div>
 
-             {/* Allergen Filters */}
-             <div className="text-center w-full max-w-md">
-               <p className="text-gray-800 mb-3 font-medium">I'm allergic to</p>
-               <div className="flex flex-wrap gap-2 justify-center">
-                 {["Gluten", "Dairy", "Eggs", "Peanuts", "Shellfish", "Fish", "Soy"].map((allergen) => {
-                   const allergenKey = allergen.toLowerCase() as AllergenType;
-                   return (
-                     <Button
-                       variant="outline"
-                       className={`rounded-full text-xs px-3 py-1 h-auto
-                         hover:bg-gray-400 hover:text-white
-                         ${selectedAllergens.includes(allergenKey) 
-                           ? "bg-blue-600 text-white" 
-                           : "bg-gray-200 text-gray-800"}`}
-                       onClick={() => {
-                         setSelectedAllergens(prev =>
-                           prev.includes(allergenKey)
-                             ? prev.filter(a => a !== allergenKey)
-                             : [...prev, allergenKey]
-                         );
-                       }}
-                     >
-                       {allergen}
-                     </Button>
-                   );
-                 })}
-               </div>
-             </div>
-
-             {/* Dietary Preferences Section */}
-             <div className="text-center w-full max-w-md">
-               <p className="text-gray-800 mb-3 font-medium">Dietary Preferences</p>
-               <div className="flex flex-wrap gap-2 justify-center">
-                 <Button
-                   variant="outline"
-                   className="rounded-full text-xs px-3 py-1 h-auto bg-gray-200 text-gray-800 hover:bg-gray-300"
-                 >
-                   Vegetarian
-                 </Button>
-                 <Button
-                   variant="outline"
-                   className="rounded-full text-xs px-3 py-1 h-auto bg-gray-200 text-gray-800 hover:bg-gray-300"
-                 >
-                   Vegan
-                 </Button>
-               </div>
-             </div>
-           </CollapsibleContent>
-          </Collapsible>
-
-          {/* Course Type Dropdown */}
-          <div className="mb-8">
-            <Select value={selectedCourse} onValueChange={setSelectedCourse}>
-              <SelectTrigger className="bg-gray-900 border-gray-800 text-[#FFFFFF] w-full rounded-xl">
-                <SelectValue placeholder="All Courses" />
-              </SelectTrigger>
-              <SelectContent className="bg-gray-900 border-gray-800">
-                <SelectItem value="all" className="text-[#FFFFFF]">All Courses</SelectItem>
-                {courseTypes.map((type) => (
-                  <SelectItem key={type} value={type} className="text-[#FFFFFF]">
-                    {type}
-                  </SelectItem>
+            {/* Allergen Filters */}
+            <div className="text-center w-full max-w-md">
+              <p className="text-gray-800 mb-3 font-medium">I'm allergic to</p>
+              <div className="flex flex-wrap gap-2 justify-center">
+                {allergensList.map((allergen) => (
+                  <Button
+                    key={allergen}
+                    variant="outline"
+                    className={`rounded-full text-xs px-3 py-1 h-auto
+                      hover:bg-gray-400 hover:text-white
+                      ${selectedAllergens.includes(allergen)
+                        ? "bg-blue-600 text-white"
+                        : "bg-gray-200 text-gray-800"}`}
+                    onClick={() => {
+                      setSelectedAllergens(prev =>
+                        prev.includes(allergen)
+                          ? prev.filter(a => a !== allergen)
+                          : [...prev, allergen]
+                      );
+                    }}
+                  >
+                    {allergen}
+                  </Button>
                 ))}
-              </SelectContent>
-            </Select>
-          </div>  
-        
-        {/* Menu Items Card Stack */}
-            <div className="w-full h-[calc(100vh-280px)] relative mb-16">
-          {cardOrder.length === 0 ? (
-            <div className="text-center py-8 text-[#FFFFFF]">
+              </div>
+            </div>
+
+            {/* Course Type Dropdown */}
+            <div className="w-full max-w-md">
+              <Select value={selectedCourse} onValueChange={setSelectedCourse}>
+                <SelectTrigger className="bg-gray-900 border-gray-800 text-[#FFFFFF] w-full rounded-xl">
+                  <SelectValue placeholder="All Courses" />
+                </SelectTrigger>
+                <SelectContent className="bg-gray-900 border-gray-800">
+                  <SelectItem value="all" className="text-[#FFFFFF]">All Courses</SelectItem>
+                  {courseTypes.map((type) => (
+                    <SelectItem key={type} value={type} className="text-[#FFFFFF]">
+                      {type}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
+
+        {/* Menu Items Carousel */}
+        <div className="w-full my-8 px-8">
+          {filteredItems.length === 0 ? (
+            <div className="text-center py-8 text-gray-800">
               No menu items match your filters
             </div>
           ) : (
-            <div className="relative w-full h-full touch-action-none">
-              <AnimatePresence initial={false} mode="popLayout">
-                {cardOrder.slice(0, 5).map((item, index) => (
-                  <MenuCard key={item.id} item={item} index={index} />
+            <Carousel
+              opts={{
+                align: "start",
+                loop: true,
+              }}
+              className="w-full"
+            >
+              <CarouselContent className="-ml-2 md:-ml-4">
+                {filteredItems.map((item) => (
+                  <CarouselItem key={item.id} className="pl-2 md:pl-4 md:basis-1/2 lg:basis-1/3">
+                    <MenuCard item={item} />
+                  </CarouselItem>
                 ))}
-              </AnimatePresence>
-            </div>
+              </CarouselContent>
+              <CarouselPrevious />
+              <CarouselNext />
+            </Carousel>
           )}
         </div>
       </div>
-      
+
       {/* Footer navigation */}
       <div className="fixed bottom-0 left-0 right-0 bg-[#F5F5F5] border-t border-gray-800 p-3 flex justify-between items-center z-50">
         <div className="w-8 h-8 flex items-center justify-center">
