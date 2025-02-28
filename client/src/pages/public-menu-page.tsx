@@ -44,7 +44,7 @@ const foodImages = [
 
 const MenuCard = ({ item }: { item: MenuItem }) => {
   return (
-    <Card className="bg-white rounded-xl overflow-hidden shadow-lg w-[300px] mx-2">
+    <Card className="bg-white rounded-xl overflow-hidcden shadow-lg w-[300px] mx-2">
       <CardContent className="p-4 space-y-4">
         {/* Title */}
         <h3 className="text-2xl font-bold text-gray-900">{item.name}</h3>
@@ -97,6 +97,8 @@ export default function PublicMenuPage() {
   const [selectedCourse, setSelectedCourse] = useState<string>("all");
   const [selectedAllergens, setSelectedAllergens] = useState<AllergenType[]>([]);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [isCourseOpen, setIsCourseOpen] = useState(false);
+
 
   const { data: restaurant, isLoading: isLoadingRestaurant } = useQuery<Restaurant>({
     queryKey: [`/api/restaurants/${restaurantId}`],
@@ -146,7 +148,7 @@ export default function PublicMenuPage() {
 
   if (!matches || !restaurantId) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F5F5F5]">
+      <div className="min-h-screen flex items-center justify-center bg-[#FFFFFF]">
         <p className="text-[#FFFFFF]">Restaurant not found</p>
       </div>
     );
@@ -154,25 +156,70 @@ export default function PublicMenuPage() {
 
   if (isLoadingRestaurant || isLoadingMenu) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F5F5F5]">
+      <div className="min-h-screen flex items-center justify-center bg-[#FFFFFF]">
         <Loader2 className="h-8 w-8 animate-spin text-[#FFFFFF]" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F5F5] pb-32 antialiased">
-      <div className="w-full py-2 px-3 border-b border-gray-800 sticky top-0 bg-[#F5F5F5] z-50">
+    <div className="min-h-screen bg-[#FFFFFF] pb-32 antialiased">
+      <div className="w-full py-2 px-3 border-b sticky top-0 bg-[#FFFFFF] z-50">
         <div className="max-w-6xl mx-auto space-y-4">
           {/* Toggle Button */}
           <div className="flex justify-center mb-2">
             <Button 
               variant="ghost" 
               onClick={() => setIsFiltersOpen(!isFiltersOpen)}
-              className="rounded-full px-4 py-1 bg-gray-900 text-gray-800 text-xs font-medium flex items-center gap-1 border-0 hover:bg-gray-800"
+              className="rounded-full px-4 py-1 bg-white text-gray-800 text-xs font-medium flex items-center gap-1 border-0 hover:bg-white"
             >
               Filters {isFiltersOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
             </Button>
+          </div>
+
+          {/* Course Type Toggle - New Component */}
+          <div className="flex flex-col items-center">
+            <Button
+              variant="ghost"
+              onClick={() => setIsCourseOpen(!isCourseOpen)}
+              className="text-xl font-semibold text-gray-800 hover:bg-transparent hover:text-gray-900 flex items-center gap-2"
+            >
+              {selectedCourse === "all" ? "All Courses" : selectedCourse}
+              <ChevronDown className={`w-5 h-5 transition-transform ${isCourseOpen ? 'rotate-180' : ''}`} />
+            </Button>
+
+            {/* Course Type Menu */}
+            {isCourseOpen && (
+              <div className="absolute z-50 mt-12 bg-white rounded-lg shadow-lg border border-gray-200 w-full max-w-xs">
+                <div className="py-2">
+                  <button
+                    onClick={() => {
+                      setSelectedCourse("all");
+                      setIsCourseOpen(false);
+                    }}
+                    className={`w-full px-4 py-2 text-left hover:bg-gray-100 ${
+                      selectedCourse === "all" ? "text-blue-600 font-medium" : "text-gray-800"
+                    }`}
+                  >
+                    All Courses
+                  </button>
+                  {courseTypes.map((type) => (
+                    <button
+                      key={type}
+                      onClick={() => {
+                        setSelectedCourse(type);
+                        setIsCourseOpen(false);
+                      }}
+                      className={`w-full px-4 py-2 text-left hover:bg-gray-100 ${
+                        selectedCourse === type ? "text-blue-600 font-medium" : "text-gray-800"
+                      }`}
+                    >
+                      {type}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Current Filter Status */}
@@ -232,23 +279,8 @@ export default function PublicMenuPage() {
               </div>
             </div>
 
-            {/* Course Type Dropdown */}
-            <div className="w-full max-w-md">
-              <Select value={selectedCourse} onValueChange={setSelectedCourse}>
-                <SelectTrigger className="bg-gray-900 border-gray-800 text-[#FFFFFF] w-full rounded-xl">
-                  <SelectValue placeholder="All Courses" />
-                </SelectTrigger>
-                <SelectContent className="bg-gray-900 border-gray-800">
-                  <SelectItem value="all" className="text-[#FFFFFF]">All Courses</SelectItem>
-                  {courseTypes.map((type) => (
-                    <SelectItem key={type} value={type} className="text-[#FFFFFF]">
-                      {type}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </CollapsibleContent>
+            {/* Course Type Dropdown - This section was already present and is redundant. Removing it */}
+            </CollapsibleContent>
         </Collapsible>
 
         {/* Menu Items Carousel */}
@@ -279,8 +311,9 @@ export default function PublicMenuPage() {
         </div>
       </div>
 
+
       {/* Footer navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-[#F5F5F5] border-t border-gray-800 p-3 flex justify-between items-center z-50">
+      <div className="fixed bottom-0 left-0 right-0 bg-[#FFFFFF] border-t border-gray-800 p-3 flex justify-between items-center z-50">
         <div className="w-8 h-8 flex items-center justify-center">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M20 2H4C2.9 2 2 2.9 2 4V22L6 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2Z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
