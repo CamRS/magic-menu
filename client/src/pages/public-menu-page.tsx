@@ -101,20 +101,20 @@ export default function PublicMenuPage() {
     }
   }, [menuItems]); // Only re-run when `menuItems` updates
 
-  const handleSwipe = useCallback(
-    (direction: "left" | "right", item: MenuItem) => {
-      setCardOrder((prev) => {
-        if (prev.length <= 1) return prev; // Prevent empty list bug
+  const handleSwipe = useCallback((direction: 'left' | 'right') => {
+    setCardOrder(prev => {
+      if (!Array.isArray(prev) || prev.length === 0) return prev; // Prevent crash
 
-        if (direction === "left") {
-          return prev.filter((i) => i.id !== item.id);
-        } else {
-          return [item, ...prev];
-        }
-      });
-    },
-    []
-  );
+      if (direction === 'left') {
+        return prev.slice(1); // Remove the first item (swiping left)
+      } else if (direction === 'right') {
+        const lastItem = menuItems?.find(item => !prev.includes(item)); // Find the last removed item
+        return lastItem ? [lastItem, ...prev] : prev; // Restore it to the front
+      }
+
+      return prev;
+    });
+  }, [menuItems]);
 
   if (!matches || !restaurantId) {
     return (
@@ -144,9 +144,10 @@ export default function PublicMenuPage() {
     const [isDragging, setIsDragging] = useState(false);
 
     // Calculate card stack position
-    const scale = Math.max(0.88, 1 - index * 0.06); // More fluid shrinking
-    const translateY = index * 12; // Adds better depth
-    const opacity = Math.max(0.5, 1 - index * 0.1); // Ensures better visibility
+    const scale = Math.max(0.85, 1 - index * 0.05); // Each card is 95% the size of the one above
+    const translateY = index * 12;  // Ensures cards stack properly
+    const opacity = Math.max(0.3, 1 - index * 0.12); // Prevents cards from fading out too much
+
 
     // Use useEffect to handle animation state changes
     useEffect(() => {
@@ -154,12 +155,13 @@ export default function PublicMenuPage() {
       controls.start({
         opacity,
         scale,
-        y: translateY,
+        y: translateY, // ✅ Use vertical stacking instead
+      
         transition: { 
           type: "spring",
-          stiffness: 180, // Less stiff for smoother animation
-          damping: 18, // Makes motion softer
-          mass: 0.9 // Prevents "snappy" behavior
+          stiffness: 250,
+          damping: 30,
+          mass: 0.8
         }
       });
     }, [controls, index, opacity, scale,]);
@@ -208,17 +210,12 @@ export default function PublicMenuPage() {
     };
 
     // Handle drag end
-    const handleSwipe = useCallback((direction: "left" | "right") => {
-      setCardOrder((prev) => {
-        if (prev.length === 0) return prev; // Prevents errors if empty
-
-        if (direction === "left") {
-          return [...prev.slice(1), prev[0]]; // Moves first card to the end
-        } else {
-          return [prev[prev.length - 1], ...prev.slice(0, -1)]; // Moves last card to the front
-        }
+    const handleDragEnd = (_, info) => {
+      setIsDragging(false);
+      setDragInfo({
+        offset: info.offset,
+        velocity: info.velocity
       });
-    }, []);
 
       // Reset drag position state
       setDragPosition({ x: 0, y: 0 });
@@ -232,15 +229,15 @@ export default function PublicMenuPage() {
         animate={{
           scale: index === 0 ? 1 : scale,
           opacity: index === 0 ? 1 : opacity,
-          y: index === 0 ? dragPosition.y : translateY - 20, // ✅ Moves all cards up smoothly
-          x: index === 0 ? dragPosition.x : 0,
+          y: translateY,
+          x: 0,
         }}
         transition={{
           type: "spring",
           stiffness: 150, // Makes swipe feel natural
           damping: 15, // Reduces snap-back effect
         }}
-        drag={index <= 1 ? "x" : false} // ✅ Allows the next card to become draggable
+        drag={index === 0 ? "x" : false} // Only the top card is draggable
         dragElastic={0.5} // Reduces stiffness when dragging
         dragMomentum={true} // Allows smooth momentum
       >
@@ -306,7 +303,6 @@ export default function PublicMenuPage() {
       </motion.div>
     );
   };
-  
   return (
       <div className="min-h-screen bg-[#F5F5F5] pb-32 antialiased">
         <div className="w-full py-2 px-3 border-b border-gray-800 sticky top-0 bg-[#F5F5F5] z-50">
@@ -339,7 +335,7 @@ export default function PublicMenuPage() {
           <Collapsible
             open={isFiltersOpen}
             onOpenChange={setIsFiltersOpen}
-            className={`absolute top-0 left-0 right-0 z-50 ${isFiltersOpen ? 'bg-white transform scale-100' : ''}`}
+            className={`absolute top-0 left-0 right-0 z-50 ${isFiltersOpen ? 'bg-white/90 backdrop-blur-lg transform scale-100' : ''}`}
           >
             <CollapsibleContent className="space-y-6 px-4 py-4 flex flex-col items-center transform scale-100">
              {/* Search Bar */}
