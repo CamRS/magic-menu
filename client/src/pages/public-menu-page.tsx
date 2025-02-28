@@ -55,7 +55,7 @@ const MenuCard = ({ item }: { item: MenuItem }) => {
 
         <div className="flex-grow mb-4">
           <img
-            src={foodImages[item.id % foodImages.length]}
+            src={item.image || foodImages[item.id % foodImages.length]}
             alt={`${item.name} presentation`}
             className="w-full h-48 object-cover rounded-lg"
             draggable="false"
