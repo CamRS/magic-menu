@@ -331,7 +331,7 @@ export default function PublicMenuPage() {
             >
               <CarouselContent className="-ml-2 md:-ml-4">
                 {filteredItems.map((item) => (
-                  <CarouselItem key={item.id} className="pl-2 md:pl-4 md:basis-1/2 lg:basis-1/3 h-[600px]">
+                  <CarouselItem key={item.id} className="pl-2 md:pl-4 md:basis-1/2 lg:basis-1/3" style={{ height: 'calc(100vh - 113px)' }}>
                     <MenuCard item={item} />
                   </CarouselItem>
                 ))}
