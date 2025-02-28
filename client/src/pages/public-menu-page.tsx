@@ -170,20 +170,18 @@ export default function PublicMenuPage() {
       <div className="w-full border-b bg-[#FFFFFF] z-50">
         <div className="max-w-md mx-auto px-4 py-2">
           {/* Toggle Buttons Container */}
-          <div className="flex flex-col gap-2 w-full">
+          <div className="flex justify-between items-center w-full space-x-2">
             {/* Filters Toggle */}
-            <div className="w-full">
-              <Button 
-                variant="ghost" 
-                onClick={() => toggleDropdown("filters")}
-                className="w-full rounded-full px-4 py-1 bg-white text-gray-800 text-lg font-semibold flex items-center justify-center gap-1 border-0 hover:bg-white shadow-none ring-0 outline-none"
-              >
-                Filters {activeDropdown === "filters" ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-              </Button>
-            </div>
+            <Button 
+              variant="ghost" 
+              onClick={() => toggleDropdown("filters")}
+              className="flex-1 rounded-full px-4 py-1 bg-white text-gray-800 text-lg font-semibold flex items-center justify-center gap-1 border-0 hover:bg-white shadow-none ring-0 outline-none"
+            >
+              Filters {activeDropdown === "filters" ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+            </Button>
 
             {/* Course Type Toggle */}
-            <div className="w-full relative">
+            <div className="relative flex-1">
               <Button
                 variant="ghost"
                 onClick={() => toggleDropdown("courses")}
@@ -194,32 +192,55 @@ export default function PublicMenuPage() {
               </Button>
 
               {activeDropdown === "courses" && (
-                <div className="absolute z-50 top-full left-0 right-0 w-full border divide-y bg-white shadow-lg mt-2 rounded-lg">
-                  <button
-                    onClick={() => {
-                      setSelectedCourse("all");
-                      setActiveDropdown(null);
-                    }}
-                    className={`w-full px-4 py-3 text-center hover:bg-gray-100 ${
-                      selectedCourse === "all" ? "hidden" : "text-gray-800"
-                    }`}
-                  >
-                    All Courses
-                  </button>
-                  {courseTypes.map((type) => (
-                    <button
-                      key={type}
-                      onClick={() => {
-                        setSelectedCourse(type);
-                        setActiveDropdown(null);
-                      }}
-                      className={`w-full px-4 py-3 text-center hover:bg-gray-100 ${
-                        selectedCourse === type ? "hidden" : "text-gray-800"
-                      }`}
-                    >
-                      {type}
-                    </button>
-                  ))}
+                <div className="fixed inset-0 bg-white z-50 flex flex-col items-center justify-center">
+                  <div className="max-w-md w-full px-4 py-6 space-y-6">
+                    {/* Search/Title Area */}
+                    <div className="text-center mb-4">
+                      <span className="text-blue-600 font-medium text-sm">Showing: </span>
+                      <span className="text-gray-700 text-sm">
+                        {selectedCourse === "all" ? "All Courses" : selectedCourse}
+                      </span>
+                    </div>
+
+                    {/* Course Selection Buttons */}
+                    <div className="space-y-4">
+                      {selectedCourse !== "all" && (
+                        <button
+                          onClick={() => {
+                            setSelectedCourse("all");
+                            setActiveDropdown(null);
+                          }}
+                          className="w-full px-4 py-4 text-center text-lg font-semibold text-gray-800 border-b"
+                        >
+                          All Courses
+                        </button>
+                      )}
+                      {courseTypes.map((type) => (
+                        <button
+                          key={type}
+                          onClick={() => {
+                            setSelectedCourse(type);
+                            setActiveDropdown(null);
+                          }}
+                          className={`w-full px-4 py-4 text-center text-lg font-semibold text-gray-800 border-b ${
+                            selectedCourse === type ? "bg-blue-50" : ""
+                          }`}
+                        >
+                          {type}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Close Button */}
+                    <div className="text-center mt-6">
+                      <button
+                        onClick={() => setActiveDropdown(null)}
+                        className="text-lg font-bold text-gray-800"
+                      >
+                        Close
+                      </button>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
