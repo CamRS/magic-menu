@@ -64,23 +64,23 @@ const MenuCard = ({ item }: { item: MenuItem }) => {
             ))}
         </div>
 
-        {/* Image */}
-        <div className="mb-4">
+        {/* Image - Only show on larger screens */}
+        <div className="hidden md:block mb-4 min-h-[120px]">
           <img
             src={foodImages[item.id % foodImages.length]}
             alt={`${item.name} presentation`}
-            className="w-full flex-1 object-cover rounded-lg min-h-[120px] max-h-[50vh]"
+            className="w-full flex-1 object-cover rounded-lg min-h-[120px] max-h-[30vh]"
             draggable="false"
           />
         </div>
 
         {/* Description */}
-        <p className="text-gray-700 text-sm min-h-[3rem] font-medium">
+        <p className="text-gray-700 text-sm font-medium">
           {item.description}
         </p>
 
         {/* Price */}
-        <div>
+        <div className="mt-auto">
           <span className="text-gray-800 text-xl font-bold">
             ${parseFloat(item.price).toFixed(2)}
           </span>
@@ -98,7 +98,6 @@ export default function PublicMenuPage() {
   const [selectedAllergens, setSelectedAllergens] = useState<AllergenType[]>([]);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [isCourseOpen, setIsCourseOpen] = useState(false);
-
 
   const { data: restaurant, isLoading: isLoadingRestaurant } = useQuery<Restaurant>({
     queryKey: [`/api/restaurants/${restaurantId}`],
@@ -163,10 +162,9 @@ export default function PublicMenuPage() {
   }
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden">
+    <div className="h-screen flex flex-col overflow-hidden bg-[#FFFFFF]">
       {/* Header with filters toggle and status */}
-      {/* Fixed width container for entire header */}
-      <div className="w-full border-b sticky top-0 bg-[#FFFFFF] z-50 overflow-hidden py-1">
+      <div className="w-full border-b bg-[#FFFFFF] z-50">
         <div className="max-w-md mx-auto px-4 py-2">
           {/* Toggle Buttons */}
           <div className="flex justify-center gap-4 mb-2">
@@ -234,63 +232,61 @@ export default function PublicMenuPage() {
         </div>
 
         {/* Filters Panel */}
-        <div className="w-full">
-          <Collapsible
-            open={isFiltersOpen}
-            onOpenChange={setIsFiltersOpen}
-          >
-            <CollapsibleContent className="fixed top-[120px] left-0 right-0 bg-white shadow-md z-40">
-              <div className="max-w-md mx-auto px-4 py-6 space-y-6">
-                {/* Search Bar */}
-                <div className="relative">
-                  <Input
-                    placeholder="Search menu"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full py-2 px-4 bg-white text-gray-800 placeholder:text-gray-500 rounded-full border border-gray-300 text-center"
-                  />
-                  <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
-                    <Search className="h-4 w-4 text-gray-400" />
-                  </div>
-                </div>
-
-                {/* Allergen Filters */}
-                <div className="text-center">
-                  <p className="text-gray-800 mb-3 font-medium">I'm allergic to</p>
-                  <div className="flex flex-wrap gap-2 justify-center">
-                    {allergensList.map((allergen) => (
-                      <Button
-                        key={allergen}
-                        variant="outline"
-                        className={`rounded-full text-xs px-3 py-1 h-auto transition-colors duration-0 focus:ring-0 focus:outline-none
-                          ${
-                            selectedAllergens.includes(allergen)
-                              ? "bg-blue-600 text-white border-blue-600 hover:bg-blue-600 hover:text-white"
-                              : "bg-gray-100 text-gray-800 border-gray-200 hover:bg-gray-200"
-                          }`}
-                        onClick={() => {
-                          setSelectedAllergens((prev) =>
-                            prev.includes(allergen)
-                              ? prev.filter((a) => a !== allergen)
-                              : [...prev, allergen]
-                          );
-                        }}
-                      >
-                        {allergen}
-                      </Button>
-                    ))}
-                  </div>
+        <Collapsible
+          open={isFiltersOpen}
+          onOpenChange={setIsFiltersOpen}
+        >
+          <CollapsibleContent className="bg-white shadow-md z-40">
+            <div className="max-w-md mx-auto px-4 py-6 space-y-6">
+              {/* Search Bar */}
+              <div className="relative">
+                <Input
+                  placeholder="Search menu"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full py-2 px-4 bg-white text-gray-800 placeholder:text-gray-500 rounded-full border border-gray-300 text-center"
+                />
+                <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
+                  <Search className="h-4 w-4 text-gray-400" />
                 </div>
               </div>
-            </CollapsibleContent>
-          </Collapsible>
-        </div>
+
+              {/* Allergen Filters */}
+              <div className="text-center">
+                <p className="text-gray-800 mb-3 font-medium">I'm allergic to</p>
+                <div className="flex flex-wrap gap-2 justify-center">
+                  {allergensList.map((allergen) => (
+                    <Button
+                      key={allergen}
+                      variant="outline"
+                      className={`rounded-full text-xs px-3 py-1 h-auto transition-colors duration-0 focus:ring-0 focus:outline-none
+                        ${
+                          selectedAllergens.includes(allergen)
+                            ? "bg-blue-600 text-white border-blue-600 hover:bg-blue-600 hover:text-white"
+                            : "bg-gray-100 text-gray-800 border-gray-200 hover:bg-gray-200"
+                        }`}
+                      onClick={() => {
+                        setSelectedAllergens((prev) =>
+                          prev.includes(allergen)
+                            ? prev.filter((a) => a !== allergen)
+                            : [...prev, allergen]
+                        );
+                      }}
+                    >
+                      {allergen}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
       </div>
 
-      <div className="w-full mx-auto p-1 flex-1 overflow-hidden">
-
-        {/* Menu Items Carousel */}
-        <div className="w-full mt-0 px-0 overflow-visible border-0 border-l-0">
+      {/* Menu Items Container - Flex grow to fill available space */}
+      <div className="flex-1 overflow-y-auto">
+        {/* Carousel Container */}
+        <div className="h-full flex items-center justify-center px-4">
           {filteredItems.length === 0 ? (
             <div className="text-center py-8 text-gray-800">
               No menu items match your filters
@@ -301,11 +297,11 @@ export default function PublicMenuPage() {
                 align: "center",
                 loop: true,
               }}
-              className="w-full overflow-visible border-0 border-l-0 relative"
+              className="w-full max-w-5xl relative"
             >
-              <CarouselContent className="-ml-2 md:-ml-4 overflow-hidden border-0 border-l-0 h-full">
+              <CarouselContent className="-ml-2 md:-ml-4">
                 {filteredItems.map((item) => (
-                  <CarouselItem key={item.id} className="pl-2 md:pl-4 md:basis-1/2 lg:basis-1/3 overflow-visible border-0 flex justify-center">
+                  <CarouselItem key={item.id} className="pl-2 md:pl-4 md:basis-1/2 lg:basis-1/3">
                     <MenuCard item={item} />
                   </CarouselItem>
                 ))}
@@ -316,7 +312,6 @@ export default function PublicMenuPage() {
           )}
         </div>
       </div>
-
 
       {/* Footer navigation */}
       <div className="fixed bottom-0 left-0 right-0 bg-[#FFFFFF] border-t border-gray-800 p-3 flex justify-between items-center z-50">
