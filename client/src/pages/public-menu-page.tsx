@@ -30,6 +30,61 @@ import {
 type AllergenType = keyof MenuItem['allergens'];
 const allergensList: AllergenType[] = ['milk', 'eggs', 'peanuts', 'nuts', 'shellfish', 'fish', 'soy', 'gluten'];
 
+const dietaryPreferences = ['Vegetarian', 'Vegan'] as const;
+
+const MenuCard = ({ item }: { item: MenuItem }) => {
+  return (
+    <Card className="bg-white rounded-xl shadow-lg w-[300px] mx-2 mb-6 border border-gray-200">
+      <CardContent className="p-4 space-y-4 flex flex-col h-full">
+        <h3 className="text-2xl font-bold text-gray-900">{item.name}</h3>
+
+        {/* Allergens and Dietary Tags */}
+        <div className="flex flex-wrap gap-1 items-center mb-3">
+          {Object.entries(item.allergens)
+            .filter(([_, value]) => value)
+            .map(([key]) => (
+              <Badge
+                key={key}
+                variant="outline"
+                className="bg-blue-50 text-blue-700 border-blue-200 rounded-full px-2 py-0.5 text-xs"
+              >
+                {key}
+              </Badge>
+            ))}
+          {item.dietaryPreferences?.map((pref) => (
+            <Badge
+              key={pref}
+              variant="outline"
+              className="bg-green-50 text-green-700 border-green-200 rounded-full px-2 py-0.5 text-xs"
+            >
+              {pref}
+            </Badge>
+          ))}
+        </div>
+
+        <div className="min-h-[120px] max-h-[200px] h-auto">
+          <img
+            src={foodImages[item.id % foodImages.length]}
+            alt={`${item.name} presentation`}
+            className="w-full h-full object-cover rounded-lg"
+            draggable="false"
+          />
+        </div>
+
+        <p className="text-gray-700 text-sm font-medium line-clamp-2">
+          {item.description}
+        </p>
+
+        <div className="mt-auto pt-2">
+          <span className="text-gray-800 text-xl font-bold">
+            ${parseFloat(item.price).toFixed(2)}
+          </span>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
 // Array of food-related image URLs
 const foodImages = [
   'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800&h=600&fit=crop&q=80',
@@ -42,60 +97,13 @@ const foodImages = [
   'https://images.unsplash.com/photo-1484723091739-30a097e8f929?w=800&h=600&fit=crop&q=80',
 ];
 
-const MenuCard = ({ item }: { item: MenuItem }) => {
-  return (
-    <Card className="bg-white rounded-xl shadow-lg w-[300px] mx-2 mb-6 border border-gray-200">
-      <CardContent className="p-4 space-y-4 flex flex-col h-full">
-        {/* Title */}
-        <h3 className="text-2xl font-bold text-gray-900">{item.name}</h3>
-
-        {/* Allergens */}
-        <div className="flex flex-wrap gap-1 items-center mb-3 w-full overflow-hidden">
-          <span className="text-gray-700 mr-1 text-sm font-medium">Contains</span>
-          {Object.entries(item.allergens)
-            .filter(([_, value]) => value)
-            .map(([key]) => (
-              <Badge
-                key={key}
-                className="bg-blue-500 text-white hover:bg-blue-600 rounded-full px-2 py-0.5 text-xs font-medium"
-              >
-                {key}
-              </Badge>
-            ))}
-        </div>
-
-        {/* Image - Hide only on very small heights */}
-        <div className="min-h-[120px] max-h-[200px] h-auto">
-          <img
-            src={foodImages[item.id % foodImages.length]}
-            alt={`${item.name} presentation`}
-            className="w-full h-full object-cover rounded-lg"
-            draggable="false"
-          />
-        </div>
-
-        {/* Description */}
-        <p className="text-gray-700 text-sm font-medium line-clamp-2">
-          {item.description}
-        </p>
-
-        {/* Price */}
-        <div className="mt-auto pt-2">
-          <span className="text-gray-800 text-xl font-bold">
-            ${parseFloat(item.price).toFixed(2)}
-          </span>
-        </div>
-      </CardContent>
-    </Card>
-  );
-};
-
 export default function PublicMenuPage() {
   const [matches, params] = useRoute("/menu/:restaurantId");
   const restaurantId = params?.restaurantId ? parseInt(params.restaurantId) : null;
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCourse, setSelectedCourse] = useState<string>("all");
   const [selectedAllergens, setSelectedAllergens] = useState<AllergenType[]>([]);
+  const [selectedDietary, setSelectedDietary] = useState<typeof dietaryPreferences[number][]>([]);
   const [activeDropdown, setActiveDropdown] = useState<"filters" | "courses" | null>(null);
 
   const { data: restaurant, isLoading: isLoadingRestaurant } = useQuery<Restaurant>({
@@ -135,14 +143,16 @@ export default function PublicMenuPage() {
 
     const lowerSearch = searchTerm.toLowerCase();
 
-    return menuItems.filter(({ name, description, courseType, allergens }) => {
+    return menuItems.filter(({ name, description, courseType, allergens, dietaryPreferences }) => {
       return (
         (!searchTerm || name.toLowerCase().includes(lowerSearch) || description.toLowerCase().includes(lowerSearch)) &&
         (selectedCourse === "all" || courseType === selectedCourse) &&
-        selectedAllergens.every(allergen => !allergens[allergen])
+        selectedAllergens.every(allergen => !allergens[allergen]) &&
+        selectedDietary.every(diet => dietaryPreferences?.includes(diet))
+
       );
     });
-  }, [menuItems, searchTerm, selectedCourse, selectedAllergens]);
+  }, [menuItems, searchTerm, selectedCourse, selectedAllergens, selectedDietary]);
 
   if (!matches || !restaurantId) {
     return (
@@ -165,132 +175,72 @@ export default function PublicMenuPage() {
   };
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden bg-[#FFFFFF]">
-      {/* Header with filters toggle and status */}
-      <div className="w-full border-b bg-[#FFFFFF] z-50">
+    <div className="h-screen flex flex-col overflow-hidden bg-white">
+      <div className="w-full border-b bg-white z-50">
         <div className="max-w-md mx-auto px-4 py-2">
-          {/* Toggle Buttons Container */}
-          <div className="flex justify-between items-center w-full space-x-2">
-            {/* Filters Toggle */}
-            <Button 
-              variant="ghost" 
-              onClick={() => toggleDropdown("filters")}
-              className="flex-1 rounded-full px-4 py-1 bg-white text-gray-800 text-lg font-semibold flex items-center justify-center gap-1 border-0 hover:bg-white shadow-none ring-0 outline-none"
-            >
-              Filters {activeDropdown === "filters" ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-            </Button>
-
-            {/* Course Type Toggle */}
-            <div className="relative flex-1">
-              <Button
-                variant="ghost"
-                onClick={() => toggleDropdown("courses")}
-                className="w-full rounded-full px-4 py-1 bg-white text-gray-800 text-lg font-semibold flex items-center justify-center gap-1 border-0 hover:bg-white shadow-none ring-0 outline-none"
-              >
-                {selectedCourse === "all" ? "All Courses" : selectedCourse}
-                <ChevronDown className={`ml-1 w-4 h-4 transition-transform ${activeDropdown === "courses" ? 'rotate-180' : ''}`} />
-              </Button>
-
-              {activeDropdown === "courses" && (
-                <div className="fixed inset-0 bg-white z-50 flex flex-col items-center justify-center">
-                  <div className="max-w-md w-full px-4 py-6 space-y-6">
-                    {/* Search/Title Area */}
-                    <div className="text-center mb-4">
-                      <span className="text-blue-600 font-medium text-sm">Showing: </span>
-                      <span className="text-gray-700 text-sm">
-                        {selectedCourse === "all" ? "All Courses" : selectedCourse}
-                      </span>
-                    </div>
-
-                    {/* Course Selection Buttons */}
-                    <div className="space-y-4">
-                      {selectedCourse !== "all" && (
-                        <button
-                          onClick={() => {
-                            setSelectedCourse("all");
-                            setActiveDropdown(null);
-                          }}
-                          className="w-full px-4 py-4 text-center text-lg font-semibold text-gray-800 border-b"
-                        >
-                          All Courses
-                        </button>
-                      )}
-                      {courseTypes.map((type) => (
-                        <button
-                          key={type}
-                          onClick={() => {
-                            setSelectedCourse(type);
-                            setActiveDropdown(null);
-                          }}
-                          className={`w-full px-4 py-4 text-center text-lg font-semibold text-gray-800 border-b ${
-                            selectedCourse === type ? "bg-blue-50" : ""
-                          }`}
-                        >
-                          {type}
-                        </button>
-                      ))}
-                    </div>
-
-                    {/* Close Button */}
-                    <div className="text-center mt-6">
-                      <button
-                        onClick={() => setActiveDropdown(null)}
-                        className="text-lg font-bold text-gray-800"
-                      >
-                        Close
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
+          <div className="relative mb-4">
+            <Input
+              placeholder="Search menu items..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full py-2 px-4 bg-white text-gray-800 placeholder:text-gray-500 rounded-full border border-gray-200"
+            />
+            <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
+              <Search className="h-4 w-4 text-gray-400" />
             </div>
           </div>
 
-          {/* Current Filter Status */}
-          <div className="text-center mt-2 mb-2">
-            <span className="text-blue-600 font-medium text-sm">Showing: </span>
-            <span className="text-gray-700 text-sm">
-              {selectedAllergens.length > 0 
-                ? `Items that contain No ${selectedAllergens.map(a => a.charAt(0).toUpperCase() + a.slice(1)).join(', ')}` 
-                : "All menu items"}
-            </span>
+          <div className="flex justify-between items-center gap-4">
+            <Button
+              variant="outline"
+              onClick={() => toggleDropdown("filters")}
+              className={`flex-1 justify-between items-center px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 ${
+                activeDropdown === "filters" ? "bg-gray-50" : ""
+              }`}
+            >
+              Filter by Allergen
+              {activeDropdown === "filters" ? (
+                <ChevronUp className="h-4 w-4" />
+              ) : (
+                <ChevronDown className="h-4 w-4" />
+              )}
+            </Button>
+
+            <Button
+              variant="outline"
+              onClick={() => toggleDropdown("courses")}
+              className={`flex-1 justify-between items-center px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 ${
+                activeDropdown === "courses" ? "bg-gray-50" : ""
+              }`}
+            >
+              {selectedCourse === "all" ? "All Items" : selectedCourse}
+              {activeDropdown === "courses" ? (
+                <ChevronUp className="h-4 w-4" />
+              ) : (
+                <ChevronDown className="h-4 w-4" />
+              )}
+            </Button>
           </div>
         </div>
 
-        {/* Filters Panel */}
         <Collapsible
           open={activeDropdown === "filters"}
           onOpenChange={(open) => setActiveDropdown(open ? "filters" : null)}
         >
-          <CollapsibleContent className="bg-white shadow-md z-40">
+          <CollapsibleContent className="bg-white shadow-sm border-t">
             <div className="max-w-md mx-auto px-4 py-6 space-y-6">
-              {/* Search Bar */}
-              <div className="relative">
-                <Input
-                  placeholder="Search menu"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full py-2 px-4 bg-white text-gray-800 placeholder:text-gray-500 rounded-full border border-gray-300 text-center"
-                />
-                <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
-                  <Search className="h-4 w-4 text-gray-400" />
-                </div>
-              </div>
-
-              {/* Allergen Filters */}
-              <div className="text-center">
-                <p className="text-gray-800 mb-3 font-medium">I'm allergic to</p>
-                <div className="flex flex-wrap gap-2 justify-center">
+              <div>
+                <h3 className="text-lg font-semibold mb-3">Allergens</h3>
+                <div className="grid grid-cols-2 gap-2">
                   {allergensList.map((allergen) => (
                     <Button
                       key={allergen}
                       variant="outline"
-                      className={`rounded-full text-xs px-3 py-1 h-auto transition-colors duration-0 focus:ring-0 focus:outline-none
-                        ${
-                          selectedAllergens.includes(allergen)
-                            ? "bg-blue-600 text-white border-blue-600 hover:bg-blue-600 hover:text-white"
-                            : "bg-gray-100 text-gray-800 border-gray-200 hover:bg-gray-200"
-                        }`}
+                      className={`justify-start gap-2 ${
+                        selectedAllergens.includes(allergen)
+                          ? "bg-blue-50 text-blue-700 border-blue-200"
+                          : "bg-gray-50 text-gray-700 border-gray-200"
+                      }`}
                       onClick={() => {
                         setSelectedAllergens((prev) =>
                           prev.includes(allergen)
@@ -299,7 +249,33 @@ export default function PublicMenuPage() {
                         );
                       }}
                     >
-                      {allergen}
+                      <span className="capitalize">{allergen}</span>
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-lg font-semibold mb-3">Dietary Preferences</h3>
+                <div className="grid grid-cols-2 gap-2">
+                  {dietaryPreferences.map((pref) => (
+                    <Button
+                      key={pref}
+                      variant="outline"
+                      className={`justify-start gap-2 ${
+                        selectedDietary.includes(pref)
+                          ? "bg-green-50 text-green-700 border-green-200"
+                          : "bg-gray-50 text-gray-700 border-gray-200"
+                      }`}
+                      onClick={() => {
+                        setSelectedDietary((prev) =>
+                          prev.includes(pref)
+                            ? prev.filter((p) => p !== pref)
+                            : [...prev, pref]
+                        );
+                      }}
+                    >
+                      {pref}
                     </Button>
                   ))}
                 </div>
@@ -307,11 +283,48 @@ export default function PublicMenuPage() {
             </div>
           </CollapsibleContent>
         </Collapsible>
+
+        <Collapsible
+          open={activeDropdown === "courses"}
+          onOpenChange={(open) => setActiveDropdown(open ? "courses" : null)}
+        >
+          <CollapsibleContent className="bg-white shadow-sm border-t">
+            <div className="max-w-md mx-auto px-4 py-6">
+              <div className="space-y-2">
+                <Button
+                  variant="ghost"
+                  className={`w-full justify-start text-lg ${
+                    selectedCourse === "all" ? "bg-gray-50" : ""
+                  }`}
+                  onClick={() => {
+                    setSelectedCourse("all");
+                    setActiveDropdown(null);
+                  }}
+                >
+                  All Items
+                </Button>
+                {courseTypes.map((type) => (
+                  <Button
+                    key={type}
+                    variant="ghost"
+                    className={`w-full justify-start text-lg ${
+                      selectedCourse === type ? "bg-gray-50" : ""
+                    }`}
+                    onClick={() => {
+                      setSelectedCourse(type);
+                      setActiveDropdown(null);
+                    }}
+                  >
+                    {type}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
       </div>
 
-      {/* Menu Items Container - Flex grow to fill available space */}
       <div className="flex-1 overflow-y-auto">
-        {/* Carousel Container */}
         <div className="h-full flex items-center justify-center px-4 py-2">
           {filteredItems.length === 0 ? (
             <div className="text-center py-8 text-gray-800">
@@ -339,8 +352,7 @@ export default function PublicMenuPage() {
         </div>
       </div>
 
-      {/* Footer navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-[#FFFFFF] border-t border-gray-800 p-3 flex justify-between items-center z-50">
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-3 flex justify-between items-center z-50">
         <div className="w-8 h-8 flex items-center justify-center">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M20 2H4C2.9 2 2 2.9 2 4V22L6 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2Z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
