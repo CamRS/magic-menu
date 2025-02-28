@@ -59,6 +59,7 @@ export default function MenuPage() {
 
   const form = useForm<InsertMenuItem>({
     resolver: zodResolver(insertMenuItemSchema),
+    mode: "onChange",
     defaultValues: {
       name: "",
       description: "",
@@ -113,12 +114,16 @@ export default function MenuPage() {
 
   useEffect(() => {
     if (editItem) {
+      // Transform the data to match form expectations
       const formData = {
-        ...editItem,
+        name: editItem.name,
+        description: editItem.description,
         price: editItem.price.toString(),
-        image: editItem.image || "",
-        customTags: editItem.customTags || [],
         courseType: editItem.courseType as "Appetizers" | "Mains" | "Desserts" | "Alcoholic" | "Non-Alcoholic" | "Custom",
+        customTags: editItem.customTags || [],
+        restaurantId: editItem.restaurantId,
+        image: editItem.image || "",
+        allergens: editItem.allergens,
       };
       form.reset(formData);
       setOpen(true);
@@ -203,7 +208,6 @@ export default function MenuPage() {
       const updateData = {
         ...data,
         id: editItem.id,
-        customTags: data.customTags || [],
       };
       updateMutation.mutate(updateData);
     } else {
@@ -631,7 +635,7 @@ export default function MenuPage() {
                     <Button
                       type="submit"
                       className="w-full"
-                      disabled={createMutation.isPending || updateMutation.isPending || !form.formState.isValid}
+                      disabled={createMutation.isPending || updateMutation.isPending}
                     >
                       {(createMutation.isPending || updateMutation.isPending) && (
                         <Loader2 className="mr-2 h-4 w-4 animate-spin text-white" />
