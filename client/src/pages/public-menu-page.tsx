@@ -64,23 +64,23 @@ const MenuCard = ({ item }: { item: MenuItem }) => {
             ))}
         </div>
 
-        {/* Image - Only show on larger screens */}
-        <div className="hidden md:block mb-4 min-h-[120px]">
+        {/* Image - Hide only on very small heights */}
+        <div className="min-h-[120px] max-h-[200px] h-auto">
           <img
             src={foodImages[item.id % foodImages.length]}
             alt={`${item.name} presentation`}
-            className="w-full flex-1 object-cover rounded-lg min-h-[120px] max-h-[30vh]"
+            className="w-full h-full object-cover rounded-lg"
             draggable="false"
           />
         </div>
 
         {/* Description */}
-        <p className="text-gray-700 text-sm font-medium">
+        <p className="text-gray-700 text-sm font-medium line-clamp-2">
           {item.description}
         </p>
 
         {/* Price */}
-        <div className="mt-auto">
+        <div className="mt-auto pt-2">
           <span className="text-gray-800 text-xl font-bold">
             ${parseFloat(item.price).toFixed(2)}
           </span>
@@ -286,7 +286,7 @@ export default function PublicMenuPage() {
       {/* Menu Items Container - Flex grow to fill available space */}
       <div className="flex-1 overflow-y-auto">
         {/* Carousel Container */}
-        <div className="h-full flex items-center justify-center px-4">
+        <div className="h-full flex items-center justify-center px-4 py-2">
           {filteredItems.length === 0 ? (
             <div className="text-center py-8 text-gray-800">
               No menu items match your filters
@@ -297,7 +297,7 @@ export default function PublicMenuPage() {
                 align: "center",
                 loop: true,
               }}
-              className="w-full max-w-5xl relative"
+              className="w-full max-w-5xl"
             >
               <CarouselContent className="-ml-2 md:-ml-4">
                 {filteredItems.map((item) => (
