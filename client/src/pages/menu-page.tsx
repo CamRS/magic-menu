@@ -106,19 +106,35 @@ export default function MenuPage() {
 
   useEffect(() => {
     if (editItem) {
-      // Ensure courseType is valid before setting it
-      const courseType = courseTypes.includes(editItem.courseType) ? editItem.courseType : "Appetizers";
+      // Validate and format the price to ensure it's a valid number
+      const formattedPrice = parseFloat(editItem.price).toFixed(2);
+
+      // Ensure courseType is valid by checking against allowed types
+      const courseType = courseTypes.includes(editItem.courseType as any)
+        ? editItem.courseType
+        : "Appetizers";
 
       const formData = {
         name: editItem.name,
         description: editItem.description,
-        price: editItem.price.toString(),
+        price: formattedPrice,
         courseType,
         customTags: editItem.customTags || [],
         restaurantId: editItem.restaurantId,
         image: editItem.image || "",
-        allergens: editItem.allergens,
+        allergens: editItem.allergens || {
+          milk: false,
+          eggs: false,
+          peanuts: false,
+          nuts: false,
+          shellfish: false,
+          fish: false,
+          soy: false,
+          gluten: false,
+        },
       };
+
+      // Reset form with validated data
       form.reset(formData);
     }
   }, [editItem, form]);
@@ -198,17 +214,28 @@ export default function MenuPage() {
 
   const handleSubmit = async (data: InsertMenuItem) => {
     try {
+      // Format price to ensure it's a valid number
+      const formattedData = {
+        ...data,
+        price: parseFloat(data.price.replace(/[^\d.-]/g, '')).toFixed(2),
+      };
+
       if (editItem) {
         await updateMutation.mutateAsync({
-          ...data,
+          ...formattedData,
           id: editItem.id,
           restaurantId: parseInt(restaurantId || "0"),
         });
       } else {
-        await createMutation.mutateAsync(data);
+        await createMutation.mutateAsync(formattedData);
       }
     } catch (error) {
       console.error('Form submission error:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to save menu item",
+        variant: "destructive",
+      });
     }
   };
 
