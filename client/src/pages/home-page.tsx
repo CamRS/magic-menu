@@ -234,13 +234,25 @@ export default function HomePage() {
 
   useEffect(() => {
     if (editingItem) {
-      // Transform data to match form expectations
+      // Transform data to match form expectations and ensure correct types
       const formData = {
         ...editingItem,
-        price: editingItem.price.toString(),
+        price: typeof editingItem.price === 'string' ? editingItem.price : editingItem.price.toString(),
         image: editingItem.image || "",
         customTags: editingItem.customTags || [],
-        courseType: editingItem.courseType as "Appetizers" | "Mains" | "Desserts" | "Alcoholic" | "Non-Alcoholic" | "Custom",
+        courseType: courseTypes.includes(editingItem.courseType) 
+          ? editingItem.courseType 
+          : "Appetizers",
+        allergens: editingItem.allergens || {
+          milk: false,
+          eggs: false,
+          peanuts: false,
+          nuts: false,
+          shellfish: false,
+          fish: false,
+          soy: false,
+          gluten: false,
+        },
       };
       form.reset(formData);
       setCreateMenuItemOpen(true);
@@ -287,15 +299,21 @@ export default function HomePage() {
   });
 
   const handleSubmit = (data: InsertMenuItem) => {
+    // Format price to ensure it's valid
+    const formattedData = {
+      ...data,
+      price: data.price.toString().replace(/[^\d.-]/g, ''),
+      customTags: data.customTags || [],
+    };
+
     if (editingItem) {
       const updateData = {
-        ...data,
+        ...formattedData,
         id: editingItem.id,
-        customTags: data.customTags || [],
       };
       updateMutation.mutate(updateData);
     } else {
-      createMutation.mutate(data);
+      createMutation.mutate(formattedData);
     }
   };
 
@@ -775,7 +793,7 @@ export default function HomePage() {
                 <Button
                   type="submit"
                   className="w-full"
-                  disabled={createMutation.isPending || updateMutation.isPending || !form.formState.isValid}
+                  disabled={createMutation.isPending || updateMutation.isPending}
                 >
                   {(createMutation.isPending || updateMutation.isPending) && (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
