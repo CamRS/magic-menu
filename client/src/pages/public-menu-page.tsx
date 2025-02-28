@@ -167,7 +167,7 @@ export default function PublicMenuPage() {
 
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-white">
-      <div className="w-full border-b bg-white z-50">
+      <div className="fixed top-0 left-0 right-0 z-50 bg-white border-b">
         <div className="max-w-md mx-auto px-4 py-2">
           <div className="relative mb-4">
             <Input
@@ -229,7 +229,7 @@ export default function PublicMenuPage() {
                       variant="outline"
                       className={`justify-start gap-2 ${
                         selectedAllergens.includes(allergen)
-                          ? "bg-blue-50 text-blue-700 border-blue-200"
+                          ? "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200"
                           : "bg-gray-50 text-gray-700 border-gray-200"
                       }`}
                       onClick={() => {
@@ -315,7 +315,7 @@ export default function PublicMenuPage() {
         </Collapsible>
       </div>
 
-      <div className="flex-1 relative overflow-hidden">
+      <div className="flex-1 relative overflow-hidden pt-[200px]">
         <div className="absolute inset-0 flex items-center justify-center px-4">
           {filteredItems.length === 0 ? (
             <div className="text-center py-8 text-gray-800">
