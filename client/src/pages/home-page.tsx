@@ -52,7 +52,6 @@ export default function HomePage() {
   const [isCreateMenuItemOpen, setCreateMenuItemOpen] = useState(false);
   const [isCreateRestaurantOpen, setCreateRestaurantOpen] = useState(false);
   const [selectedItems, setSelectedItems] = useState<number[]>([]);
-  const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -79,7 +78,6 @@ export default function HomePage() {
     },
   });
 
-  // Move the handleImageDrop callback to component level
   const handleImageDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
@@ -157,7 +155,6 @@ export default function HomePage() {
             throw new Error("Could not read CSV data");
           }
 
-          // Simple validation to check if it's likely a valid CSV
           const lines = csvData.split(/\r?\n/).filter(line => line.trim());
           if (lines.length < 2) {
             throw new Error("CSV must contain a header row and at least one data row");
@@ -179,7 +176,6 @@ export default function HomePage() {
           e.target.value = '';
           setIsImportDialogOpen(false);
 
-          // Show more detailed feedback
           const successMessage = `Successfully imported ${result.success} items.`;
           const failureMessage = result.failed > 0
             ? `\nFailed to import ${result.failed} items.${
@@ -191,7 +187,7 @@ export default function HomePage() {
             title: result.failed > 0 ? "Import Completed with Errors" : "Import Complete",
             description: successMessage + failureMessage,
             variant: result.failed > 0 ? "destructive" : "default",
-            duration: result.failed > 0 ? 10000 : 3000, // Show longer for errors
+            duration: result.failed > 0 ? 10000 : 3000,
           });
 
           queryClient.invalidateQueries({ queryKey: ["/api/menu-items", selectedRestaurant.id] });
@@ -216,7 +212,6 @@ export default function HomePage() {
     }
   };
 
-  // Helper function to parse allergens string into the expected format
   const parseAllergens = (allergensStr: string) => {
     const allergenList = allergensStr ? allergensStr.split(';').map(a => a.trim().toLowerCase()) : [];
     return {
@@ -232,95 +227,9 @@ export default function HomePage() {
   };
 
 
-  useEffect(() => {
-    if (editingItem) {
-      // Transform data to match form expectations and ensure correct types
-      const formData = {
-        ...editingItem,
-        price: typeof editingItem.price === 'string' ? editingItem.price : editingItem.price.toString(),
-        image: editingItem.image || "",
-        customTags: editingItem.customTags || [],
-        courseType: courseTypes.includes(editingItem.courseType) ? editingItem.courseType : "Appetizers",
-        allergens: editingItem.allergens || {
-          milk: false,
-          eggs: false,
-          peanuts: false,
-          nuts: false,
-          shellfish: false,
-          fish: false,
-          soy: false,
-          gluten: false,
-        },
-      };
-      form.reset(formData);
-      setCreateMenuItemOpen(true);
-    }
-  }, [editingItem, form]);
-
-  const updateMutation = useMutation({
-    mutationFn: async (data: InsertMenuItem & { id: number }) => {
-      const { id, ...updateData } = data;
-
-      // Transform the data to match expected types
-      const transformedData: Partial<InsertMenuItem> = {
-        ...updateData,
-        courseType: updateData.courseType,
-        customTags: updateData.customTags || [], // Convert null to empty array
-        price: updateData.price.toString(), // Ensure price is string
-        image: updateData.image || "", // Convert undefined to empty string
-      };
-
-      const response = await apiRequest("PATCH", `/api/menu-items/${id}`, transformedData);
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Failed to update menu item");
-      }
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/menu-items", selectedRestaurant?.id] });
-      setCreateMenuItemOpen(false);
-      setEditingItem(null);
-      form.reset();
-      toast({
-        title: "Success",
-        description: "Menu item updated successfully",
-      });
-    },
-    onError: (error: Error) => {
-      console.error('Update mutation error:', error);
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const handleSubmit = (data: InsertMenuItem) => {
-    // Format price to ensure it's valid
-    const formattedData = {
-      ...data,
-      price: data.price.toString().replace(/[^\d.-]/g, ''),
-      customTags: data.customTags || [],
-      courseType: courseTypes.includes(data.courseType) ? data.courseType : "Appetizers",
-    };
-
-    if (editingItem) {
-      const updateData = {
-        ...formattedData,
-        id: editingItem.id,
-      };
-      updateMutation.mutate(updateData);
-    } else {
-      createMutation.mutate(formattedData);
-    }
-  };
-
   const handleDialogOpenChange = (open: boolean) => {
     setCreateMenuItemOpen(open);
     if (!open) {
-      setEditingItem(null);
       form.reset();
     }
   };
@@ -360,6 +269,17 @@ export default function HomePage() {
       });
     },
   });
+
+  const handleSubmit = (data: InsertMenuItem) => {
+    const formattedData = {
+      ...data,
+      price: data.price.toString().replace(/[^\d.-]/g, ''),
+      customTags: data.customTags || [],
+      courseType: courseTypes.includes(data.courseType) ? data.courseType : "Appetizers",
+    };
+
+    createMutation.mutate(formattedData);
+  };
 
   const createRestaurantForm = useForm({
     resolver: zodResolver(insertRestaurantSchema),
@@ -644,7 +564,7 @@ export default function HomePage() {
           <Dialog open={isCreateMenuItemOpen} onOpenChange={handleDialogOpenChange}>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>{editingItem ? 'Edit Menu Item' : 'Add Menu Item'}</DialogTitle>
+                <DialogTitle>Add Menu Item</DialogTitle>
               </DialogHeader>
               <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
                 <div>
@@ -793,12 +713,12 @@ export default function HomePage() {
                 <Button
                   type="submit"
                   className="w-full"
-                  disabled={createMutation.isPending || updateMutation.isPending}
+                  disabled={createMutation.isPending}
                 >
-                  {(createMutation.isPending || updateMutation.isPending) && (
+                  {createMutation.isPending && (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   )}
-                  {editingItem ? 'Update Item' : 'Add Item'}
+                  Add Item
                 </Button>
               </form>
             </DialogContent>
@@ -899,45 +819,31 @@ export default function HomePage() {
                             className="w-full h-48 object-cover rounded-lg mb-4"
                           />
                         )}
-                        <div className="absolute top-4 right-4 z-10">
+                        <div className="flex justify-between items-start">
+                          <div className="space-y-1">
+                            <h3 className="text-lg font-semibold">{item.name}</h3>
+                            <p className="text-sm text-muted-foreground">{item.description}</p>
+                          </div>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                data-dropdown-trigger="true"
-                                onClick={(e) => e.stopPropagation()}
-                              >
+                              <Button variant="ghost" size="icon">
                                 <MoreVertical className="h-4 w-4" />
-                                <span className="sr-only">Open menu</span>
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setEditingItem(item);
-                                }}
-                              >
-                                <Pencil className="mr-2 h-4 w-4" />
-                                Edit
+                              <DropdownMenuItem onClick={() => toggleItemSelection(item.id)}>
+                                Select
                               </DropdownMenuItem>
                               <DropdownMenuItem
-                                className="text-destructive focus:text-destructive"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  deleteMutation.mutate([item.id]);
-                                }}
+                                className="text-destructive"
+                                onClick={() => deleteMutation.mutate([item.id])}
                               >
-                                <Trash2 className="mr-2 h-4 w-4" />
                                 Delete
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </div>
-
-                        <h3 className="text-xl font-semibold mb-2">{item.name}</h3><p className="text-muted-foreground mb-4">{item.description}</p>
-                        <div className="flex justify-between items-center">
+                        <div className="flex justify-between items-center mt-4">
                           <span className="font-semibold">${parseFloat(item.price).toFixed(2)}</span>
                           <div className="flex flex-wrap gap-2">
                             {Object.entries(item.allergens)
