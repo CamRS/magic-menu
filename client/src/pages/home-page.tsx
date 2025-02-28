@@ -212,12 +212,15 @@ export default function HomePage() {
 
   useEffect(() => {
     if (editingItem) {
-      form.reset({
+      // Transform data to match form expectations
+      const formData = {
         ...editingItem,
         price: editingItem.price.toString(),
-        image: editingItem.image || undefined,
+        image: editingItem.image || "",
+        customTags: editingItem.customTags || [],
         courseType: editingItem.courseType as "Appetizers" | "Mains" | "Desserts" | "Alcoholic" | "Non-Alcoholic" | "Custom",
-      });
+      };
+      form.reset(formData);
       setCreateMenuItemOpen(true);
     }
   }, [editingItem, form]);
@@ -225,7 +228,16 @@ export default function HomePage() {
   const updateMutation = useMutation({
     mutationFn: async (data: InsertMenuItem & { id: number }) => {
       const { id, ...updateData } = data;
-      const response = await apiRequest("PATCH", `/api/menu-items/${id}`, updateData);
+
+      // Transform the data to match expected types
+      const transformedData = {
+        ...updateData,
+        customTags: updateData.customTags || [], // Convert null to empty array
+        price: updateData.price.toString(), // Ensure price is string
+        image: updateData.image || "", // Convert undefined to empty string
+      };
+
+      const response = await apiRequest("PATCH", `/api/menu-items/${id}`, transformedData);
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.message || "Failed to update menu item");
@@ -243,6 +255,7 @@ export default function HomePage() {
       });
     },
     onError: (error: Error) => {
+      console.error('Update mutation error:', error);
       toast({
         title: "Error",
         description: error.message,
@@ -253,7 +266,12 @@ export default function HomePage() {
 
   const handleSubmit = (data: InsertMenuItem) => {
     if (editingItem) {
-      updateMutation.mutate({ ...data, id: editingItem.id });
+      const updateData = {
+        ...data,
+        id: editingItem.id,
+        customTags: data.customTags || [],
+      };
+      updateMutation.mutate(updateData);
     } else {
       createMutation.mutate(data);
     }
