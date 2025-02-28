@@ -53,7 +53,6 @@ export default function MenuPage() {
 
   const form = useForm<InsertMenuItem>({
     resolver: zodResolver(insertMenuItemSchema),
-    mode: "onChange",
     defaultValues: {
       name: "",
       description: "",
@@ -75,7 +74,6 @@ export default function MenuPage() {
     },
   });
 
-  // Handle image drop
   const handleImageDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
