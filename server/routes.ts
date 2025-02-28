@@ -282,14 +282,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const rows = parseCSV(req.body.csvData);
       if (rows.length < 2) {
-        return res.status(400).json({ message: "CSV file is empty or invalid" });
+        return res.status(400).json({ message: "CSV file is empty" });
       }
 
-      // Verify header row
+      // Verify header row - case insensitive comparison
       const expectedHeaders = ["Name", "Description", "Price", "Course Type", "Custom Tags", "Allergens"];
-      const headers = rows[0];
-      if (!expectedHeaders.every((header, i) => header === headers[i])) {
-        return res.status(400).json({ message: "Invalid CSV format. Please use the template from the export function." });
+      const headers = rows[0].map(header => header.trim());
+      const headersMatch = expectedHeaders.every(expected => 
+        headers.some(header => header.toLowerCase() === expected.toLowerCase())
+      );
+
+      if (!headersMatch) {
+        return res.status(400).json({ 
+          message: "Invalid CSV format. Please use the template from the export function.",
+          expected: expectedHeaders,
+          received: headers
+        });
       }
 
       const results = {
@@ -300,38 +308,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Process each row (skip header)
       for (let i = 1; i < rows.length; i++) {
-        const row = rows[i];
-        if (row.length !== 6) continue; // Skip invalid rows
+        const row = rows[i].map(cell => cell.trim());
+        if (row.length !== expectedHeaders.length) {
+          results.failed++;
+          results.errors.push(`Row ${i}: Invalid number of columns`);
+          continue;
+        }
 
         try {
-          const customTags = row[4] ? row[4].split(';').map(tag => tag.trim()) : [];
-          const allergens = row[5].split(';').reduce((acc, allergen) => {
-            // Initialize with all allergens set to false
-            const baseAllergens: Record<string, boolean> = {
-              milk: false,
-              eggs: false,
-              peanuts: false,
-              nuts: false,
-              shellfish: false,
-              fish: false,
-              soy: false,
-              gluten: false,
-            };
+          const customTags = row[4] ? row[4].split(';').map(tag => tag.trim()).filter(Boolean) : [];
 
-            // Only set true for allergens that are present
-            const key = allergen.trim().toLowerCase() as keyof typeof baseAllergens;
-            if (key in baseAllergens) {
-              baseAllergens[key] = true;
+          // Initialize allergens object with all false
+          const allergens = {
+            milk: false,
+            eggs: false,
+            peanuts: false,
+            nuts: false,
+            shellfish: false,
+            fish: false,
+            soy: false,
+            gluten: false,
+          };
+
+          // Process allergens string
+          const allergensList = row[5] ? row[5].split(';').map(a => a.trim().toLowerCase()) : [];
+          for (const allergen of allergensList) {
+            if (allergen in allergens) {
+              allergens[allergen as keyof typeof allergens] = true;
             }
-            return baseAllergens;
-          }, {} as Record<string, boolean>);
+          }
+
+          // Clean price value - remove currency symbol and trim
+          const price = row[2].replace(/^[\$£€]/, '').trim();
 
           const menuItem = {
             restaurantId,
             name: row[0],
             description: row[1],
-            price: row[2],
-            courseType: row[3],
+            price,
+            courseType: row[3].trim(),
             customTags,
             allergens,
             image: '', // Default empty string for image
@@ -348,7 +363,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           results.success++;
         } catch (error) {
           results.failed++;
-          results.errors.push(`Row ${i}: Failed to process row`);
+          results.errors.push(`Row ${i}: Failed to process row - ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
       }
 
