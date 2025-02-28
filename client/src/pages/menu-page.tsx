@@ -92,12 +92,27 @@ export default function MenuPage() {
 
   useEffect(() => {
     if (editItem) {
+      // Destructure editItem to only include properties defined in InsertMenuItem
+      const {
+        name,
+        description,
+        price,
+        courseType,
+        customTags,
+        allergens,
+        image,
+        restaurantId
+      } = editItem;
+
       form.reset({
-        ...editItem,
-        price: editItem.price.toString(),
-        image: editItem.image || undefined,
-        courseType: editItem.courseType as "Appetizers" | "Mains" | "Desserts" | "Alcoholic" | "Non-Alcoholic" | "Custom",
-        customTags: editItem.customTags || [],
+        name,
+        description,
+        price: price.toString(),
+        courseType: courseType as "Appetizers" | "Mains" | "Desserts" | "Alcoholic" | "Non-Alcoholic" | "Custom",
+        customTags: customTags || [],
+        allergens,
+        image: image || undefined,
+        restaurantId
       });
       setOpen(true);
     }

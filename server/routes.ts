@@ -306,19 +306,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         try {
           const customTags = row[4] ? row[4].split(';').map(tag => tag.trim()) : [];
           const allergens = row[5].split(';').reduce((acc, allergen) => {
-            const key = allergen.trim().toLowerCase();
-            if (key) acc[key] = true;
-            return acc;
-          }, {
-            milk: false,
-            eggs: false,
-            peanuts: false,
-            nuts: false,
-            shellfish: false,
-            fish: false,
-            soy: false,
-            gluten: false,
-          });
+            // Initialize with all allergens set to false
+            const baseAllergens: Record<string, boolean> = {
+              milk: false,
+              eggs: false,
+              peanuts: false,
+              nuts: false,
+              shellfish: false,
+              fish: false,
+              soy: false,
+              gluten: false,
+            };
+
+            // Only set true for allergens that are present
+            const key = allergen.trim().toLowerCase() as keyof typeof baseAllergens;
+            if (key in baseAllergens) {
+              baseAllergens[key] = true;
+            }
+            return baseAllergens;
+          }, {} as Record<string, boolean>);
 
           const menuItem = {
             restaurantId,
@@ -328,6 +334,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             courseType: row[3],
             customTags,
             allergens,
+            image: '', // Default empty string for image
           };
 
           const parsed = insertMenuItemSchema.safeParse(menuItem);
