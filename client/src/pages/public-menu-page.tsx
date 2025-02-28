@@ -166,10 +166,11 @@ export default function PublicMenuPage() {
     <div className="h-screen flex flex-col overflow-hidden">
       {/* Header with filters toggle and status */}
       {/* Fixed width container for entire header */}
-        <div className="w-full border-b sticky top-0 bg-[#FFFFFF] z-50 overflow-hidden py-1">
+      <div className="w-full border-b sticky top-0 bg-[#FFFFFF] z-50 overflow-hidden py-1">
         <div className="max-w-md mx-auto px-4 py-2">
-          {/* Toggle Button */}
-          <div className="flex justify-center mb-2">
+          {/* Toggle Buttons */}
+          <div className="flex justify-center gap-4 mb-2">
+            {/* Filters Toggle */}
             <Button 
               variant="ghost" 
               onClick={() => setIsFiltersOpen(!isFiltersOpen)}
@@ -177,6 +178,48 @@ export default function PublicMenuPage() {
             >
               Filters {isFiltersOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
             </Button>
+
+            {/* Course Type Toggle */}
+            <div className="relative">
+              <Button
+                variant="ghost"
+                onClick={() => setIsCourseOpen(!isCourseOpen)}
+                className="rounded-full px-4 py-1 bg-white text-gray-800 text-lg font-semibold flex items-center gap-1 border-0 hover:bg-white shadow-none ring-0 outline-none"
+              >
+                {selectedCourse === "all" ? "All Courses" : selectedCourse}
+                <ChevronDown className={`ml-1 w-4 h-4 transition-transform ${isCourseOpen ? 'rotate-180' : ''}`} />
+              </Button>
+
+              {isCourseOpen && (
+                <div className="absolute z-50 top-full left-1/2 -translate-x-1/2 w-48 border divide-y bg-white shadow-lg mt-2 rounded-lg">
+                  <button
+                    onClick={() => {
+                      setSelectedCourse("all");
+                      setIsCourseOpen(false);
+                    }}
+                    className={`w-full px-4 py-3 text-center hover:bg-gray-100 ${
+                      selectedCourse === "all" ? "hidden" : "text-gray-800"
+                    }`}
+                  >
+                    All Courses
+                  </button>
+                  {courseTypes.map((type) => (
+                    <button
+                      key={type}
+                      onClick={() => {
+                        setSelectedCourse(type);
+                        setIsCourseOpen(false);
+                      }}
+                      className={`w-full px-4 py-3 text-center hover:bg-gray-100 ${
+                        selectedCourse === type ? "hidden" : "text-gray-800"
+                      }`}
+                    >
+                      {type}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Current Filter Status */}
@@ -216,26 +259,25 @@ export default function PublicMenuPage() {
                   <p className="text-gray-800 mb-3 font-medium">I'm allergic to</p>
                   <div className="flex flex-wrap gap-2 justify-center">
                     {allergensList.map((allergen) => (
-            <Button
-              key={allergen}
-              variant="outline"
-              className={`rounded-full text-xs px-3 py-1 h-auto transition-colors duration-0 focus:ring-0 focus:outline-none
-                ${
-                  selectedAllergens.includes(allergen)
-                    ? "bg-blue-600 text-white border-blue-600 hover:bg-blue-600 hover:text-white"
-                    : "bg-gray-100 text-gray-800 border-gray-200 hover:bg-gray-200"
-                }`}
-              onClick={() => {
-                setSelectedAllergens((prev) =>
-                  prev.includes(allergen)
-                    ? prev.filter((a) => a !== allergen)
-                    : [...prev, allergen]
-                );
-              }}
-            >
-              {allergen}
-            </Button>
-
+                      <Button
+                        key={allergen}
+                        variant="outline"
+                        className={`rounded-full text-xs px-3 py-1 h-auto transition-colors duration-0 focus:ring-0 focus:outline-none
+                          ${
+                            selectedAllergens.includes(allergen)
+                              ? "bg-blue-600 text-white border-blue-600 hover:bg-blue-600 hover:text-white"
+                              : "bg-gray-100 text-gray-800 border-gray-200 hover:bg-gray-200"
+                          }`}
+                        onClick={() => {
+                          setSelectedAllergens((prev) =>
+                            prev.includes(allergen)
+                              ? prev.filter((a) => a !== allergen)
+                              : [...prev, allergen]
+                          );
+                        }}
+                      >
+                        {allergen}
+                      </Button>
                     ))}
                   </div>
                 </div>
@@ -245,69 +287,27 @@ export default function PublicMenuPage() {
         </div>
       </div>
 
-      {/* Course Type Menu */}
-      <div className="w-full max-w-md mx-auto mt-3 mb-1 px-4 relative">
-        <button
-          onClick={() => setIsCourseOpen(!isCourseOpen)}
-          className="w-full flex items-center justify-center text-lg font-medium text-gray-800"
-        >
-          {selectedCourse === "all" ? "All Courses" : selectedCourse}
-          <ChevronDown className={`ml-2 w-5 h-5 transition-transform ${isCourseOpen ? 'rotate-180' : ''}`} />
-        </button>
-
-        {isCourseOpen && (
-          <div className="absolute z-50 top-full left-0 right-0 border-t border-b divide-y bg-white shadow-lg mt-4">
-            <button
-              onClick={() => {
-                setSelectedCourse("all");
-                setIsCourseOpen(false);
-              }}
-              className={`w-full px-4 py-4 text-center hover:bg-gray-100 ${
-                selectedCourse === "all" ? "hidden" : "text-gray-800"
-              }`}
-            >
-              All Courses
-            </button>
-            {courseTypes.map((type) => (
-              <button
-                key={type}
-                onClick={() => {
-                  setSelectedCourse(type);
-                  setIsCourseOpen(false);
-                }}
-                className={`w-full px-4 py-4 text-center hover:bg-gray-100 ${
-                  selectedCourse === type ? "hidden" : "text-gray-800"
-                }`}
-              >
-                {type}
-              </button>
-            ))}
-          </div>
-        )}
-
-      </div>
-
       <div className="w-full mx-auto p-1 flex-1 overflow-hidden">
 
-      {/* Menu Items Carousel */}
-      <div className="w-full mt-0 px-0 overflow-visible border-0 border-l-0">
-        {filteredItems.length === 0 ? (
-        <div className="text-center py-8 text-gray-800">
-          No menu items match your filters
-        </div>
-      ) : (
-          <Carousel
-            opts={{
-              align: "center",
-              loop: true,
-            }}
-            className="w-full overflow-visible border-0 border-l-0 relative"
-          >
+        {/* Menu Items Carousel */}
+        <div className="w-full mt-0 px-0 overflow-visible border-0 border-l-0">
+          {filteredItems.length === 0 ? (
+            <div className="text-center py-8 text-gray-800">
+              No menu items match your filters
+            </div>
+          ) : (
+            <Carousel
+              opts={{
+                align: "center",
+                loop: true,
+              }}
+              className="w-full overflow-visible border-0 border-l-0 relative"
+            >
               <CarouselContent className="-ml-2 md:-ml-4 overflow-hidden border-0 border-l-0 h-full">
                 {filteredItems.map((item) => (
-            <CarouselItem key={item.id} className="pl-2 md:pl-4 md:basis-1/2 lg:basis-1/3 overflow-visible border-0 flex justify-center">
-              <MenuCard item={item} />
-            </CarouselItem>
+                  <CarouselItem key={item.id} className="pl-2 md:pl-4 md:basis-1/2 lg:basis-1/3 overflow-visible border-0 flex justify-center">
+                    <MenuCard item={item} />
+                  </CarouselItem>
                 ))}
               </CarouselContent>
               <CarouselPrevious className="absolute left-1 -translate-y-1/2" />
