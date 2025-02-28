@@ -101,7 +101,6 @@ export default function HomePage() {
 
   const handleImportCSV = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!selectedRestaurant?.id) return;
-
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -109,7 +108,18 @@ export default function HomePage() {
       const reader = new FileReader();
       reader.onload = async (event) => {
         try {
-          const csvData = event.target?.result;
+          const csvData = event.target?.result as string;
+          if (!csvData || typeof csvData !== 'string') {
+            throw new Error("Could not read CSV data");
+          }
+
+          // Simple validation to check if it's likely a valid CSV
+          const lines = csvData.split(/\r?\n/).filter(line => line.trim());
+          if (lines.length < 2) {
+            throw new Error("CSV must contain a header row and at least one data row");
+          }
+
+          // Send to server with minimal processing
           const response = await fetch(`/api/restaurants/${selectedRestaurant.id}/menu/import`, {
             method: 'POST',
             headers: {
@@ -124,7 +134,6 @@ export default function HomePage() {
           }
 
           e.target.value = '';
-
           toast({
             title: "Import Complete",
             description: `Successfully imported ${result.success} items. ${
@@ -153,6 +162,21 @@ export default function HomePage() {
         variant: "destructive",
       });
     }
+  };
+
+  // Helper function to parse allergens string into the expected format
+  const parseAllergens = (allergensStr: string) => {
+    const allergenList = allergensStr ? allergensStr.split(';').map(a => a.trim().toLowerCase()) : [];
+    return {
+      milk: allergenList.includes('milk'),
+      eggs: allergenList.includes('eggs'),
+      peanuts: allergenList.includes('peanuts'),
+      nuts: allergenList.includes('nuts'),
+      shellfish: allergenList.includes('shellfish'),
+      fish: allergenList.includes('fish'),
+      soy: allergenList.includes('soy'),
+      gluten: allergenList.includes('gluten')
+    };
   };
 
   const form = useForm<InsertMenuItem>({
@@ -674,8 +698,18 @@ export default function HomePage() {
 
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                Your CSV file should follow this structure. The first row must contain these exact column headers:
+                To successfully import menu items, please follow these steps:
               </p>
+
+              <div className="bg-amber-100 p-4 rounded-md border border-amber-200">
+                <h3 className="font-medium mb-2">Important: Use the Export Template</h3>
+                <p className="text-sm">
+                  For best results, first click "Export CSV" to download a template with the correct format. 
+                  Then add your new items to this file.
+                </p>
+              </div>
+
+              <p className="text-sm">Your CSV file should follow this structure:</p>
 
               <Table>
                 <TableHeader>
@@ -714,6 +748,10 @@ export default function HomePage() {
             <DialogFooter className="flex gap-2">
               <Button variant="outline" onClick={() => setIsImportDialogOpen(false)}>
                 Go back
+              </Button>
+              <Button onClick={handleExportCSV} className="mr-2">
+                <Download className="mr-2 h-4 w-4" />
+                Export Template
               </Button>
               <Button onClick={handleContinueImport}>
                 Continue Import

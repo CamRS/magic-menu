@@ -44,20 +44,20 @@ const foodImages = [
 
 const MenuCard = ({ item }: { item: MenuItem }) => {
   return (
-    <Card className="bg-white rounded-xl overflow-hidcden shadow-lg w-[300px] mx-2">
-      <CardContent className="p-4 space-y-4">
+    <Card className="bg-white rounded-xl shadow-lg w-[300px] mx-2 mb-6 border border-gray-200">
+      <CardContent className="p-4 space-y-4 flex flex-col h-full">
         {/* Title */}
         <h3 className="text-2xl font-bold text-gray-900">{item.name}</h3>
 
         {/* Allergens */}
-        <div className="flex flex-wrap gap-2 items-center mb-3">
-          <span className="text-gray-700 mr-2 text-sm">Contains</span>
+        <div className="flex flex-wrap gap-1 items-center mb-3 w-full overflow-hidden">
+          <span className="text-gray-700 mr-1 text-sm font-medium">Contains</span>
           {Object.entries(item.allergens)
             .filter(([_, value]) => value)
             .map(([key]) => (
               <Badge
                 key={key}
-                className="bg-blue-500 text-gray-800 hover:bg-blue-600 rounded-full px-2.5 py-1 text-xs"
+                className="bg-blue-500 text-white hover:bg-blue-600 rounded-full px-2 py-0.5 text-xs font-medium"
               >
                 {key}
               </Badge>
@@ -69,19 +69,19 @@ const MenuCard = ({ item }: { item: MenuItem }) => {
           <img
             src={foodImages[item.id % foodImages.length]}
             alt={`${item.name} presentation`}
-            className="w-full h-48 object-cover rounded-lg"
+            className="w-full flex-1 object-cover rounded-lg min-h-[120px] max-h-[50vh]"
             draggable="false"
           />
         </div>
 
         {/* Description */}
-        <p className="text-gray-700 text-sm min-h-[3rem]">
+        <p className="text-gray-700 text-sm min-h-[3rem] font-medium">
           {item.description}
         </p>
 
         {/* Price */}
         <div>
-          <span className="text-gray-500 text-xl font-semibold">
+          <span className="text-gray-800 text-xl font-bold">
             ${parseFloat(item.price).toFixed(2)}
           </span>
         </div>
@@ -163,149 +163,155 @@ export default function PublicMenuPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FFFFFF] pb-32 antialiased">
-      <div className="w-full py-2 px-3 border-b sticky top-0 bg-[#FFFFFF] z-50">
-        <div className="max-w-6xl mx-auto space-y-4">
+    <div className="h-screen flex flex-col overflow-hidden">
+      {/* Header with filters toggle and status */}
+      {/* Fixed width container for entire header */}
+        <div className="w-full border-b sticky top-0 bg-[#FFFFFF] z-50 overflow-hidden py-1">
+        <div className="max-w-md mx-auto px-4 py-2">
           {/* Toggle Button */}
           <div className="flex justify-center mb-2">
             <Button 
               variant="ghost" 
               onClick={() => setIsFiltersOpen(!isFiltersOpen)}
-              className="rounded-full px-4 py-1 bg-white text-gray-800 text-xs font-medium flex items-center gap-1 border-0 hover:bg-white"
+              className="rounded-full px-4 py-1 bg-white text-gray-800 text-lg font-semibold flex items-center gap-1 border-0 hover:bg-white shadow-none ring-0 outline-none"
             >
               Filters {isFiltersOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
             </Button>
           </div>
 
-          {/* Course Type Toggle - New Component */}
-          <div className="flex flex-col items-center">
-            <Button
-              variant="ghost"
-              onClick={() => setIsCourseOpen(!isCourseOpen)}
-              className="text-xl font-semibold text-gray-800 hover:bg-transparent hover:text-gray-900 flex items-center gap-2"
-            >
-              {selectedCourse === "all" ? "All Courses" : selectedCourse}
-              <ChevronDown className={`w-5 h-5 transition-transform ${isCourseOpen ? 'rotate-180' : ''}`} />
-            </Button>
-
-            {/* Course Type Menu */}
-            {isCourseOpen && (
-              <div className="absolute z-50 mt-12 bg-white rounded-lg shadow-lg border border-gray-200 w-full max-w-xs">
-                <div className="py-2">
-                  <button
-                    onClick={() => {
-                      setSelectedCourse("all");
-                      setIsCourseOpen(false);
-                    }}
-                    className={`w-full px-4 py-2 text-left hover:bg-gray-100 ${
-                      selectedCourse === "all" ? "text-blue-600 font-medium" : "text-gray-800"
-                    }`}
-                  >
-                    All Courses
-                  </button>
-                  {courseTypes.map((type) => (
-                    <button
-                      key={type}
-                      onClick={() => {
-                        setSelectedCourse(type);
-                        setIsCourseOpen(false);
-                      }}
-                      className={`w-full px-4 py-2 text-left hover:bg-gray-100 ${
-                        selectedCourse === type ? "text-blue-600 font-medium" : "text-gray-800"
-                      }`}
-                    >
-                      {type}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
           {/* Current Filter Status */}
-          <div className="text-center mb-4">
-            <span className="text-blue-700 font-medium text-xs">Showing:</span>{" "}
-            <span className="text-gray-700 text-xs">
-              {filteredItems.length === menuItems?.length
-                ? "All menu items"
-                : `${filteredItems.length} filtered items`}
+          <div className="text-center mb-2">
+            <span className="text-blue-600 font-medium text-sm">Showing: </span>
+            <span className="text-gray-700 text-sm">
+              {selectedAllergens.length > 0 
+                ? `Items that contain No ${selectedAllergens.map(a => a.charAt(0).toUpperCase() + a.slice(1)).join(', ')}` 
+                : "All menu items"}
             </span>
           </div>
         </div>
+
+        {/* Filters Panel */}
+        <div className="w-full">
+          <Collapsible
+            open={isFiltersOpen}
+            onOpenChange={setIsFiltersOpen}
+          >
+            <CollapsibleContent className="fixed top-[120px] left-0 right-0 bg-white shadow-md z-40">
+              <div className="max-w-md mx-auto px-4 py-6 space-y-6">
+                {/* Search Bar */}
+                <div className="relative">
+                  <Input
+                    placeholder="Search menu"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full py-2 px-4 bg-white text-gray-800 placeholder:text-gray-500 rounded-full border border-gray-300 text-center"
+                  />
+                  <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
+                    <Search className="h-4 w-4 text-gray-400" />
+                  </div>
+                </div>
+
+                {/* Allergen Filters */}
+                <div className="text-center">
+                  <p className="text-gray-800 mb-3 font-medium">I'm allergic to</p>
+                  <div className="flex flex-wrap gap-2 justify-center">
+                    {allergensList.map((allergen) => (
+            <Button
+              key={allergen}
+              variant="outline"
+              className={`rounded-full text-xs px-3 py-1 h-auto transition-colors duration-0 focus:ring-0 focus:outline-none
+                ${
+                  selectedAllergens.includes(allergen)
+                    ? "bg-blue-600 text-white border-blue-600 hover:bg-blue-600 hover:text-white"
+                    : "bg-gray-100 text-gray-800 border-gray-200 hover:bg-gray-200"
+                }`}
+              onClick={() => {
+                setSelectedAllergens((prev) =>
+                  prev.includes(allergen)
+                    ? prev.filter((a) => a !== allergen)
+                    : [...prev, allergen]
+                );
+              }}
+            >
+              {allergen}
+            </Button>
+
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        </div>
       </div>
 
-      <div className="max-w-6xl mx-auto p-2 relative">
-        {/* Filters Section */}
-        <Collapsible
-          open={isFiltersOpen}
-          onOpenChange={setIsFiltersOpen}
-          className={`absolute top-0 left-0 right-0 z-50 ${isFiltersOpen ? 'bg-white/90 backdrop-blur-lg transform scale-100' : ''}`}
+      {/* Course Type Menu */}
+      <div className="w-full max-w-md mx-auto mt-3 mb-1 px-4 relative">
+        <button
+          onClick={() => setIsCourseOpen(!isCourseOpen)}
+          className="w-full flex items-center justify-center text-lg font-medium text-gray-800"
         >
-          <CollapsibleContent className="space-y-6 px-4 py-4 flex flex-col items-center transform scale-100">
-            {/* Search Bar */}
-            <div className="w-full max-w-md">
-              <Input
-                placeholder="Search menu"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full py-2 px-4 bg-white text-gray-800 placeholder:text-gray-500 rounded-full border border-gray-300 text-center"
-              />
-            </div>
+          {selectedCourse === "all" ? "All Courses" : selectedCourse}
+          <ChevronDown className={`ml-2 w-5 h-5 transition-transform ${isCourseOpen ? 'rotate-180' : ''}`} />
+        </button>
 
-            {/* Allergen Filters */}
-            <div className="text-center w-full max-w-md">
-              <p className="text-gray-800 mb-3 font-medium">I'm allergic to</p>
-              <div className="flex flex-wrap gap-2 justify-center">
-                {allergensList.map((allergen) => (
-                  <Button
-                    key={allergen}
-                    variant="outline"
-                    className={`rounded-full text-xs px-3 py-1 h-auto
-                      hover:bg-gray-400 hover:text-white
-                      ${selectedAllergens.includes(allergen)
-                        ? "bg-blue-600 text-white"
-                        : "bg-gray-200 text-gray-800"}`}
-                    onClick={() => {
-                      setSelectedAllergens(prev =>
-                        prev.includes(allergen)
-                          ? prev.filter(a => a !== allergen)
-                          : [...prev, allergen]
-                      );
-                    }}
-                  >
-                    {allergen}
-                  </Button>
-                ))}
-              </div>
-            </div>
-
-            {/* Course Type Dropdown - This section was already present and is redundant. Removing it */}
-            </CollapsibleContent>
-        </Collapsible>
-
-        {/* Menu Items Carousel */}
-        <div className="w-full my-8 px-8">
-          {filteredItems.length === 0 ? (
-            <div className="text-center py-8 text-gray-800">
-              No menu items match your filters
-            </div>
-          ) : (
-            <Carousel
-              opts={{
-                align: "start",
-                loop: true,
+        {isCourseOpen && (
+          <div className="absolute z-50 top-full left-0 right-0 border-t border-b divide-y bg-white shadow-lg mt-4">
+            <button
+              onClick={() => {
+                setSelectedCourse("all");
+                setIsCourseOpen(false);
               }}
-              className="w-full"
+              className={`w-full px-4 py-4 text-center hover:bg-gray-100 ${
+                selectedCourse === "all" ? "hidden" : "text-gray-800"
+              }`}
             >
-              <CarouselContent className="-ml-2 md:-ml-4">
+              All Courses
+            </button>
+            {courseTypes.map((type) => (
+              <button
+                key={type}
+                onClick={() => {
+                  setSelectedCourse(type);
+                  setIsCourseOpen(false);
+                }}
+                className={`w-full px-4 py-4 text-center hover:bg-gray-100 ${
+                  selectedCourse === type ? "hidden" : "text-gray-800"
+                }`}
+              >
+                {type}
+              </button>
+            ))}
+          </div>
+        )}
+
+      </div>
+
+      <div className="w-full mx-auto p-1 flex-1 overflow-hidden">
+
+      {/* Menu Items Carousel */}
+      <div className="w-full mt-0 px-0 overflow-visible border-0 border-l-0">
+        {filteredItems.length === 0 ? (
+        <div className="text-center py-8 text-gray-800">
+          No menu items match your filters
+        </div>
+      ) : (
+          <Carousel
+            opts={{
+              align: "center",
+              loop: true,
+            }}
+            className="w-full overflow-visible border-0 border-l-0 relative"
+          >
+              <CarouselContent className="-ml-2 md:-ml-4 overflow-hidden border-0 border-l-0 h-full">
                 {filteredItems.map((item) => (
-                  <CarouselItem key={item.id} className="pl-2 md:pl-4 md:basis-1/2 lg:basis-1/3">
-                    <MenuCard item={item} />
-                  </CarouselItem>
+            <CarouselItem key={item.id} className="pl-2 md:pl-4 md:basis-1/2 lg:basis-1/3 overflow-visible border-0 flex justify-center">
+              <MenuCard item={item} />
+            </CarouselItem>
                 ))}
               </CarouselContent>
-              <CarouselPrevious />
-              <CarouselNext />
+              <CarouselPrevious className="absolute left-1 -translate-y-1/2" />
+              <CarouselNext className="absolute right-1 -translate-y-1/2" />
             </Carousel>
           )}
         </div>
