@@ -508,42 +508,30 @@ export default function HomePage() {
           throw new Error("Could not read image data");
         }
 
-        // Upload to Dropbox
         try {
           const timestamp = new Date().getTime();
           const fileName = `${selectedRestaurant.id}_${timestamp}_${file.name}`;
-          const path = `/menu_images/${fileName}`;
+          const path = `/Magic Menu/${fileName}`;
 
-          const uploadResponse = await dbx.filesUpload({
+          await dbx.filesUpload({
             path,
             contents: imageData,
           });
 
-          // Get a shared link
-          const sharedLinkResponse = await dbx.sharingCreateSharedLink({
-            path: uploadResponse.result.path_display
-          });
-
-          // Convert the shared link to a direct download link
-          const directLink = sharedLinkResponse.result.url.replace('www.dropbox.com', 'dl.dropboxusercontent.com');
-
-          // Clear the input value
+          // Clear the input value and close dialog
           e.target.value = '';
           setIsImageUploadDialogOpen(false);
 
           toast({
             title: "Success",
-            description: "Image uploaded successfully to Dropbox",
+            description: "Image uploaded successfully",
           });
-
-          // Store the Dropbox link or use it as needed
-          console.log("Dropbox image URL:", directLink);
 
         } catch (dropboxError) {
           console.error('Dropbox upload error:', dropboxError);
           toast({
             title: "Error",
-            description: "Failed to upload image to Dropbox",
+            description: "Failed to upload image",
             variant: "destructive",
           });
         }
@@ -859,8 +847,7 @@ export default function HomePage() {
                   <div className="grid grid-cols-2 gap-4 mt-2">
                     {(Object.keys(form.getValues().allergens) as Array<keyof InsertMenuItem['allergens']>).map((key) => (
                       <div key={key} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={key}
+                        <Checkbox                          id={key}
                           checked={form.getValues().allergens[key]}
                           onCheckedChange={(checked) => {
                             form.setValue(`allergens.${key}`, checked as boolean, { shouldValidate: true });
