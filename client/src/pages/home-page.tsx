@@ -947,21 +947,21 @@ export default function HomePage() {
           <Dialog open={isImageUploadDialogOpen} onOpenChange={setIsImageUploadDialogOpen}>
             <DialogContent className="max-w-3xl">
               <DialogHeader>
-                <DialogTitle>Image Upload Instructions</DialogTitle>
+                <DialogTitle>Upload Menu Image</DialogTitle>
               </DialogHeader>
 
               <div className="space-y-4">
                 <p className="text-sm text-muted-foreground">
-                  To upload images for your menu items, please follow these guidelines:
+                  To upload a full menu image, please follow these guidelines:
                 </p>
 
-                <div className="bg-amber-100 p-4 rounded-md border border-amber200">
+                <div className="bg-amber-100 p-4 rounded-md border border-amber-200">
                   <h3 className="font-medium mb-2">Image Requirements</h3>
                   <ul className="list-disc list-inside space-y-1 text-sm">
+                    <li>High-resolution images of your complete menu</li>
                     <li>Supported formats: JPG, PNG, GIF</li>
                     <li>Maximum file size: 5MB</li>
-                    <li>Recommended dimensions: 800x600 pixels</li>
-                    <li>Images will be automatically resized to fit the menu display</li>
+                    <li>Ensure the menu text is clear and readable</li>
                   </ul>
                 </div>
               </div>
