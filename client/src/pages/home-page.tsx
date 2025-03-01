@@ -638,7 +638,7 @@ export default function HomePage() {
               </Button>
               <Button variant="outline" className="w-full sm:w-auto" onClick={handleImageUploadClick}>
                 <ImageIcon className="mr-2 h-4 w-4" />
-                Upload Images
+                Upload Menu Image
               </Button>
               <input
                 ref={fileInputRef}
@@ -934,7 +934,7 @@ export default function HomePage() {
                   To upload images for your menu items, please follow these guidelines:
                 </p>
 
-                <div className="bg-amber-100 p-4 rounded-md border border-amber-200">
+                <div className="bg-amber-100 p-4 rounded-md border border-amber200">
                   <h3 className="font-medium mb-2">Image Requirements</h3>
                   <ul className="list-disc list-inside space-y-1 text-sm">
                     <li>Supported formats: JPG, PNG, GIF</li>
