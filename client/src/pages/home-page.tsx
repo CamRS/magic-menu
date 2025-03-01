@@ -23,7 +23,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Copy, Store, PlusCircle, ChevronDown, Loader2, Download, Upload, Trash2, MoreVertical, Pencil, Globe } from "lucide-react";
+import { Copy, Store, PlusCircle, ChevronDown, Loader2, Download, Upload, Trash2, MoreVertical, Pencil, Globe, Image as ImageIcon } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { type Restaurant, type MenuItem, type InsertMenuItem, insertMenuItemSchema, insertRestaurantSchema, courseTypes } from "@shared/schema";
 import { useState, useEffect, useRef, useCallback } from "react";
@@ -55,6 +55,8 @@ export default function HomePage() {
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isImageUploadDialogOpen, setIsImageUploadDialogOpen] = useState(false);
+  const imageUploadRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<InsertMenuItem>({
     resolver: zodResolver(insertMenuItemSchema),
@@ -478,6 +480,51 @@ export default function HomePage() {
     fileInputRef.current?.click();
   };
 
+  const handleImageUploadClick = () => {
+    setIsImageUploadDialogOpen(true);
+  };
+
+  const handleContinueImageUpload = () => {
+    setIsImageUploadDialogOpen(false);
+    imageUploadRef.current?.click();
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!selectedRestaurant?.id) return;
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const imageData = reader.result as string;
+        if (!imageData) {
+          throw new Error("Could not read image data");
+        }
+
+        // Clear the input value
+        e.target.value = '';
+        setIsImageUploadDialogOpen(false);
+
+        toast({
+          title: "Success",
+          description: "Image uploaded successfully",
+        });
+
+        // Refresh the menu items to show the new image
+        queryClient.invalidateQueries({ queryKey: ["/api/menu-items", selectedRestaurant.id] });
+      };
+      reader.readAsDataURL(file);
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      toast({
+        title: "Error",
+        description: "Failed to upload image",
+        variant: "destructive",
+      });
+    }
+  };
+
 
   if (!restaurants?.length && !isLoadingRestaurants) {
     return (
@@ -589,11 +636,22 @@ export default function HomePage() {
                 <Upload className="mr-2 h-4 w-4" />
                 Import CSV
               </Button>
+              <Button variant="outline" className="w-full sm:w-auto" onClick={handleImageUploadClick}>
+                <ImageIcon className="mr-2 h-4 w-4" />
+                Upload Images
+              </Button>
               <input
                 ref={fileInputRef}
                 type="file"
                 accept=".csv"
                 onChange={handleImportCSV}
+                className="hidden"
+              />
+              <input
+                ref={imageUploadRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
                 className="hidden"
               />
             </div>
@@ -860,6 +918,39 @@ export default function HomePage() {
                 </Button>
                 <Button onClick={handleContinueImport}>
                   Continue Import
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={isImageUploadDialogOpen} onOpenChange={setIsImageUploadDialogOpen}>
+            <DialogContent className="max-w-3xl">
+              <DialogHeader>
+                <DialogTitle>Image Upload Instructions</DialogTitle>
+              </DialogHeader>
+
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  To upload images for your menu items, please follow these guidelines:
+                </p>
+
+                <div className="bg-amber-100 p-4 rounded-md border border-amber-200">
+                  <h3 className="font-medium mb-2">Image Requirements</h3>
+                  <ul className="list-disc list-inside space-y-1 text-sm">
+                    <li>Supported formats: JPG, PNG, GIF</li>
+                    <li>Maximum file size: 5MB</li>
+                    <li>Recommended dimensions: 800x600 pixels</li>
+                    <li>Images will be automatically resized to fit the menu display</li>
+                  </ul>
+                </div>
+              </div>
+
+              <DialogFooter className="flex gap-2">
+                <Button variant="outline" onClick={() => setIsImageUploadDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleContinueImageUpload}>
+                  Choose Image
                 </Button>
               </DialogFooter>
             </DialogContent>
