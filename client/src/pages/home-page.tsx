@@ -528,7 +528,7 @@ export default function HomePage() {
             mute: false,
             property_groups: [
               {
-                template_id: 'restaurant_metadata',
+                template_id: 'ptid:restaurant_metadata',
                 fields: [
                   {
                     name: 'restaurant_id',
