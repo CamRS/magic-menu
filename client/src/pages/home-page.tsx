@@ -45,7 +45,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { X } from "lucide-react";
 import { Dropbox } from 'dropbox';
-import { getAccessTokenFromUrl } from '@/lib/dropbox-utils';
 
 export default function HomePage() {
   const { user, logoutMutation } = useAuth();
@@ -59,11 +58,6 @@ export default function HomePage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isImageUploadDialogOpen, setIsImageUploadDialogOpen] = useState(false);
   const imageUploadRef = useRef<HTMLInputElement>(null);
-
-  const { data: dropboxToken, refetch: refetchDropboxToken } = useQuery<{ token: string }>({
-    queryKey: ["/api/dropbox-token"],
-    enabled: !!user?.id,
-  });
 
   const form = useForm<InsertMenuItem>({
     resolver: zodResolver(insertMenuItemSchema),
@@ -496,35 +490,12 @@ export default function HomePage() {
     imageUploadRef.current?.click();
   };
 
-  useEffect(() => {
-    const token = getAccessTokenFromUrl();
-    if (token) {
-      window.location.hash = '';
-      queryClient.setQueryData(["/api/dropbox-token"], { token });
-    }
-  }, [queryClient]);
-
-  const initiateDropboxAuth = async () => {
-    try {
-      const response = await fetch('/api/dropbox/auth');
-      const data = await response.json();
-      window.location.href = data.authUrl;
-    } catch (error) {
-      console.error('Failed to get auth URL:', error);
-      toast({
-        title: "Error",
-        description: "Failed to initiate Dropbox authentication",
-        variant: "destructive",
-      });
-    }
-  };
+  // Initialize Dropbox client
+  const dbx = new Dropbox({
+    accessToken: 'sl.u.AFl_Sm0VvreSnOuSdWHK5rR41xXZ0e1ax1KXmdzGcrBzu93CgXoYXabBbPXQ1ixKPJqEiRwJFNoAZR7g5H6FOPziCi14cQDa2LkommycAQOfWGyIBLGwJeb5EBkcBsUeP5WEPIZpJkNJoSz-ggr_fynsiFbLTinDrn9_VeJGIEkaXLTygT0dwR66-ayia0GICKvhHE355P_OdqYlHhk6A_BZz3DuBCiEngop5deOpuTyATyrjJo8qnlqGzGJXmC8tu74E5XaRzcHh_f8pzdCrsBHH-btjdqUmZ3N7NcIHT_C5xyDxondmaX5d1v7HattUQrSGerhyHiZ_C_n3x6cM3I2gUl359SLDZGiJthgqqPewH504MAcE8vXMrVsKcomspeSxADX8nreXcuQbYFZsrz16h-ZII7YHOUCM1a4TSoHHMN2toRYa53kvNfo3jy47oAbz79u5RYwavacA-ljKYB7qnQWqATsrOWtRT_3wVq7YI786qvimhV6sr_1vesO1KvnAPkE_shZSGN37p6yRY6xFGmmoBcUKh4gVHcxNAJiNKxyDDDFuEVdmtCtAtLMJp1nS_wFfUdlwNYSfaxRSv32FYl9nHXfp6q5YuELNQiwIiZLWte5Zb1afLdSHEKKHCzmRu8pFWkj2Sm5JpdrsPWP2ZeermrQGRlNt6Ez9xw5MJ2vEV70khqsQdahOMEUcKtuD4UG3Bu5kat4po0ekV8EqNAT4qfn5byZ1PpC4OS9ZMsiYcYmof-r_1Zr8RfHdWGSpnIU90KKop9cYoyjYmvgQkKGIqvrvQV50VOdYmxCK6f5mk8BrTiOSGNIztDmV805f9ZLEVmQfRUB8jsyd50-TR7C_9bKN_h65XoSJxzrdcXA3UuhGmzBicuIfdnUq4Dbw4tLxqFQ1sBr8iuQlDBs_heWnvLa4B8DzVbCesQ7WQ7aHrXSNpQONcia-2DZiMA2KkTaJ44cM-Bu9blwHTRveyEdHwKkkTOPa8TlX45x3i3YEuJ1_myltpvAXPPfwIcBZhcNQDftbLqO4Fnchx_L1tEYfdL7oK3xHpspzwIIYwFQ2KC6xiuzgWT05eph459Fdd564aMxbZp5lr4VSnJ96fMdXUUfuVLKQb_YpZ_-T-JdjeCexxQMmTdbRy7YPN33lIMxeq9cp240VIu8yP6HPhsoQMqxSHgSpEsgX8cQhcEKr5UgxmXl-m4Q6DTV5pXElcAIBMMNUCdHc0Hn-ES-CXc02ujgzZ3DHkTn5lLYzSeJCoEzv4313y1PPdOHVa0'
+  });
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!dropboxToken?.token) {
-      initiateDropboxAuth();
-      return;
-    }
-
     if (!selectedRestaurant?.id) return;
     const file = e.target.files?.[0];
     if (!file) return;
@@ -532,22 +503,22 @@ export default function HomePage() {
     try {
       const reader = new FileReader();
       reader.onloadend = async () => {
-        try {
-          const imageData = reader.result as ArrayBuffer;
-          if (!imageData) {
-            throw new Error("Could not read image data");
-          }
+        const imageData = reader.result as ArrayBuffer;
+        if (!imageData) {
+          throw new Error("Could not read image data");
+        }
 
+        try {
           const timestamp = new Date().getTime();
           const fileName = `${selectedRestaurant.id}_${timestamp}_${file.name}`;
           const path = `/Magic Menu/${fileName}`;
 
-          const dbx = new Dropbox({ accessToken: dropboxToken.token });
           await dbx.filesUpload({
             path,
             contents: imageData,
           });
 
+          // Clear the input value and close dialog
           e.target.value = '';
           setIsImageUploadDialogOpen(false);
 
@@ -558,15 +529,11 @@ export default function HomePage() {
 
         } catch (dropboxError) {
           console.error('Dropbox upload error:', dropboxError);
-          if ((dropboxError as any)?.status === 401) {
-            initiateDropboxAuth();
-          } else {
-            toast({
-              title: "Error",
-              description: "Failed to upload image",
-              variant: "destructive",
-            });
-          }
+          toast({
+            title: "Error",
+            description: "Failed to upload image",
+            variant: "destructive",
+          });
         }
       };
       reader.readAsArrayBuffer(file);
@@ -928,22 +895,51 @@ export default function HomePage() {
 
                 <p className="text-sm">Your CSV file should follow this structure:</p>
 
-                <div className="bg-muted p-4 rounded-md">
-                  <ul className="list-disc list-inside space-y-1 text-sm">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead>Price</TableHead>
+                      <TableHead>Course Type</TableHead>
+                      <TableHead>Custom Tags</TableHead>
+                      <TableHead>Allergens</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <TableRow>
+                      <TableCell>Taco</TableCell>
+                      <TableCell>Tasty</TableCell>
+                      <TableCell>2.49</TableCell>
+                      <TableCell>Mains</TableCell>
+                      <TableCell></TableCell>
+                      <TableCell>milk</TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+
+                <div className="text-sm space-y-2">
+                  <p><strong>Guidelines:</strong></p>
+                  <ul className="list-disc list-inside space-y-1">
                     <li>Course Type must be one of: {courseTypes.join(", ")}</li>
                     <li>Price should be a decimal number (e.g., 2.49)</li>
                     <li>Custom Tags should be semicolon-separated (e.g., "Spicy;Vegetarian")</li>
-                    <li>Allergens should be semicolon-separated, valid options: milk, eggs, peanuts, nuts, shellfish, fish, soy,<br>gluten</li>
+                    <li>Allergens should be semicolon-separated, valid options: milk, eggs, peanuts, nuts, shellfish, fish, soy, gluten</li>
                   </ul>
                 </div>
               </div>
 
               <DialogFooter className="flex gap-2">
                 <Button variant="outline" onClick={() => setIsImportDialogOpen(false)}>
-                  Cancel
+                  Go back
+                </Button>
+                <Button onClick={handleExportCSV} className="mr-2">
+                  <Download className="mr-2 h-4 w-4" />
+                  Export Template
                 </Button>
                 <Button onClick={handleContinueImport}>
-                  Choose File                </Button>
+                  Continue Import
+                </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -970,7 +966,7 @@ export default function HomePage() {
                 </div>
               </div>
 
-              <DialogFooter>
+              <DialogFooter className="flex gap-2">
                 <Button variant="outline" onClick={() => setIsImageUploadDialogOpen(false)}>
                   Cancel
                 </Button>

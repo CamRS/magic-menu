@@ -4,7 +4,6 @@ import { createServer, type Server } from "http";
 import { setupAuth, requireAuth } from "./auth.js";
 import { storage } from "./storage";
 import { insertMenuItemSchema, insertRestaurantSchema, courseTypes } from "@shared/schema";
-import { dropboxService } from './dropbox-token-service';
 
 // Helper function to parse CSV data
 function parseCSV(csvText: string): string[][] {
@@ -289,12 +288,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Verify header row - case insensitive comparison
       const expectedHeaders = ["Name", "Description", "Price", "Course Type", "Custom Tags", "Allergens"];
       const headers = rows[0].map(header => header.trim());
-      const headersMatch = expectedHeaders.every(expected =>
+      const headersMatch = expectedHeaders.every(expected => 
         headers.some(header => header.toLowerCase() === expected.toLowerCase())
       );
 
       if (!headersMatch) {
-        return res.status(400).json({
+        return res.status(400).json({ 
           message: "Invalid CSV format. Please use the template from the export function.",
           expected: expectedHeaders,
           received: headers
@@ -371,47 +370,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(results);
     } catch (error) {
       console.error('Error importing menu:', error);
-      res.status(500).json({ message: "Internal server error" });
-    }
-  });
-
-  // Add new Dropbox auth routes
-  app.get('/api/dropbox/auth', (req, res) => {
-    const authUrl = dropboxService.getAuthUrl();
-    res.json({ authUrl });
-  });
-
-  const REDIRECT_URI = process.env.REDIRECT_URI || 'http://localhost:3000/auth/callback'; // You'll need to set REDIRECT_URI appropriately
-
-  app.get('/auth/callback', async (req, res) => {
-    const { code } = req.query;
-    if (!code || typeof code !== 'string') {
-      return res.status(400).json({ message: 'Invalid auth code' });
-    }
-
-    try {
-      const response = await dropboxService.dbx.auth.getAccessTokenFromCode(REDIRECT_URI, code);
-      const accessToken = response.result.access_token;
-      dropboxService.setAccessToken(accessToken);
-
-      // Redirect back to the app
-      res.redirect('/');
-    } catch (error) {
-      console.error('Error getting access token:', error);
-      res.status(500).json({ message: 'Failed to authenticate with Dropbox' });
-    }
-  });
-
-  app.get("/api/dropbox-token", requireAuth, async (req, res) => {
-    try {
-      if (!req.user) return res.sendStatus(401);
-      const token = dropboxService.getCurrentToken();
-      if (!token) {
-        return res.status(401).json({ message: 'Not authenticated with Dropbox' });
-      }
-      res.json({ token });
-    } catch (error) {
-      console.error('Error getting Dropbox token:', error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
