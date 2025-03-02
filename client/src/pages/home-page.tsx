@@ -45,6 +45,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { X } from "lucide-react";
 import { Dropbox } from 'dropbox';
+import { getAccessTokenFromUrl } from '@/lib/dropbox-utils';
 
 export default function HomePage() {
   const { user, logoutMutation } = useAuth();
@@ -495,12 +496,35 @@ export default function HomePage() {
     imageUploadRef.current?.click();
   };
 
-  // Initialize Dropbox client
-  const dbx = new Dropbox({
-    accessToken: dropboxToken?.token || ''
-  });
+  useEffect(() => {
+    const token = getAccessTokenFromUrl();
+    if (token) {
+      window.location.hash = '';
+      queryClient.setQueryData(["/api/dropbox-token"], { token });
+    }
+  }, [queryClient]);
+
+  const initiateDropboxAuth = async () => {
+    try {
+      const response = await fetch('/api/dropbox/auth');
+      const data = await response.json();
+      window.location.href = data.authUrl;
+    } catch (error) {
+      console.error('Failed to get auth URL:', error);
+      toast({
+        title: "Error",
+        description: "Failed to initiate Dropbox authentication",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!dropboxToken?.token) {
+      initiateDropboxAuth();
+      return;
+    }
+
     if (!selectedRestaurant?.id) return;
     const file = e.target.files?.[0];
     if (!file) return;
@@ -508,22 +532,22 @@ export default function HomePage() {
     try {
       const reader = new FileReader();
       reader.onloadend = async () => {
-        const imageData = reader.result as ArrayBuffer;
-        if (!imageData) {
-          throw new Error("Could not read image data");
-        }
-
         try {
+          const imageData = reader.result as ArrayBuffer;
+          if (!imageData) {
+            throw new Error("Could not read image data");
+          }
+
           const timestamp = new Date().getTime();
           const fileName = `${selectedRestaurant.id}_${timestamp}_${file.name}`;
           const path = `/Magic Menu/${fileName}`;
 
+          const dbx = new Dropbox({ accessToken: dropboxToken.token });
           await dbx.filesUpload({
             path,
             contents: imageData,
           });
 
-          // Clear the input value and close dialog
           e.target.value = '';
           setIsImageUploadDialogOpen(false);
 
@@ -534,15 +558,8 @@ export default function HomePage() {
 
         } catch (dropboxError) {
           console.error('Dropbox upload error:', dropboxError);
-
-          // Handle token expiration by refreshing the token
           if ((dropboxError as any)?.status === 401) {
-            await refetchDropboxToken();
-            toast({
-              title: "Error",
-              description: "Please try uploading again",
-              variant: "destructive",
-            });
+            initiateDropboxAuth();
           } else {
             toast({
               title: "Error",
@@ -916,7 +933,7 @@ export default function HomePage() {
                     <li>Course Type must be one of: {courseTypes.join(", ")}</li>
                     <li>Price should be a decimal number (e.g., 2.49)</li>
                     <li>Custom Tags should be semicolon-separated (e.g., "Spicy;Vegetarian")</li>
-                    <li>Allergens should be semicolon-separated, valid options: milk, eggs, peanuts, nuts, shellfish, fish, soy, gluten</li>
+                    <li>Allergens should be semicolon-separated, valid options: milk, eggs, peanuts, nuts, shellfish, fish, soy,<br>gluten</li>
                   </ul>
                 </div>
               </div>
@@ -926,8 +943,7 @@ export default function HomePage() {
                   Cancel
                 </Button>
                 <Button onClick={handleContinueImport}>
-                  Choose File
-                </Button>
+                  Choose File                </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
