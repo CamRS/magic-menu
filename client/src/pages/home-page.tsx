@@ -522,38 +522,14 @@ export default function HomePage() {
           const fileName = `RestaurantID-${selectedRestaurant.id}_${timestamp}_${file.name}`;
           const path = `/Magic Menu/${selectedRestaurant.id}/menu_images/${fileName}`;
 
-          // Format date to match Dropbox expected format: YYYY-MM-DDThh:mm:ssZ
-          const now = new Date();
-          const formattedDate = now.toISOString().split('.')[0] + 'Z';
-
-          // Upload file with metadata
+          // Upload file without metadata
           await dbx.filesUpload({
             path,
             contents: imageData,
             mode: { '.tag': 'add' },
             autorename: true,
             strict_conflict: false,
-            client_modified: formattedDate,
-            mute: false,
-            property_groups: [
-              {
-                template_id: 'ptid:restaurant_metadata',
-                fields: [
-                  {
-                    name: 'restaurant_id',
-                    value: selectedRestaurant.id.toString()
-                  },
-                  {
-                    name: 'restaurant_name',
-                    value: selectedRestaurant.name
-                  },
-                  {
-                    name: 'upload_type',
-                    value: 'menu_image'
-                  }
-                ]
-              }
-            ]
+            mute: false
           });
 
           // Clear the input value and close dialog
