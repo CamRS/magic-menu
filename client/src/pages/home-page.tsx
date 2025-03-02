@@ -48,13 +48,7 @@ import { Dropbox } from 'dropbox';
 
 // Initialize Dropbox client with OAuth
 const APP_KEY = 's0y3pb9x0ug1yd4';
-const APP_SECRET = 'u0v0lo5w073x34v';
 
-// Create Dropbox OAuth instance
-const dbx = new Dropbox({
-  clientId: APP_KEY,
-  accessToken: null // We'll set this after authentication
-});
 
 export default function HomePage() {
   const { user, logoutMutation } = useAuth();
@@ -68,6 +62,7 @@ export default function HomePage() {
   const [isImageUploadDialogOpen, setIsImageUploadDialogOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageUploadRef = useRef<HTMLInputElement>(null);
+  const [dbxClient, setDbxClient] = useState<Dropbox | null>(null);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!selectedRestaurant?.id) return;
@@ -83,47 +78,46 @@ export default function HomePage() {
         }
 
         try {
+          // If no client or auth error, redirect to Dropbox auth
+          if (!dbxClient) {
+            const redirectUri = `${window.location.origin}${window.location.pathname}`;
+            const authUrl = `https://www.dropbox.com/oauth2/authorize?client_id=${APP_KEY}&response_type=token&redirect_uri=${encodeURIComponent(redirectUri)}`;
+            window.location.href = authUrl;
+            return;
+          }
+
           const timestamp = new Date().getTime();
           const fileName = `${selectedRestaurant.id}_${timestamp}_${file.name}`;
           const path = `/Magic Menu/${fileName}`;
 
-          try {
-            await dbx.filesUpload({
-              path,
-              contents: imageData,
-            });
-
-            // Clear the input value and close dialog
-            e.target.value = '';
-            setIsImageUploadDialogOpen(false);
-
-            toast({
-              title: "Success",
-              description: "Image uploaded successfully",
-            });
-
-          } catch (error: any) {
-            // Check if token expired or unauthorized
-            if (error?.status === 401) {
-              toast({
-                title: "Authentication Error",
-                description: "Please authenticate with Dropbox",
-                variant: "destructive",
-              });
-
-              // Redirect to Dropbox auth
-              window.location.href = `https://www.dropbox.com/oauth2/authorize?client_id=${APP_KEY}&response_type=token&redirect_uri=${window.location.origin}/auth/dropbox/callback`;
-            } else {
-              throw error;
-            }
-          }
-        } catch (dropboxError) {
-          console.error('Dropbox upload error:', dropboxError);
-          toast({
-            title: "Error",
-            description: "Failed to upload image",
-            variant: "destructive",
+          await dbxClient.filesUpload({
+            path,
+            contents: imageData,
           });
+
+          // Clear the input value and close dialog
+          e.target.value = '';
+          setIsImageUploadDialogOpen(false);
+
+          toast({
+            title: "Success",
+            description: "Image uploaded successfully",
+          });
+
+        } catch (error: any) {
+          // If unauthorized, redirect to auth
+          if (error?.status === 401) {
+            const redirectUri = `${window.location.origin}${window.location.pathname}`;
+            const authUrl = `https://www.dropbox.com/oauth2/authorize?client_id=${APP_KEY}&response_type=token&redirect_uri=${encodeURIComponent(redirectUri)}`;
+            window.location.href = authUrl;
+          } else {
+            console.error('Dropbox upload error:', error);
+            toast({
+              title: "Error",
+              description: "Failed to upload image",
+              variant: "destructive",
+            });
+          }
         }
       };
       reader.readAsArrayBuffer(file);
@@ -137,15 +131,15 @@ export default function HomePage() {
     }
   };
 
-  // Handle Dropbox OAuth callback
+  // Initialize Dropbox client on mount and handle OAuth callback
   useEffect(() => {
     const hash = window.location.hash;
     if (hash) {
       const params = new URLSearchParams(hash.substring(1));
       const accessToken = params.get('access_token');
       if (accessToken) {
-        // Update Dropbox client with the new token
-        dbx.setAccessToken(accessToken);
+        const client = new Dropbox({ accessToken });
+        setDbxClient(client);
         // Clear the URL hash
         window.history.replaceState(null, '', window.location.pathname);
       }
