@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { dropboxService } from './dropbox-token-service';
 
 const app = express();
 app.use(express.json({ limit: '10mb' }));
@@ -53,6 +54,9 @@ app.use((req, res, next) => {
     res.status(status).json({ message });
     throw err;
   });
+
+  // Start the Dropbox token refresh service
+  dropboxService.startTokenRefresh();
 
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
