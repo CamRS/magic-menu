@@ -45,24 +45,13 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { X } from "lucide-react";
 import { Dropbox } from 'dropbox';
+import { generateState, getDropboxClient } from "@/lib/dropbox";
 
 // Initialize Dropbox client with OAuth
 const APP_KEY = 's0y3pb9x0ug1yd4';
-const APP_SECRET = 'u0v0lo5w073x34v';
-
-// Generate a random state string for OAuth security
-const generateState = () => {
-  return Math.random().toString(36).substring(2);
-};
 
 // Get the current domain for redirect URI
 const REDIRECT_URI = window.location.origin;
-
-// Create Dropbox OAuth instance
-const dbx = new Dropbox({
-  clientId: APP_KEY,
-  accessToken: null // We'll set this after authentication
-});
 
 export default function HomePage() {
   const { user, logoutMutation } = useAuth();
@@ -76,7 +65,7 @@ export default function HomePage() {
   const [isImageUploadDialogOpen, setIsImageUploadDialogOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageUploadRef = useRef<HTMLInputElement>(null);
-
+  const [dropboxToken, setDropboxToken] = useState<string | null>(null);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!selectedRestaurant?.id) return;
@@ -92,49 +81,67 @@ export default function HomePage() {
         }
 
         try {
+          if (!dropboxToken) {
+            const state = generateState();
+            sessionStorage.setItem('dropboxOAuthState', state);
+
+            const authUrl = new URL('https://www.dropbox.com/oauth2/authorize');
+            authUrl.searchParams.append('client_id', APP_KEY);
+            authUrl.searchParams.append('response_type', 'token');
+            authUrl.searchParams.append('redirect_uri', REDIRECT_URI);
+            authUrl.searchParams.append('state', state);
+
+            window.location.href = authUrl.toString();
+            return;
+          }
+
           const timestamp = new Date().getTime();
           const fileName = `${selectedRestaurant.id}_${timestamp}_${file.name}`;
           const path = `/Magic Menu/${fileName}`;
 
-          try {
-            await dbx.filesUpload({
-              path,
-              contents: imageData,
-            });
+          // Get the Dropbox client with the current token
+          const dbx = getDropboxClient(dropboxToken);
 
-            // Clear the input value and close dialog
-            e.target.value = '';
-            setIsImageUploadDialogOpen(false);
-
-            toast({
-              title: "Success",
-              description: "Image uploaded successfully",
-            });
-
-          } catch (error: any) {
-            // If unauthorized, initiate OAuth flow
-            if (error?.status === 401) {
-              const state = generateState();
-              sessionStorage.setItem('dropboxOAuthState', state);
-
-              const authUrl = new URL('https://www.dropbox.com/oauth2/authorize');
-              authUrl.searchParams.append('client_id', APP_KEY);
-              authUrl.searchParams.append('response_type', 'token');
-              authUrl.searchParams.append('redirect_uri', REDIRECT_URI);
-              authUrl.searchParams.append('state', state);
-
-              window.location.href = authUrl.toString();
-            } else {
-              throw error;
-            }
+          if (!dbx) {
+            throw new Error("Failed to initialize Dropbox client");
           }
-        } catch (dropboxError) {
-          console.error('Dropbox upload error:', dropboxError);
-          toast({
-            title: "Error",
-            description: "Failed to upload image",
-            variant: "destructive",
+
+          await dbx.filesUpload({
+            path,
+            contents: imageData,
           });
+
+          // Clear the input value and close dialog
+          e.target.value = '';
+          setIsImageUploadDialogOpen(false);
+
+          toast({
+            title: "Success",
+            description: "Image uploaded successfully",
+          });
+
+        } catch (error: any) {
+          // If unauthorized, clear token and initiate new OAuth flow
+          if (error?.status === 401) {
+            setDropboxToken(null);
+            const state = generateState();
+            sessionStorage.setItem('dropboxOAuthState', state);
+
+            const authUrl = new URL('https://www.dropbox.com/oauth2/authorize');
+            authUrl.searchParams.append('client_id', APP_KEY);
+            authUrl.searchParams.append('response_type', 'token');
+            authUrl.searchParams.append('redirect_uri', REDIRECT_URI);
+            authUrl.searchParams.append('state', state);
+
+            window.location.href = authUrl.toString();
+          } else {
+            console.error('Dropbox upload error:', error);
+            toast({
+              title: "Error",
+              description: "Failed to upload image",
+              variant: "destructive",
+            });
+          }
         }
       };
       reader.readAsArrayBuffer(file);
@@ -158,9 +165,8 @@ export default function HomePage() {
       const storedState = sessionStorage.getItem('dropboxOAuthState');
 
       if (accessToken && state === storedState) {
-        dbx.setAccessToken(accessToken);
-
-        // Clear OAuth state and hash
+        setDropboxToken(accessToken);
+        getDropboxClient(accessToken); // Initialize the Dropbox client
         sessionStorage.removeItem('dropboxOAuthState');
         window.history.replaceState(null, '', window.location.pathname);
 
