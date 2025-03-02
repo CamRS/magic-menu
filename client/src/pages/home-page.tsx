@@ -46,6 +46,20 @@ import { Badge } from "@/components/ui/badge";
 import { X } from "lucide-react";
 import { Dropbox } from 'dropbox';
 
+// Initialize Dropbox client with environment variable and headers
+const dbx = new Dropbox({
+  accessToken: import.meta.env.VITE_DROPBOX_ACCESS_TOKEN,
+  fetch: (url: string, init?: RequestInit) => {
+    if (init) {
+      init.headers = {
+        ...init.headers,
+        'Authorization': `Bearer ${import.meta.env.VITE_DROPBOX_ACCESS_TOKEN}`,
+      };
+    }
+    return fetch(url, init);
+  }
+});
+
 export default function HomePage() {
   const { user, logoutMutation } = useAuth();
   const { toast } = useToast();
@@ -489,11 +503,6 @@ export default function HomePage() {
     setIsImageUploadDialogOpen(false);
     imageUploadRef.current?.click();
   };
-
-  // Initialize Dropbox client with environment variable
-  const dbx = new Dropbox({
-    accessToken: import.meta.env.VITE_DROPBOX_ACCESS_TOKEN
-  });
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!selectedRestaurant?.id) return;
