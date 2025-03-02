@@ -391,12 +391,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Zapier endpoint to create a menu item
   app.post("/api/zapier/menu-items", requireApiKey, async (req, res) => {
     try {
-      const parsed = insertMenuItemSchema.safeParse(req.body);
+      // Convert input values to expected types
+      const processedData = {
+        name: String(req.body.name || ''),
+        description: String(req.body.description || ''),
+        restaurantId: parseInt(req.body.restaurantId || '0'),
+        price: String(req.body.price || '0').replace(/[^\d.-]/g, ''),
+        courseType: String(req.body.courseType || ''),
+        customTags: Array.isArray(req.body.customTags)
+          ? req.body.customTags.map(String)
+          : typeof req.body.customTags === 'string'
+            ? req.body.customTags.split(',').map(tag => tag.trim())
+            : [],
+        image: String(req.body.image || ''),
+        allergens: {
+          milk: String(req.body.allergens?.milk || 'false').toLowerCase() === 'true',
+          eggs: String(req.body.allergens?.eggs || 'false').toLowerCase() === 'true',
+          peanuts: String(req.body.allergens?.peanuts || 'false').toLowerCase() === 'true',
+          nuts: String(req.body.allergens?.nuts || 'false').toLowerCase() === 'true',
+          shellfish: String(req.body.allergens?.shellfish || 'false').toLowerCase() === 'true',
+          fish: String(req.body.allergens?.fish || 'false').toLowerCase() === 'true',
+          soy: String(req.body.allergens?.soy || 'false').toLowerCase() === 'true',
+          gluten: String(req.body.allergens?.gluten || 'false').toLowerCase() === 'true',
+        }
+      };
+
+      const parsed = insertMenuItemSchema.safeParse(processedData);
 
       if (!parsed.success) {
         return res.status(400).json({
-          message: "Invalid menu item data",
-          errors: parsed.error.errors
+          message: "Invalid menu item data after type conversion",
+          errors: parsed.error.errors,
+          receivedData: processedData
         });
       }
 
@@ -410,7 +436,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json(item);
     } catch (error) {
       console.error('Error creating menu item via Zapier:', error);
-      res.status(500).json({ message: "Internal server error" });
+      res.status(500).json({
+        message: "Internal server error",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
     }
   });
 
