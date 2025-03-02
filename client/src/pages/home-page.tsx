@@ -59,7 +59,7 @@ export default function HomePage() {
   const [isImageUploadDialogOpen, setIsImageUploadDialogOpen] = useState(false);
   const imageUploadRef = useRef<HTMLInputElement>(null);
 
-  const { data: dropboxToken } = useQuery<{ token: string }>({
+  const { data: dropboxToken, refetch: refetchDropboxToken } = useQuery<{ token: string }>({
     queryKey: ["/api/dropbox-token"],
     enabled: !!user?.id,
   });
@@ -497,7 +497,7 @@ export default function HomePage() {
 
   // Initialize Dropbox client
   const dbx = new Dropbox({
-    accessToken: dropboxToken?.token || 'sl.u.AFl_Sm0VvreSnOuSdWHK5rR41xXZ0e1ax1KXmdzGcrBzu93CgXoYXabBbPXQ1ixKPJqEiRwJFNoAZR7g5H6FOPziCi14cQDa2LkommycAQOfWGyIBLGwJeb5EBkcBsUeP5WEPIZpJkNJoSz-ggr_fynsiFbLTinDrn9_VeJGIEkaXLTygT0dwR66-ayia0GICKvhHE355P_OdqYlHhk6A_BZz3DuBCiEngop5deOpuTyATyrjJo8qnlqGzGJXmC8tu74E5XaRzcHh_f8pzdCrsBHH-btjdqUmZ3N7NcIHT_C5xyDxondmaX5d1v7HattUQrSGerhyHiZ_C_n3x6cM3I2gUl359SLDZGiJthgqqPewH504MAcE8vXMrVsKcomspeSxADX8nreXcuQbYFZsrz16h-ZII7YHOUCM1a4TSoHHMN2toRYa53kvNfo3jy47oAbz79u5RYwavacA-ljKYB7qnQWqATsrOWtRT_3wVq7YI786qvimhV6sr_1vesO1KvnAPkE_shZSGN37p6yRY6xFGmmoBcUKh4gVHcxNAJiNKxyDDDFuEVdmtCtAtLMJp1nS_wFfUdlwNYSfaxRSv32FYl9nHXfp6q5YuELNQiwIiZLWte5Zb1afLdSHEKKHCzmRu8pFWkj2Sm5JpdrsPWP2ZeermrQGRlNt6Ez9xw5MJ2vEV70khqsQdahOMEUcKtuD4UG3Bu5kat4po0ekV8EqNAT4qfn5byZ1PpC4OS9ZMsiYcYmof-r_1Zr8RfHdWGSpnIU90KKop9cYoyjYmvgQkKGIqvrvQV50VOdYmxCK6f5mk8BrTiOSGNIztDmV805f9ZLEVmQfRUB8jsyd50-TR7C_9bKN_h65XoSJxzrdcXA3UuhGmzBicuIfdnUq4Dbw4tLxqFQ1sBr8iuQlDBs_heWnvLa4B8DzVbCesQ7WQ7aHrXSNpQONcia-2DZiMA2KkTaJ44cM-Bu9blwHTRveyEdHwKkkTOPa8TlX45x3i3YEuJ1_myltpvAXPPfwIcBZhcNQDftbLqO4Fnchx_L1tEYfdL7oK3xHpspzwIIYwFQ2KC6xiuzgWT05eph459Fdd564aMxbZp5lr4VSnJ96fMdXUUfuVLKQb_YpZ_-T-JdjeCexxQMmTdbRy7YPN33lIMxeq9cp240VIu8yP6HPhsoQMqxSHgSpEsgX8cQhcEKr5UgxmXl-m4Q6DTV5pXElcAIBMMNUCdHc0Hn-ES-CXc02ujgzZ3DHkTn5lLYzSeJCoEzv4313y1PPdOHVa0'
+    accessToken: dropboxToken?.token || ''
   });
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -534,11 +534,22 @@ export default function HomePage() {
 
         } catch (dropboxError) {
           console.error('Dropbox upload error:', dropboxError);
-          toast({
-            title: "Error",
-            description: "Failed to upload image",
-            variant: "destructive",
-          });
+
+          // Handle token expiration by refreshing the token
+          if ((dropboxError as any)?.status === 401) {
+            await refetchDropboxToken();
+            toast({
+              title: "Error",
+              description: "Please try uploading again",
+              variant: "destructive",
+            });
+          } else {
+            toast({
+              title: "Error",
+              description: "Failed to upload image",
+              variant: "destructive",
+            });
+          }
         }
       };
       reader.readAsArrayBuffer(file);
@@ -900,32 +911,8 @@ export default function HomePage() {
 
                 <p className="text-sm">Your CSV file should follow this structure:</p>
 
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Description</TableHead>
-                      <TableHead>Price</TableHead>
-                      <TableHead>Course Type</TableHead>
-                      <TableHead>Custom Tags</TableHead>
-                      <TableHead>Allergens</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    <TableRow>
-                      <TableCell>Taco</TableCell>
-                      <TableCell>Tasty</TableCell>
-                      <TableCell>2.49</TableCell>
-                      <TableCell>Mains</TableCell>
-                      <TableCell></TableCell>
-                      <TableCell>milk</TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
-
-                <div className="text-sm space-y-2">
-                  <p><strong>Guidelines:</strong></p>
-                  <ul className="list-disc list-inside space-y-1">
+                <div className="bg-muted p-4 rounded-md">
+                  <ul className="list-disc list-inside space-y-1 text-sm">
                     <li>Course Type must be one of: {courseTypes.join(", ")}</li>
                     <li>Price should be a decimal number (e.g., 2.49)</li>
                     <li>Custom Tags should be semicolon-separated (e.g., "Spicy;Vegetarian")</li>
@@ -936,14 +923,10 @@ export default function HomePage() {
 
               <DialogFooter className="flex gap-2">
                 <Button variant="outline" onClick={() => setIsImportDialogOpen(false)}>
-                  Go back
-                </Button>
-                <Button onClick={handleExportCSV} className="mr-2">
-                  <Download className="mr-2 h-4 w-4" />
-                  Export Template
+                  Cancel
                 </Button>
                 <Button onClick={handleContinueImport}>
-                  Continue Import
+                  Choose File
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -971,7 +954,7 @@ export default function HomePage() {
                 </div>
               </div>
 
-              <DialogFooter className="flex gap-2">
+              <DialogFooter>
                 <Button variant="outline" onClick={() => setIsImageUploadDialogOpen(false)}>
                   Cancel
                 </Button>
