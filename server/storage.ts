@@ -25,9 +25,8 @@ export interface IStorage {
   updateMenuItemsForRestaurants(restaurantIds: number[], updates: Partial<InsertMenuItem>): Promise<void>;
   deleteMenuItem(id: number): Promise<void>;
 
-  // Image-related methods
+  // New image-related methods
   getImage(id: number): Promise<Image | undefined>;
-  getImagesByRestaurant(restaurantId: number): Promise<Image[]>;
   createImage(image: InsertImage): Promise<Image>;
   deleteImage(id: number): Promise<void>;
 
@@ -207,33 +206,24 @@ export class DatabaseStorage implements IStorage {
     await db.delete(menuItems).where(eq(menuItems.id, id));
   }
 
+  // New image-related method implementations
   async getImage(id: number): Promise<Image | undefined> {
     console.log("Getting image by ID:", id);
     const [image] = await db
       .select()
       .from(images)
       .where(eq(images.id, id));
-    console.log("Found image:", image ? { ...image, data: '[REDACTED]' } : 'null');
+    console.log("Found image:", image ? { ...image, data: '[BASE64]' } : 'null');
     return image;
   }
 
-  async getImagesByRestaurant(restaurantId: number): Promise<Image[]> {
-    console.log("Getting images for restaurant:", restaurantId);
-    const restaurantImages = await db
-      .select()
-      .from(images)
-      .where(eq(images.restaurantId, restaurantId));
-    console.log("Found images:", restaurantImages.length);
-    return restaurantImages;
-  }
-
   async createImage(image: InsertImage): Promise<Image> {
-    console.log("Creating image with data:", { ...image, data: '[REDACTED]' });
+    console.log("Creating image with data:", { ...image, data: '[BASE64]' });
     const [newImage] = await db
       .insert(images)
       .values(image)
       .returning();
-    console.log("Created image:", { ...newImage, data: '[REDACTED]' });
+    console.log("Created image:", { ...newImage, data: '[BASE64]' });
     return newImage;
   }
 
