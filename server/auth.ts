@@ -42,6 +42,17 @@ export const requireAuth = (req: Request, res: Response, next: NextFunction) => 
   next();
 };
 
+// Add Zapier API key middleware
+export const requireApiKey = (req: Request, res: Response, next: NextFunction) => {
+  const apiKey = req.headers['x-api-key'];
+
+  if (!apiKey || apiKey !== process.env.ZAPIER_API_KEY) {
+    return res.status(401).json({ message: "Invalid API key" });
+  }
+
+  next();
+};
+
 export function setupAuth(app: Express) {
   const sessionSettings: session.SessionOptions = {
     secret: process.env.SESSION_SECRET || "development_secret",

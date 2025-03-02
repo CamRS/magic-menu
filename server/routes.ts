@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { z } from "zod";
 import { createServer, type Server } from "http";
-import { setupAuth, requireAuth } from "./auth.js";
+import { setupAuth, requireAuth, requireApiKey } from "./auth.js";
 import { storage } from "./storage";
 import { insertMenuItemSchema, insertRestaurantSchema, courseTypes } from "@shared/schema";
 
@@ -288,12 +288,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Verify header row - case insensitive comparison
       const expectedHeaders = ["Name", "Description", "Price", "Course Type", "Custom Tags", "Allergens"];
       const headers = rows[0].map(header => header.trim());
-      const headersMatch = expectedHeaders.every(expected => 
+      const headersMatch = expectedHeaders.every(expected =>
         headers.some(header => header.toLowerCase() === expected.toLowerCase())
       );
 
       if (!headersMatch) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           message: "Invalid CSV format. Please use the template from the export function.",
           expected: expectedHeaders,
           received: headers
@@ -370,6 +370,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(results);
     } catch (error) {
       console.error('Error importing menu:', error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // New Zapier API endpoints
+  app.get("/api/zapier/test", requireApiKey, async (_req, res) => {
+    try {
+      res.json({
+        status: "success",
+        message: "Zapier connection successful",
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error in Zapier test endpoint:', error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Zapier endpoint to create a menu item
+  app.post("/api/zapier/menu-items", requireApiKey, async (req, res) => {
+    try {
+      const parsed = insertMenuItemSchema.safeParse(req.body);
+
+      if (!parsed.success) {
+        return res.status(400).json({
+          message: "Invalid menu item data",
+          errors: parsed.error.errors
+        });
+      }
+
+      // Verify restaurant exists
+      const restaurant = await storage.getRestaurant(parsed.data.restaurantId);
+      if (!restaurant) {
+        return res.status(404).json({ message: "Restaurant not found" });
+      }
+
+      const item = await storage.createMenuItem(parsed.data);
+      res.status(201).json(item);
+    } catch (error) {
+      console.error('Error creating menu item via Zapier:', error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Zapier endpoint to get menu items for a restaurant
+  app.get("/api/zapier/menu-items/:restaurantId", requireApiKey, async (req, res) => {
+    try {
+      const restaurantId = parseInt(req.params.restaurantId);
+      if (isNaN(restaurantId)) {
+        return res.status(400).json({ message: "Invalid restaurant ID" });
+      }
+
+      const items = await storage.getMenuItems(restaurantId);
+      res.json(items);
+    } catch (error) {
+      console.error('Error fetching menu items via Zapier:', error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
