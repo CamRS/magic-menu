@@ -166,7 +166,11 @@ export default function PublicMenuPage() {
   };
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden bg-white">
+    <div
+      className="h-screen flex flex-col overflow-hidden bg-white"
+      data-restaurant-id={restaurantId}
+      id="public-menu-container"
+    >
       <div className="fixed top-0 left-0 right-0 z-50 bg-white border-b">
         <div className="max-w-md mx-auto px-4 py-2">
           <div className="relative mb-4">
