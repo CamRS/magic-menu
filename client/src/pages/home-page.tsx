@@ -46,19 +46,50 @@ import { Badge } from "@/components/ui/badge";
 import { X } from "lucide-react";
 import { Dropbox } from 'dropbox';
 
-// Initialize Dropbox client with environment variable and headers
-const dbx = new Dropbox({
-  accessToken: 'sl.u.AFmLAQYIzoJQvIvfpOCfaezyWRWDvAMWAEyYavfg8i2Cq2Ms_4OqBgxxbuxXODPC7Ohv90dUJrbisPfBMnZvpcSIKHleVG9Dee1zdl8k6o2IUVui0Yaz97ksnMdO--47uQwKE5ZJlnY-3RMDzJDsr4r6wSAJlVSxJhepbm0Yl8_Xji42ji1ByYbSynzBrIxRPcrL6yJqHf1KnTyev-WqhYJCr7LHHKc9XNx8gKMYo7Co8_gJHawVYPbh89OpZHpbVKyZgsCd2bhO6hEJ9pTzBJMni_avwk0sBqogC3jnGK7-g2itcQYPVaOu6C-9EWmFSZh9Vl5MdHX3kx8gy9yBZYnxTQGnRSBY0-e5FZek0lnor-Cq4sg1FxXgyGZHpdqIkHnIZofAs43RzPNFP7ZXZ422yykTqywXzdH9POk8fmJ3zIvi-IlPg-bmplIfjaPfS9jLTBuWJSuQWT7HDTB-YtjWkmgrHWA5yb_fzGlyq3cFusSMVTFCUxqGWAtGRnI0Kbbl11Ky7bnesNBCbfy303-Fq9rN9qNVBY7N-gV-ZO6gkTInO9xcgmH0B9jKUZWXeZ1jQXW2mXPwMnjCU0f4tzQZ1MkMV27H08jGsV6i_G5GJ9QsM3Uo1Oh9nu-Q9v3DBVAKfw8ZHo0iiOpYpvYRL3T7DX-DuJckcw0ilZ9R4-aEcqenRdd3kqYTWBV6zAj6JiSspbxO5Jjgu_jLegVOn7WJmvggwOit-1zrCqgRytpMZfF7gumNEPRsh0-n4VCsJJYIxWAFvxi0zy3iIv75Mq0pYstKnoytNTwn_rbF0RrAJ-twpdkk8onG04CWDOhVdcjaq7-Ida2rBO3csGQ4Nqcprirxgecn3p0VEr_Sd1lCT2z_jYx8w_gvVq_RG2_WRUah2VleNJTRvweV-XX57BZTKs-l4v-NO1SLZIslKe5VqA7pbSSKIBmZwhuvgvPwfaop3JeujgOo-KcEwfl6EXCPWL9gayEeK_As4DSNAtlAnTAL6N_fb9ugIzQYdoPn3J1UgqhnYapa2lWbqInodZMBf8RgIuso3MVelEDZfr9hqMyJrmy8xw_pr4k0o9dCOpE7WZotzl98W3fnEkr3emMtD4RUujGF1QQlynkCq0BqpPVYTtfWAjegKpZdVu_u89P3R87gKCh86SeXTuiA82e0Bvw1qp-LKWqlTuyCbL8wnUZWCu0pm6koIySSH-Ug-UAUofnoHyldjAKtkFBSHZU67TFnMSuTarwwrLSb9ICpDxBpKa6hrOL38a_5aPJP-oSp-_ZI3UW5IsbJr63gciWF',
+// Initialize Dropbox client with the access token and refresh mechanism
+let dropboxAccessToken = 'sl.u.AFmLAQYIzoJQvIvfpOCfaezyWRWDvAMWAEyYavfg8i2Cq2Ms_4OqBgxxbuxXODPC7Ohv90dUJrbisPfBMnZvpcSIKHleVG9Dee1zdl8k6o2IUVui0Yaz97ksnMdO--47uQwKE5ZJlnY-3RMDzJDsr4r6wSAJlVSxJhepbm0Yl8_Xji42ji1ByYbSynzBrIxRPcrL6yJqHf1KnTyev-WqhYJCr7LHHKc9XNx8gKMYo7Co8_gJHawVYPbh89OpZHpbVKyZgsCd2bhO6hEJ9pTzBJMni_avwk0sBqogC3jnGK7-g2itcQYPVaOu6C-9EWmFSZh9Vl5MdHX3kx8gy9yBZYnxTQGnRSBY0-e5FZek0lnor-Cq4sg1FxXgyGZHpdqIkHnIZofAs43RzPNFP7ZXZ422yykTqywXzdH9POk8fmJ3zIvi-IlPg-bmplIfjaPfS9jLTBuWJSuQWT7HDTB-YtjWkmgrHWA5yb_fzGlyq3cFusSMVTFCUxqGWAtGRnI0Kbbl11Ky7bnesNBCbfy303-Fq9rN9qNVBY7N-gV-ZO6gkTInO9xcgmH0B9jKUZWXeZ1jQXW2mXPwMnjCU0f4tzQZ1MkMV27H08jGsV6i_G5GJ9QsM3Uo1Oh9nu-Q9v3DBVAKfw8ZHo0iiOpYpvYRL3T7DX-DuJckcw0ilZ9R4-aEcqenRdd3kqYTWBV6zAj6JiSspbxO5Jjgu_jLegVOn7WJmvggwOit-1zrCqgRytpMZfF7gumNEPRsh0-n4VCsJJYIxWAFvxi0zy3iIv75Mq0pYstKnoytNTwn_rbF0RrAJ-twpdkk8onG04CWDOhVdcjaq7-Ida2rBO3csGQ4Nqcprirxgecn3p0VEr_Sd1lCT2z_jYx8w_gvVq_RG2_WRUah2VleNJTRvweV-XX57BZTKs-l4v-NO1SLZIslKe5VqA7pbSSKIBmZwhuvgvPwfaop3JeujgOo-KcEwfl6EXCPWL9gayEeK_As4DSNAtlAnTAL6N_fb9ugIzQYdoPn3J1UgqhnYapa2lWbqInodZMBf8RgIuso3MVelEDZfr9hqMyJrmy8xw_pr4k0o9dCOpE7WZotzl98W3fnEkr3emMtD4RUujGF1QQlynkCq0BqpPVYTtfWAjegKpZdVu_u89P3R87gKCh86SeXTuiA82e0Bvw1qp-LKWqlTuyCbL8wnUZWCu0pm6koIySSH-Ug-UAUofnoHyldjAKtkFBSHZU67TFnMSuTarwwrLSb9ICpDxBpKa6hrOL38a_5aPJP-oSp-_ZI3UW5IsbJr63gciWF';
+
+const refreshDropboxToken = async () => {
+  try {
+    const response = await fetch('https://api.dropbox.com/oauth2/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Authorization': 'Basic ' + btoa('YOUR_APP_KEY:YOUR_APP_SECRET') // Replace with your actual app key and secret
+      },
+      body: new URLSearchParams({
+        'grant_type': 'refresh_token',
+        'refresh_token': 'ijtNMv3N4gcAAAAAAAAAAeSGSCnK9rsIggZMlNLpbOqoDihtdVQ-QoiUqakb6xcl' // Replace with your actual refresh token
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to refresh token');
+    }
+
+    const data = await response.json();
+    dropboxAccessToken = data.access_token;
+    return data.access_token;
+  } catch (error) {
+    console.error('Error refreshing token:', error);
+    throw error;
+  }
+};
+
+const createDropboxClient = (accessToken: string) => new Dropbox({
+  accessToken,
   fetch: (url: string, init?: RequestInit) => {
     if (init) {
       init.headers = {
         ...init.headers,
-        'Authorization': `Bearer sl.u.AFmLAQYIzoJQvIvfpOCfaezyWRWDvAMWAEyYavfg8i2Cq2Ms_4OqBgxxbuxXODPC7Ohv90dUJrbisPfBMnZvpcSIKHleVG9Dee1zdl8k6o2IUVui0Yaz97ksnMdO--47uQwKE5ZJlnY-3RMDzJDsr4r6wSAJlVSxJhepbm0Yl8_Xji42ji1ByYbSynzBrIxRPcrL6yJqHf1KnTyev-WqhYJCr7LHHKc9XNx8gKMYo7Co8_gJHawVYPbh89OpZHpbVKyZgsCd2bhO6hEJ9pTzBJMni_avwk0sBqogC3jnGK7-g2itcQYPVaOu6C-9EWmFSZh9Vl5MdHX3kx8gy9yBZYnxTQGnRSBY0-e5FZek0lnor-Cq4sg1FxXgyGZHpdqIkHnIZofAs43RzPNFP7ZXZ422yykTqywXzdH9POk8fmJ3zIvi-IlPg-bmplIfjaPfS9jLTBuWJSuQWT7HDTB-YtjWkmgrHWA5yb_fzGlyq3cFusSMVTFCUxqGWAtGRnI0Kbbl11Ky7bnesNBCbfy303-Fq9rN9qNVBY7N-gV-ZO6gkTInO9xcgmH0B9jKUZWXeZ1jQXW2mXPwMnjCU0f4tzQZ1MkMV27H08jGsV6i_G5GJ9QsM3Uo1Oh9nu-Q9v3DBVAKfw8ZHo0iiOpYpvYRL3T7DX-DuJckcw0ilZ9R4-aEcqenRdd3kqYTWBV6zAj6JiSspbxO5Jjgu_jLegVOn7WJmvggwOit-1zrCqgRytpMZfF7gumNEPRsh0-n4VCsJJYIxWAFvxi0zy3iIv75Mq0pYstKnoytNTwn_rbF0RrAJ-twpdkk8onG04CWDOhVdcjaq7-Ida2rBO3csGQ4Nqcprirxgecn3p0VEr_Sd1lCT2z_jYx8w_gvVq_RG2_WRUah2VleNJTRvweV-XX57BZTKs-l4v-NO1SLZIslKe5VqA7pbSSKIBmZwhuvgvPwfaop3JeujgOo-KcEwfl6EXCPWL9gayEeK_As4DSNAtlAnTAL6N_fb9ugIzQYdoPn3J1UgqhnYapa2lWbqInodZMBf8RgIuso3MVelEDZfr9hqMyJrmy8xw_pr4k0o9dCOpE7WZotzl98W3fnEkr3emMtD4RUujGF1QQlynkCq0BqpPVYTtfWAjegKpZdVu_u89P3R87gKCh86SeXTuiA82e0Bvw1qp-LKWqlTuyCbL8wnUZWCu0pm6koIySSH-Ug-UAUofnoHyldjAKtkFBSHZU67TFnMSuTarwwrLSb9ICpDxBpKa6hrOL38a_5aPJP-oSp-_ZI3UW5IsbJr63gciWF`,
+        'Authorization': `Bearer ${accessToken}`,
       };
     }
     return fetch(url, init);
   }
 });
+
+let dbx = createDropboxClient(dropboxAccessToken);
 
 export default function HomePage() {
   const { user, logoutMutation } = useAuth();
@@ -521,26 +552,43 @@ export default function HomePage() {
         const fileName = `RestaurantID-${selectedRestaurant.id}_${timestamp}_${file.name}`;
         const filePath = `/Magic Menu/${fileName}`;
 
+        const uploadWithRetry = async (retryCount = 0) => {
+          try {
+            await dbx.filesUpload({
+              path: filePath,
+              contents: imageData,
+              mode: { '.tag': 'add' },
+              autorename: true,
+              strict_conflict: false,
+              mute: false
+            });
+
+            // Clear the input value and close dialog
+            e.target.value = '';
+            setIsImageUploadDialogOpen(false);
+
+            toast({
+              title: "Success",
+              description: "Menu image uploaded successfully",
+            });
+          } catch (error: any) {
+            if (error?.status === 401 && retryCount < 1) {
+              try {
+                // Refresh token and retry upload
+                const newToken = await refreshDropboxToken();
+                dbx = createDropboxClient(newToken);
+                return uploadWithRetry(retryCount + 1);
+              } catch (refreshError) {
+                console.error('Error refreshing token:', refreshError);
+                throw new Error('Failed to refresh access token');
+              }
+            }
+            throw error;
+          }
+        };
+
         try {
-          // Upload file directly to Magic Menu folder
-          await dbx.filesUpload({
-            path: filePath,
-            contents: imageData,
-            mode: { '.tag': 'add' },
-            autorename: true,
-            strict_conflict: false,
-            mute: false
-          });
-
-          // Clear the input value and close dialog
-          e.target.value = '';
-          setIsImageUploadDialogOpen(false);
-
-          toast({
-            title: "Success",
-            description: "Menu image uploaded successfully",
-          });
-
+          await uploadWithRetry();
         } catch (error) {
           console.error('Upload error:', error);
           toast({
@@ -560,7 +608,6 @@ export default function HomePage() {
       });
     }
   };
-
 
 
   if (!restaurants?.length && !isLoadingRestaurants) {
