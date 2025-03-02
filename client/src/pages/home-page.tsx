@@ -510,7 +510,7 @@ export default function HomePage() {
 
         try {
           const timestamp = new Date().getTime();
-          const fileName = `${selectedRestaurant.id}_${timestamp}_${file.name}`;
+          const fileName = `RestaurantID-${selectedRestaurant.id}_${timestamp}_${file.name}`;
           const path = `/Magic Menu/${selectedRestaurant.id}/menu_images/${fileName}`;
 
           // Format date to match Dropbox expected format: YYYY-MM-DDThh:mm:ssZ
@@ -575,6 +575,7 @@ export default function HomePage() {
       });
     }
   };
+
 
 
   if (!restaurants?.length && !isLoadingRestaurants) {
@@ -846,7 +847,7 @@ export default function HomePage() {
                             onClick={() => {
                               const newTags = [...form.getValues("customTags")];
                               newTags.splice(index, 1);
-                              form.setValue("customTags", newTags);
+                              form.setValue("customTags",newTags);
                             }}
                           />
                         </Badge>
