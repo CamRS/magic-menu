@@ -45,8 +45,21 @@ export const requireAuth = (req: Request, res: Response, next: NextFunction) => 
 // Add Zapier API key middleware
 export const requireApiKey = (req: Request, res: Response, next: NextFunction) => {
   const apiKey = req.headers['x-api-key'];
+  const expectedApiKey = process.env.ZAPIER_API_KEY;
 
-  if (!apiKey || apiKey !== process.env.ZAPIER_API_KEY) {
+  console.log('API Key verification:', { 
+    hasApiKey: !!apiKey,
+    hasExpectedKey: !!expectedApiKey,
+    keysMatch: apiKey === expectedApiKey,
+    receivedKeyLength: apiKey ? apiKey.length : 0,
+    expectedKeyLength: expectedApiKey ? expectedApiKey.length : 0
+  });
+
+  if (!apiKey || !expectedApiKey || apiKey !== expectedApiKey) {
+    console.log('API Key verification failed:', { 
+      received: apiKey,
+      expected: process.env.ZAPIER_API_KEY ? 'Key exists' : 'Key missing'
+    });
     return res.status(401).json({ message: "Invalid API key" });
   }
 
