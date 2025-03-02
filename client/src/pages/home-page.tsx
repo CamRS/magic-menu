@@ -54,6 +54,15 @@ const generateState = () => {
   return Math.random().toString(36).substring(2);
 };
 
+// Get the current domain for redirect URI
+const REDIRECT_URI = window.location.origin;
+
+// Create Dropbox OAuth instance
+const dbx = new Dropbox({
+  clientId: APP_KEY,
+  accessToken: null // We'll set this after authentication
+});
+
 export default function HomePage() {
   const { user, logoutMutation } = useAuth();
   const { toast } = useToast();
@@ -66,7 +75,23 @@ export default function HomePage() {
   const [isImageUploadDialogOpen, setIsImageUploadDialogOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageUploadRef = useRef<HTMLInputElement>(null);
-  const [dbxClient, setDbxClient] = useState<Dropbox | null>(null);
+  const [dbxClient, setDbxClient] = useState<Dropbox | null>(null); // Use the initialized dbx client
+
+  const initiateDropboxAuth = () => {
+    const state = generateState();
+    sessionStorage.setItem('dropboxOAuthState', state);
+
+    const authUrl = new URL('https://www.dropbox.com/oauth2/authorize');
+    authUrl.searchParams.append('client_id', APP_KEY);
+    authUrl.searchParams.append('response_type', 'token');
+    authUrl.searchParams.append('redirect_uri', REDIRECT_URI);
+    authUrl.searchParams.append('state', state);
+
+    // For debugging
+    console.log('Redirecting to Dropbox with URI:', REDIRECT_URI);
+
+    window.location.href = authUrl.toString();
+  };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!selectedRestaurant?.id) return;
@@ -84,13 +109,7 @@ export default function HomePage() {
         try {
           // If no client, initiate OAuth flow
           if (!dbxClient) {
-            const state = generateState();
-            sessionStorage.setItem('dropboxOAuthState', state);
-
-            const redirectUri = encodeURIComponent(`${window.location.origin}`);
-            const authUrl = `https://www.dropbox.com/oauth2/authorize?client_id=${APP_KEY}&response_type=token&redirect_uri=${redirectUri}&state=${state}`;
-
-            window.location.href = authUrl;
+            initiateDropboxAuth();
             return;
           }
 
@@ -98,38 +117,36 @@ export default function HomePage() {
           const fileName = `${selectedRestaurant.id}_${timestamp}_${file.name}`;
           const path = `/Magic Menu/${fileName}`;
 
-          await dbxClient.filesUpload({
-            path,
-            contents: imageData,
-          });
-
-          // Clear the input value and close dialog
-          e.target.value = '';
-          setIsImageUploadDialogOpen(false);
-
-          toast({
-            title: "Success",
-            description: "Image uploaded successfully",
-          });
-
-        } catch (error: any) {
-          // If unauthorized, initiate new OAuth flow
-          if (error?.status === 401) {
-            const state = generateState();
-            sessionStorage.setItem('dropboxOAuthState', state);
-
-            const redirectUri = encodeURIComponent(`${window.location.origin}`);
-            const authUrl = `https://www.dropbox.com/oauth2/authorize?client_id=${APP_KEY}&response_type=token&redirect_uri=${redirectUri}&state=${state}`;
-
-            window.location.href = authUrl;
-          } else {
-            console.error('Dropbox upload error:', error);
-            toast({
-              title: "Error",
-              description: "Failed to upload image",
-              variant: "destructive",
+          try {
+            await dbxClient.filesUpload({
+              path,
+              contents: imageData,
             });
+
+            // Clear the input value and close dialog
+            e.target.value = '';
+            setIsImageUploadDialogOpen(false);
+
+            toast({
+              title: "Success",
+              description: "Image uploaded successfully",
+            });
+
+          } catch (error: any) {
+            // If unauthorized, initiate new OAuth flow
+            if (error?.status === 401) {
+              initiateDropboxAuth();
+            } else {
+              throw error;
+            }
           }
+        } catch (dropboxError) {
+          console.error('Dropbox upload error:', dropboxError);
+          toast({
+            title: "Error",
+            description: "Failed to upload image",
+            variant: "destructive",
+          });
         }
       };
       reader.readAsArrayBuffer(file);
@@ -143,7 +160,7 @@ export default function HomePage() {
     }
   };
 
-  // Initialize Dropbox client on mount and handle OAuth callback
+  // Handle Dropbox OAuth callback
   useEffect(() => {
     const hash = window.location.hash;
     if (hash) {
@@ -163,6 +180,18 @@ export default function HomePage() {
         toast({
           title: "Success",
           description: "Connected to Dropbox successfully",
+        });
+      } else if (accessToken && state !== storedState) {
+        toast({
+          title: "Error",
+          description: "Dropbox OAuth state mismatch. Please try again.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to connect to Dropbox. Please check your settings.",
+          variant: "destructive",
         });
       }
     }
@@ -929,41 +958,40 @@ export default function HomePage() {
                 <p className="text-sm text-muted-foreground">
                   To successfully import menu items, please follow these steps:
                 </p>
+                  <div className="bg-amber-100 p-4 rounded-md border border-amber-200">
+                    <h3 className="font-medium mb-2">Important: Use the Export Template</h3>
+                    <p className="text-sm">
+                      For best results, first click "Export CSV" to download a template with the correct format.
+                      Then add your new items to this file.
+                    </p>
+                  </div>
 
-                <div className="bg-amber-100 p-4 rounded-md border border-amber-200">
-                  <h3 className="font-medium mb-2">Important: Use the Export Template</h3>
-                  <p className="text-sm">
-                    For best results, first click "Export CSV" to download a template with the correct format.
-                    Then add your new items to this file.
-                  </p>
-                </div>
+                  <p className="text-sm">Your CSV file should follow this structure:</p>
 
-                <p className="text-sm">Your CSV file should follow this structure:</p>
-
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Description</TableHead>
-                      <TableHead>Price</TableHead>
-                      <TableHead>Course Type</TableHead>
-                      <TableHead>Custom Tags</TableHead>
-                      <TableHead>Allergens</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    <TableRow>
-                      <TableCell>Sample Item</TableCell>
-                      <TableCell>Description here</TableCell>
-                      <TableCell>$10.00</TableCell>
-                      <TableCell>Mains</TableCell>
-                      <TableCell></TableCell>
-                      <TableCell>milk</TableCell>
-                      <TableCell></TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Description</TableHead>
+                        <TableHead>Price</TableHead>
+                        <TableHead>Course Type</TableHead>
+                        <TableHead>Custom Tags</TableHead>
+                        <TableHead>Allergens</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      <TableRow>
+                        <TableCell>Sample Item</TableCell>
+                        <TableCell>Description here</TableCell>
+                        <TableCell>$10.00</TableCell>
+                        <TableCell>Mains</TableCell>
+                        <TableCell></TableCell>
+                        <TableCell>milk</TableCell>
+                        <TableCell></TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
 
                 <div className="text-sm space-y-2">
                   <p><strong>Guidelines:</strong></p>
