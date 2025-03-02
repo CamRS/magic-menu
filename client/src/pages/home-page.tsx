@@ -45,13 +45,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { X } from "lucide-react";
 import { Dropbox } from 'dropbox';
-import { generateState, getDropboxClient } from "@/lib/dropbox";
-
-// Initialize Dropbox client with OAuth
-const APP_KEY = 's0y3pb9x0ug1yd4';
-
-// Get the current domain for redirect URI
-const REDIRECT_URI = window.location.origin;
 
 export default function HomePage() {
   const { user, logoutMutation } = useAuth();
@@ -62,121 +55,9 @@ export default function HomePage() {
   const [selectedItems, setSelectedItems] = useState<number[]>([]);
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
-  const [isImageUploadDialogOpen, setIsImageUploadDialogOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isImageUploadDialogOpen, setIsImageUploadDialogOpen] = useState(false);
   const imageUploadRef = useRef<HTMLInputElement>(null);
-  const [dropboxToken, setDropboxToken] = useState<string | null>(null);
-
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!selectedRestaurant?.id) return;
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    try {
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        const imageData = reader.result as ArrayBuffer;
-        if (!imageData) {
-          throw new Error("Could not read image data");
-        }
-
-        try {
-          if (!dropboxToken) {
-            const state = generateState();
-            sessionStorage.setItem('dropboxOAuthState', state);
-
-            const authUrl = new URL('https://www.dropbox.com/oauth2/authorize');
-            authUrl.searchParams.append('client_id', APP_KEY);
-            authUrl.searchParams.append('response_type', 'token');
-            authUrl.searchParams.append('redirect_uri', REDIRECT_URI);
-            authUrl.searchParams.append('state', state);
-
-            window.location.href = authUrl.toString();
-            return;
-          }
-
-          const timestamp = new Date().getTime();
-          const fileName = `${selectedRestaurant.id}_${timestamp}_${file.name}`;
-          const path = `/Magic Menu/${fileName}`;
-
-          // Get the Dropbox client with the current token
-          const dbx = getDropboxClient(dropboxToken);
-
-          if (!dbx) {
-            throw new Error("Failed to initialize Dropbox client");
-          }
-
-          await dbx.filesUpload({
-            path,
-            contents: imageData,
-          });
-
-          // Clear the input value and close dialog
-          e.target.value = '';
-          setIsImageUploadDialogOpen(false);
-
-          toast({
-            title: "Success",
-            description: "Image uploaded successfully",
-          });
-
-        } catch (error: any) {
-          // If unauthorized, clear token and initiate new OAuth flow
-          if (error?.status === 401) {
-            setDropboxToken(null);
-            const state = generateState();
-            sessionStorage.setItem('dropboxOAuthState', state);
-
-            const authUrl = new URL('https://www.dropbox.com/oauth2/authorize');
-            authUrl.searchParams.append('client_id', APP_KEY);
-            authUrl.searchParams.append('response_type', 'token');
-            authUrl.searchParams.append('redirect_uri', REDIRECT_URI);
-            authUrl.searchParams.append('state', state);
-
-            window.location.href = authUrl.toString();
-          } else {
-            console.error('Dropbox upload error:', error);
-            toast({
-              title: "Error",
-              description: "Failed to upload image",
-              variant: "destructive",
-            });
-          }
-        }
-      };
-      reader.readAsArrayBuffer(file);
-    } catch (error) {
-      console.error('Error reading file:', error);
-      toast({
-        title: "Error",
-        description: "Failed to read the image file",
-        variant: "destructive",
-      });
-    }
-  };
-
-  // Handle Dropbox OAuth callback
-  useEffect(() => {
-    const hash = window.location.hash;
-    if (hash) {
-      const params = new URLSearchParams(hash.substring(1));
-      const accessToken = params.get('access_token');
-      const state = params.get('state');
-      const storedState = sessionStorage.getItem('dropboxOAuthState');
-
-      if (accessToken && state === storedState) {
-        setDropboxToken(accessToken);
-        getDropboxClient(accessToken); // Initialize the Dropbox client
-        sessionStorage.removeItem('dropboxOAuthState');
-        window.history.replaceState(null, '', window.location.pathname);
-
-        toast({
-          title: "Success",
-          description: "Connected to Dropbox successfully",
-        });
-      }
-    }
-  }, []);
 
   const form = useForm<InsertMenuItem>({
     resolver: zodResolver(insertMenuItemSchema),
@@ -352,6 +233,7 @@ export default function HomePage() {
 
   useEffect(() => {
     if (editingItem) {
+      console.log("Setting form data for editing:", editingItem); 
       const formData = {
         name: editingItem.name,
         description: editingItem.description,
@@ -379,6 +261,7 @@ export default function HomePage() {
   const updateMutation = useMutation({
     mutationFn: async (data: InsertMenuItem & { id: number }) => {
       const { id, ...updateData } = data;
+      console.log("Updating menu item:", { id, ...updateData }); 
 
       const response = await apiRequest("PATCH", `/api/menu-items/${id}`, updateData);
       if (!response.ok) {
@@ -388,6 +271,7 @@ export default function HomePage() {
       return response.json();
     },
     onSuccess: () => {
+      console.log("Update successful"); 
       queryClient.invalidateQueries({ queryKey: ["/api/menu-items", selectedRestaurant?.id] });
       setCreateMenuItemOpen(false);
       setEditingItem(null);
@@ -398,6 +282,7 @@ export default function HomePage() {
       });
     },
     onError: (error: Error) => {
+      console.error("Update failed:", error); 
       toast({
         title: "Error",
         description: error.message,
@@ -443,7 +328,10 @@ export default function HomePage() {
   });
 
   const handleSubmit = (data: InsertMenuItem) => {
+    console.log("Form submitted with data:", data); 
+
     if (editingItem) {
+      console.log("Updating existing item:", editingItem.id); 
       const updateData = {
         ...data,
         id: editingItem.id,
@@ -534,6 +422,7 @@ export default function HomePage() {
   const handleDialogOpenChange = (open: boolean) => {
     setCreateMenuItemOpen(open);
     if (!open) {
+      console.log("Resetting form and edit state"); 
       setEditingItem(null);
       form.reset();
     }
@@ -599,6 +488,63 @@ export default function HomePage() {
   const handleContinueImageUpload = () => {
     setIsImageUploadDialogOpen(false);
     imageUploadRef.current?.click();
+  };
+
+  // Initialize Dropbox client
+  const dbx = new Dropbox({
+    accessToken: 'sl.u.AFl_Sm0VvreSnOuSdWHK5rR41xXZ0e1ax1KXmdzGcrBzu93CgXoYXabBbPXQ1ixKPJqEiRwJFNoAZR7g5H6FOPziCi14cQDa2LkommycAQOfWGyIBLGwJeb5EBkcBsUeP5WEPIZpJkNJoSz-ggr_fynsiFbLTinDrn9_VeJGIEkaXLTygT0dwR66-ayia0GICKvhHE355P_OdqYlHhk6A_BZz3DuBCiEngop5deOpuTyATyrjJo8qnlqGzGJXmC8tu74E5XaRzcHh_f8pzdCrsBHH-btjdqUmZ3N7NcIHT_C5xyDxondmaX5d1v7HattUQrSGerhyHiZ_C_n3x6cM3I2gUl359SLDZGiJthgqqPewH504MAcE8vXMrVsKcomspeSxADX8nreXcuQbYFZsrz16h-ZII7YHOUCM1a4TSoHHMN2toRYa53kvNfo3jy47oAbz79u5RYwavacA-ljKYB7qnQWqATsrOWtRT_3wVq7YI786qvimhV6sr_1vesO1KvnAPkE_shZSGN37p6yRY6xFGmmoBcUKh4gVHcxNAJiNKxyDDDFuEVdmtCtAtLMJp1nS_wFfUdlwNYSfaxRSv32FYl9nHXfp6q5YuELNQiwIiZLWte5Zb1afLdSHEKKHCzmRu8pFWkj2Sm5JpdrsPWP2ZeermrQGRlNt6Ez9xw5MJ2vEV70khqsQdahOMEUcKtuD4UG3Bu5kat4po0ekV8EqNAT4qfn5byZ1PpC4OS9ZMsiYcYmof-r_1Zr8RfHdWGSpnIU90KKop9cYoyjYmvgQkKGIqvrvQV50VOdYmxCK6f5mk8BrTiOSGNIztDmV805f9ZLEVmQfRUB8jsyd50-TR7C_9bKN_h65XoSJxzrdcXA3UuhGmzBicuIfdnUq4Dbw4tLxqFQ1sBr8iuQlDBs_heWnvLa4B8DzVbCesQ7WQ7aHrXSNpQONcia-2DZiMA2KkTaJ44cM-Bu9blwHTRveyEdHwKkkTOPa8TlX45x3i3YEuJ1_myltpvAXPPfwIcBZhcNQDftbLqO4Fnchx_L1tEYfdL7oK3xHpspzwIIYwFQ2KC6xiuzgWT05eph459Fdd564aMxbZp5lr4VSnJ96fMdXUUfuVLKQb_YpZ_-T-JdjeCexxQMmTdbRy7YPN33lIMxeq9cp240VIu8yP6HPhsoQMqxSHgSpEsgX8cQhcEKr5UgxmXl-m4Q6DTV5pXElcAIBMMNUCdHc0Hn-ES-CXc02ujgzZ3DHkTn5lLYzSeJCoEzv4313y1PPdOHVa0'
+  });
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!selectedRestaurant?.id) return;
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const imageData = reader.result as ArrayBuffer;
+        if (!imageData) {
+          throw new Error("Could not read image data");
+        }
+
+        try {
+          const timestamp = new Date().getTime();
+          const fileName = `${selectedRestaurant.id}_${timestamp}_${file.name}`;
+          const path = `/Magic Menu/${fileName}`;
+
+          await dbx.filesUpload({
+            path,
+            contents: imageData,
+          });
+
+          // Clear the input value and close dialog
+          e.target.value = '';
+          setIsImageUploadDialogOpen(false);
+
+          toast({
+            title: "Success",
+            description: "Image uploaded successfully",
+          });
+
+        } catch (dropboxError) {
+          console.error('Dropbox upload error:', dropboxError);
+          toast({
+            title: "Error",
+            description: "Failed to upload image",
+            variant: "destructive",
+          });
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    } catch (error) {
+      console.error('Error reading file:', error);
+      toast({
+        title: "Error",
+        description: "Failed to read the image file",
+        variant: "destructive",
+      });
+    }
   };
 
 
@@ -901,8 +847,7 @@ export default function HomePage() {
                   <div className="grid grid-cols-2 gap-4 mt-2">
                     {(Object.keys(form.getValues().allergens) as Array<keyof InsertMenuItem['allergens']>).map((key) => (
                       <div key={key} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={key}
+                        <Checkbox                          id={key}
                           checked={form.getValues().allergens[key]}
                           onCheckedChange={(checked) => {
                             form.setValue(`allergens.${key}`, checked as boolean, { shouldValidate: true });
@@ -939,6 +884,7 @@ export default function HomePage() {
                 <p className="text-sm text-muted-foreground">
                   To successfully import menu items, please follow these steps:
                 </p>
+
                 <div className="bg-amber-100 p-4 rounded-md border border-amber-200">
                   <h3 className="font-medium mb-2">Important: Use the Export Template</h3>
                   <p className="text-sm">
@@ -958,18 +904,16 @@ export default function HomePage() {
                       <TableHead>Course Type</TableHead>
                       <TableHead>Custom Tags</TableHead>
                       <TableHead>Allergens</TableHead>
-                      <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     <TableRow>
-                      <TableCell>Sample Item</TableCell>
-                      <TableCell>Description here</TableCell>
-                      <TableCell>$10.00</TableCell>
+                      <TableCell>Taco</TableCell>
+                      <TableCell>Tasty</TableCell>
+                      <TableCell>2.49</TableCell>
                       <TableCell>Mains</TableCell>
                       <TableCell></TableCell>
                       <TableCell>milk</TableCell>
-                      <TableCell></TableCell>
                     </TableRow>
                   </TableBody>
                 </Table>
