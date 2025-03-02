@@ -19,7 +19,8 @@ export const images = pgTable("images", {
   restaurantId: integer("restaurant_id").notNull().references(() => restaurants.id),
   fileName: text("file_name").notNull(),
   contentType: text("content_type").notNull(),
-  data: text("data").notNull(), // We'll store base64 encoded data
+  dropboxUrl: text("dropbox_url").notNull(),
+  dropboxPath: text("dropbox_path").notNull(),
   createdAt: text("created_at").notNull().default(new Date().toISOString()),
 });
 
@@ -66,7 +67,10 @@ export const courseTypes = [
   "Custom"
 ] as const;
 
-export const insertImageSchema = createInsertSchema(images);
+export const insertImageSchema = createInsertSchema(images).extend({
+  dropboxUrl: z.string().url("Invalid Dropbox URL"),
+  dropboxPath: z.string().min(1, "Dropbox path is required"),
+});
 
 export const insertMenuItemSchema = createInsertSchema(menuItems).extend({
   price: z.string().min(1, "Price is required"),

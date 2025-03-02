@@ -492,11 +492,18 @@ export default function HomePage() {
 
   // Initialize Dropbox client
   const dbx = new Dropbox({
-    accessToken: 'sl.u.AFl-IJ-UX_dcjQfZ6A8ywrqTzGiKvjzdpFTTrPpjvFJcTkv5Ypd1mNufbFu1fgc9LUN0Hybuwf5eZuBZQ16kaIH1CGgXujiMxqnYJZ2TN1H8Puu60i0-iHnA_OuTO55uIan3UHu9w6cpgNpM4HbbKqsxoN7dDIx_h8gb1zEWE8f-PboHfnZqBZZKVXcc3GMwXs32kZZF6avakqA5UETqlT4NN__VviqKdiTblG1UJuuiHw2apTN2k6v97aYy6p4MyAvVISlX8V9FEmHYJJB8v9YHZ0j_bBOb1MOc5dKrAuOrvDrJTokpODMZzb96CresmcKqlNzXX9T-_9Eh5Q-wqR8GxqNP_J_f2qmkYGOWWtq52RsbZc0KAw9xLdycp5XD0wrdR6H7ZTfAUMiesV55G_ZWQDd9CYKHBAuBmDD0TY80d-dwFxTuJkyWHU7_ZuQ_5pUOiccc6C8AOmZFTmKsOnIyBKmWvd3AXlmjLta-Nl2RiYP_BvLeg8ivWNkqnA6sg7iIYAzkPFbDYW37Foc26QllkIEGxltwzjTwUo_-j8RwUxeDchy_d-bq1ktyeJ_a8p7hogTw7iZL6TTLkjkhu3bG1jABi3fWZnkKNW6fsifqnf9v2fBLWpRE6ofLLS54abKiV3iTc3YCu-TvBRcQRkkefdzZR4gND7TD5o6XRg4dF6mmSJmSQ3xjFBJsdWMsS0_CVifog7mjx7CJ8KD8iKETBFlEVbVmU__DT27oxNgN5CWn-u-RCPFW8jwynriQZCwH4pybXbYLsdzhj1kk0Fr6sCxBJm0SX01EQFulvQoYuq9nnoIYy0kmpGjbznz6AugS1ljRuHaJcyL_tYfwnHFLPWZD94vp7k1bN6SqpdlJhQNcCYjeMQuPo-0k2NYyLPPCRiG6g_BC8lhjCT9bK8j10gLInma7Yn2LX1jZqAcVMlYxYOqObJlGz7K3UNaOqqgM25hpApdiKRcTsmMEUQm_DgangcI6WI7alU5eZADiusi-qMqaWmA8t538yfvrCyo2kMgZJlt00ZvzZ_jJTvSl4H7bb6fXha2vA8_1EwiXyJu7fluDT5tac_0JYBUKlOdzTSu-HEmvDTfrtpADqBEmcW2zvkjVc0WEv2HPUTonT5hkUlCdaAZepVDnTA8MZMo2vmbFeJUKbErP0brJBtnlasIXfWouvp4cQgRK_0UaBBto0x-Zz8k8nx_8qClfVukeD6rwYLjIwdQcTNEhgN3nlvkT-wwPSPHd5WFM_lq8J6ECLluFYxunsR1Sj6kEIap9FxQR2QOK2niuLUJruteB'
+    accessToken: 'sl.u.AFl-IJ-UX_dcjQfZ6A8ywrqTzGiKvjzdpFTTrPpjvFJcTkv5Ypd1mNufbFu1fgc9LUN0Hybuwf5eZuBZQ16kaIH1CGgXujiMxqnYJZ2TN1H8Puu60i0-iHnA_OuTO55uIan3UHu9w6cpgNpM4HbbKqsxoN7dDIx_h8gb1zEWE8f-PboHfnZqBZZKVXcc3GMwXs32kZZF6avakqA5UETqlT4NN__VviqKdiTblG1UJuuiHw2apTN2k6v97aYy6p4MyAvVISlX8V9FEmHYJJB8v9YHZ0j_bBOb1MOc5dKrAuOrvDrJTokpODMZzb96CresmcKqlNzXX9T-_9Eh5Q-wqR8GxqNP_J_f2qmkYGOWWtq52RsbZc0KAw9xLdycp5XD0wrdR6H7ZTfAUMiesV55G_ZWQDd9CYKHBAuBmDD0TY80d-dwFxTuJkyWHU7_ZuQ_5pUOiccc6C8AOmZFTmKsOnIyBKmWvd3AXlmjLta-Nl2RiYP_BvLeg8ivWNkqnA6sg7iIYAzkPFbDYW37Foc26QllkIEGxltwzjTwUo_-j8RwUxeDchy_d-bq1ktyeJ_a8p7hogTw7iZL6TTLkjkhu3bG1jABi3fWZnkKNW6fsifqnf9v2fBLWpRE6ofLLS5o6XRg4dF6mmSJmSQ3xjFBJsdWMsS0_CVifog7mjx7CJ8KD8iKETBFlEVbVmU__DT27oxNgN5CWn-u-RCPFW8jwynriQZCwH4pybXbYLsdzhj1kk0Fr6sCxBJm0SX01EQFulvQoYuq9nnoIYy0kmpGjbznz6AugS1ljRuHaJcyL_tYfwnHFLPWZD94vp7k1bN6SqpdlJhQNcCYjeMQuPo-0k2NYyLPPCRiG6g_BC8lhjCT9bK8j10gLInma7Yn2LX1jZqAcVMlYxYOqObJlGz7K3UNaOqqgM25hpApdiKRcTsmMEUQm_DgangcI6WI7alU5eZADiusi-qMqaWmA8t538yfvrCyo2kMgZJlt00ZvzZ_jJTvSl4H7bb6fXha2vA8_1EwiXyJu7fluDT5tac_0JYBUKlOdzTSu-HEmvDTfrtpADqBEmcW2zvkjVc0WEv2HPUTonT5hkUlCdaAZepVDnTA8MZMo2vmbFeJUKbErP0brJBtnlasIXfWouvp4cQgRK_0UaBBto0x-Zz8k8nx_8qClfVukeD6rwYLjIwdQcTNEhgN3nlvkT-wwPSPHd5WFM_lq8J6ECLluFYxunsR1Sj6kEIap9FxQR2QOK2niuLUJruteB'
   });
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!selectedRestaurant?.id) return;
+    if (!selectedRestaurant?.id) {
+      toast({
+        title: "Error",
+        description: "Please select a restaurant first",
+        variant: "destructive",
+      });
+      return;
+    }
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -510,13 +517,40 @@ export default function HomePage() {
 
         try {
           const timestamp = new Date().getTime();
-          const fileName = `${selectedRestaurant.id}_${timestamp}_${file.name}`;
-          const path = `/Magic Menu/${fileName}`;
+          // Include restaurant ID in both folder structure and filename
+          const restaurantPath = `restaurant_${selectedRestaurant.id}`;
+          const fileName = `${file.name.replace(/\.[^/.]+$/, '')}_rid_${selectedRestaurant.id}_${timestamp}${file.name.match(/\.[^/.]+$/)?.[0] || ''}`;
+          const path = `/Magic Menu/${restaurantPath}/${fileName}`;
 
-          await dbx.filesUpload({
+          const uploadResult = await dbx.filesUpload({
             path,
             contents: imageData,
           });
+
+          // Get a shared link for the uploaded file
+          const sharedLinkResult = await dbx.sharingCreateSharedLinkWithSettings({
+            path: uploadResult.result.path_display,
+            settings: {
+              requested_visibility: { '.tag': 'public' }
+            }
+          });
+
+          // Store the image URL and restaurant ID mapping in your database
+          const response = await fetch('/api/images', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              restaurantId: selectedRestaurant.id,
+              imageUrl: sharedLinkResult.result.url,
+              fileName: fileName,
+            }),
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to store image metadata');
+          }
 
           // Clear the input value and close dialog
           e.target.value = '';
@@ -526,6 +560,9 @@ export default function HomePage() {
             title: "Success",
             description: "Menu image uploaded successfully",
           });
+
+          // Invalidate the images query to refresh the list
+          queryClient.invalidateQueries({ queryKey: [`/api/images/${selectedRestaurant.id}`] });
 
         } catch (error) {
           console.error('Upload error:', error);
@@ -810,7 +847,7 @@ export default function HomePage() {
                     <Label htmlFor="customTag">Custom Tags</Label>
                     <div className="flex gap-2 mb-2">
                       {form.watch("customTags").map((tag, index) => (
-                        <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                        <Badge key={index}                        variant="secondary" className="flex items-center gap-1">
                           {tag}
                           <X
                             className="h-3 w-3 cursor-pointer"
