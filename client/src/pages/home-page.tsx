@@ -517,14 +517,26 @@ export default function HomePage() {
           throw new Error("Could not read image data");
         }
 
+        const timestamp = new Date().getTime();
+        const fileName = `RestaurantID-${selectedRestaurant.id}_${timestamp}_${file.name}`;
+        const folderPath = `/Magic Menu/${selectedRestaurant.id}/menu_images`;
+        const filePath = `${folderPath}/${fileName}`;
+
         try {
-          const timestamp = new Date().getTime();
-          const fileName = `RestaurantID-${selectedRestaurant.id}_${timestamp}_${file.name}`;
-          const path = `/Magic Menu/${selectedRestaurant.id}/menu_images/${fileName}`;
+          // Create folder structure if it doesn't exist
+          await dbx.filesCreateFolderV2({
+            path: folderPath,
+            autorename: false
+          }).catch(error => {
+            // Ignore error if folder already exists (conflict error)
+            if (error.status !== 409) {
+              throw error;
+            }
+          });
 
           // Upload file without metadata
           await dbx.filesUpload({
-            path,
+            path: filePath,
             contents: imageData,
             mode: { '.tag': 'add' },
             autorename: true,
