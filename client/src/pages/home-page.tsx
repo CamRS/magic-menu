@@ -513,6 +513,10 @@ export default function HomePage() {
           const fileName = `${selectedRestaurant.id}_${timestamp}_${file.name}`;
           const path = `/Magic Menu/${selectedRestaurant.id}/menu_images/${fileName}`;
 
+          // Format date to match Dropbox expected format: YYYY-MM-DDThh:mm:ssZ
+          const now = new Date();
+          const formattedDate = now.toISOString().split('.')[0] + 'Z';
+
           // Upload file with metadata
           await dbx.filesUpload({
             path,
@@ -520,7 +524,7 @@ export default function HomePage() {
             mode: { '.tag': 'add' },
             autorename: true,
             strict_conflict: false,
-            client_modified: new Date().toISOString(),
+            client_modified: formattedDate,
             mute: false,
             property_groups: [
               {
