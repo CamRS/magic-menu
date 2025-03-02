@@ -492,7 +492,7 @@ export default function HomePage() {
 
   // Initialize Dropbox client
   const dbx = new Dropbox({
-    accessToken: 'sl.u.AFl_Sm0VvreSnOuSdWHK5rR41xXZ0e1ax1KXmdzGcrBzu93CgXoYXabBbPXQ1ixKPJqEiRwJFNoAZR7g5H6FOPziCi14cQDa2LkommycAQOfWGyIBLGwJeb5EBkcBsUeP5WEPIZpJkNJoSz-ggr_fynsiFbLTinDrn9_VeJGIEkaXLTygT0dwR66-ayia0GICKvhHE355P_OdqYlHhk6A_BZz3DuBCiEngop5deOpuTyATyrjJo8qnlqGzGJXmC8tu74E5XaRzcHh_f8pzdCrsBHH-btjdqUmZ3N7NcIHT_C5xyDxondmaX5d1v7HattUQrSGerhyHiZ_C_n3x6cM3I2gUl359SLDZGiJthgqqPewH504MAcE8vXMrVsKcomspeSxADX8nreXcuQbYFZsrz16h-ZII7YHOUCM1a4TSoHHMN2toRYa53kvNfo3jy47oAbz79u5RYwavacA-ljKYB7qnQWqATsrOWtRT_3wVq7YI786qvimhV6sr_1vesO1KvnAPkE_shZSGN37p6yRY6xFGmmoBcUKh4gVHcxNAJiNKxyDDDFuEVdmtCtAtLMJp1nS_wFfUdlwNYSfaxRSv32FYl9nHXfp6q5YuELNQiwIiZLWte5Zb1afLdSHEKKHCzmRu8pFWkj2Sm5JpdrsPWP2ZeermrQGRlNt6Ez9xw5MJ2vEV70khqsQdahOMEUcKtuD4UG3Bu5kat4po0ekV8EqNAT4qfn5byZ1PpC4OS9ZMsiYcYmof-r_1Zr8RfHdWGSpnIU90KKop9cYoyjYmvgQkKGIqvrvQV50VOdYmxCK6f5mk8BrTiOSGNIztDmV805f9ZLEVmQfRUB8jsyd50-TR7C_9bKN_h65XoSJxzrdcXA3UuhGmzBicuIfdnUq4Dbw4tLxqFQ1sBr8iuQlDBs_heWnvLa4B8DzVbCesQ7WQ7aHrXSNpQONcia-2DZiMA2KkTaJ44cM-Bu9blwHTRveyEdHwKkkTOPa8TlX45x3i3YEuJ1_myltpvAXPPfwIcBZhcNQDftbLqO4Fnchx_L1tEYfdL7oK3xHpspzwIIYwFQ2KC6xiuzgWT05eph459Fdd564aMxbZp5lr4VSnJ96fMdXUUfuVLKQb_YpZ_-T-JdjeCexxQMmTdbRy7YPN33lIMxeq9cp240VIu8yP6HPhsoQMqxSHgSpEsgX8cQhcEKr5UgxmXl-m4Q6DTV5pXElcAIBMMNUCdHc0Hn-ES-CXc02ujgzZ3DHkTn5lLYzSeJCoEzv4313y1PPdOHVa0'
+    accessToken: 'sl.u.AFl-IJ-UX_dcjQfZ6A8ywrqTzGiKvjzdpFTTrPpjvFJcTkv5Ypd1mNufbFu1fgc9LUN0Hybuwf5eZuBZQ16kaIH1CGgXujiMxqnYJZ2TN1H8Puu60i0-iHnA_OuTO55uIan3UHu9w6cpgNpM4HbbKqsxoN7dDIx_h8gb1zEWE8f-PboHfnZqBZZKVXcc3GMwXs32kZZF6avakqA5UETqlT4NN__VviqKdiTblG1UJuuiHw2apTN2k6v97aYy6p4MyAvVISlX8V9FEmHYJJB8v9YHZ0j_bBOb1MOc5dKrAuOrvDrJTokpODMZzb96CresmcKqlNzXX9T-_9Eh5Q-wqR8GxqNP_J_f2qmkYGOWWtq52RsbZc0KAw9xLdycp5XD0wrdR6H7ZTfAUMiesV55G_ZWQDd9CYKHBAuBmDD0TY80d-dwFxTuJkyWHU7_ZuQ_5pUOiccc6C8AOmZFTmKsOnIyBKmWvd3AXlmjLta-Nl2RiYP_BvLeg8ivWNkqnA6sg7iIYAzkPFbDYW37Foc26QllkIEGxltwzjTwUo_-j8RwUxeDchy_d-bq1ktyeJ_a8p7hogTw7iZL6TTLkjkhu3bG1jABi3fWZnkKNW6fsifqnf9v2fBLWpRE6ofLLS54abKiV3iTc3YCu-TvBRcQRkkefdzZR4gND7TD5o6XRg4dF6mmSJmSQ3xjFBJsdWMsS0_CVifog7mjx7CJ8KD8iKETBFlEVbVmU__DT27oxNgN5CWn-u-RCPFW8jwynriQZCwH4pybXbYLsdzhj1kk0Fr6sCxBJm0SX01EQFulvQoYuq9nnoIYy0kmpGjbznz6AugS1ljRuHaJcyL_tYfwnHFLPWZD94vp7k1bN6SqpdlJhQNcCYjeMQuPo-0k2NYyLPPCRiG6g_BC8lhjCT9bK8j10gLInma7Yn2LX1jZqAcVMlYxYOqObJlGz7K3UNaOqqgM25hpApdiKRcTsmMEUQm_DgangcI6WI7alU5eZADiusi-qMqaWmA8t538yfvrCyo2kMgZJlt00ZvzZ_jJTvSl4H7bb6fXha2vA8_1EwiXyJu7fluDT5tac_0JYBUKlOdzTSu-HEmvDTfrtpADqBEmcW2zvkjVc0WEv2HPUTonT5hkUlCdaAZepVDnTA8MZMo2vmbFeJUKbErP0brJBtnlasIXfWouvp4cQgRK_0UaBBto0x-Zz8k8nx_8qClfVukeD6rwYLjIwdQcTNEhgN3nlvkT-wwPSPHd5WFM_lq8J6ECLluFYxunsR1Sj6kEIap9FxQR2QOK2niuLUJruteB'
   });
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -524,14 +524,14 @@ export default function HomePage() {
 
           toast({
             title: "Success",
-            description: "Image uploaded successfully",
+            description: "Menu image uploaded successfully",
           });
 
-        } catch (dropboxError) {
-          console.error('Dropbox upload error:', dropboxError);
+        } catch (error) {
+          console.error('Upload error:', error);
           toast({
             title: "Error",
-            description: "Failed to upload image",
+            description: error instanceof Error ? error.message : "Failed to upload image",
             variant: "destructive",
           });
         }
