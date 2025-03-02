@@ -490,9 +490,9 @@ export default function HomePage() {
     imageUploadRef.current?.click();
   };
 
-  // Initialize Dropbox client
+  // Initialize Dropbox client with app key
   const dbx = new Dropbox({
-    accessToken: 'sl.u.AFl-IJ-UX_dcjQfZ6A8ywrqTzGiKvjzdpFTTrPpjvFJcTkv5Ypd1mNufbFu1fgc9LUN0Hybuwf5eZuBZQ16kaIH1CGgXujiMxqnYJZ2TN1H8Puu60i0-iHnA_OuTO55uIan3UHu9w6cpgNpM4HbbKqsxoN7dDIx_h8gb1zEWE8f-PboHfnZqBZZKVXcc3GMwXs32kZZF6avakqA5UETqlT4NN__VviqKdiTblG1UJuuiHw2apTN2k6v97aYy6p4MyAvVISlX8V9FEmHYJJB8v9YHZ0j_bBOb1MOc5dKrAuOrvDrJTokpODMZzb96CresmcKqlNzXX9T-_9Eh5Q-wqR8GxqNP_J_f2qmkYGOWWtq52RsbZc0KAw9xLdycp5XD0wrdR6H7ZTfAUMiesV55G_ZWQDd9CYKHBAuBmDD0TY80d-dwFxTuJkyWHU7_ZuQ_5pUOiccc6C8AOmZFTmKsOnIyBKmWvd3AXlmjLta-Nl2RiYP_BvLeg8ivWNkqnA6sg7iIYAzkPFbDYW37Foc26QllkIEGxltwzjTwUo_-j8RwUxeDchy_d-bq1ktyeJ_a8p7hogTw7iZL6TTLkjkhu3bG1jABi3fWZnkKNW6fsifqnf9v2fBLWpRE6ofLLS5o6XRg4dF6mmSJmSQ3xjFBJsdWMsS0_CVifog7mjx7CJ8KD8iKETBFlEVbVmU__DT27oxNgN5CWn-u-RCPFW8jwynriQZCwH4pybXbYLsdzhj1kk0Fr6sCxBJm0SX01EQFulvQoYuq9nnoIYy0kmpGjbznz6AugS1ljRuHaJcyL_tYfwnHFLPWZD94vp7k1bN6SqpdlJhQNcCYjeMQuPo-0k2NYyLPPCRiG6g_BC8lhjCT9bK8j10gLInma7Yn2LX1jZqAcVMlYxYOqObJlGz7K3UNaOqqgM25hpApdiKRcTsmMEUQm_DgangcI6WI7alU5eZADiusi-qMqaWmA8t538yfvrCyo2kMgZJlt00ZvzZ_jJTvSl4H7bb6fXha2vA8_1EwiXyJu7fluDT5tac_0JYBUKlOdzTSu-HEmvDTfrtpADqBEmcW2zvkjVc0WEv2HPUTonT5hkUlCdaAZepVDnTA8MZMo2vmbFeJUKbErP0brJBtnlasIXfWouvp4cQgRK_0UaBBto0x-Zz8k8nx_8qClfVukeD6rwYLjIwdQcTNEhgN3nlvkT-wwPSPHd5WFM_lq8J6ECLluFYxunsR1Sj6kEIap9FxQR2QOK2niuLUJruteB'
+    clientId: import.meta.env.VITE_DROPBOX_APP_KEY,
   });
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -522,10 +522,31 @@ export default function HomePage() {
           const fileName = `${file.name.replace(/\.[^/.]+$/, '')}_rid_${selectedRestaurant.id}_${timestamp}${file.name.match(/\.[^/.]+$/)?.[0] || ''}`;
           const path = `/Magic Menu/${restaurantPath}/${fileName}`;
 
+          // Check if we're authenticated
+          try {
+            // Generate authentication URL and redirect to it
+            const authUrl = dbx.getAuthenticationUrl(window.location.href);
+            window.location.href = authUrl;
+            return;
+          } catch (authError) {
+            console.error('Auth error:', authError);
+            toast({
+              title: "Authentication Error",
+              description: "Failed to authenticate with Dropbox. Please try again.",
+              variant: "destructive",
+            });
+            return;
+          }
+
+          // Note: The following code will only execute after successful OAuth redirect
           const uploadResult = await dbx.filesUpload({
             path,
             contents: imageData,
           });
+
+          if (!uploadResult.result.path_display) {
+            throw new Error('Upload failed - no path returned');
+          }
 
           // Get a shared link for the uploaded file
           const sharedLinkResult = await dbx.sharingCreateSharedLinkWithSettings({
@@ -543,8 +564,10 @@ export default function HomePage() {
             },
             body: JSON.stringify({
               restaurantId: selectedRestaurant.id,
-              imageUrl: sharedLinkResult.result.url,
               fileName: fileName,
+              contentType: file.type,
+              dropboxUrl: sharedLinkResult.result.url,
+              dropboxPath: uploadResult.result.path_display,
             }),
           });
 
@@ -930,55 +953,34 @@ export default function HomePage() {
                   </p>
                 </div>
 
-                <p className="text-sm">Your CSV file should follow this structure:</p>
+                <p className="text-sm mt-4">Your CSV file should follow this structure:</p>
+                <pre className="mt-2 p-4 bg-slate-100 rounded-md text-sm overflow-x-auto">
+                  name,description,price,courseType,customTags,allergens
+                </pre>
 
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Description</TableHead>
-                      <TableHead>Price</TableHead>
-                      <TableHead>Course Type</TableHead>
-                      <TableHead>Custom Tags</TableHead>
-                      <TableHead>Allergens</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    <TableRow>
-                      <TableCell>Taco</TableCell>
-                      <TableCell>Tasty</TableCell>
-                      <TableCell>2.49</TableCell>
-                      <TableCell>Mains</TableCell>
-                      <TableCell></TableCell>
-                      <TableCell>milk</TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
-
-                <div className="text-sm space-y-2">
-                  <p><strong>Guidelines:</strong></p>
-                  <ul className="list-disc list-inside space-y-1">
-                    <li>Course Type must be one of: {courseTypes.join(", ")}</li>
-                    <li>Price should be a decimal number (e.g., 2.49)</li>
-                    <li>Custom Tags should be semicolon-separated (e.g., "Spicy;Vegetarian")</li>
-                    <li>Allergens should be semicolon-separated, valid options: milk, eggs, peanuts, nuts, shellfish, fish, soy, gluten</li>
-                  </ul>
+                <div className="bg-slate-100 rounded-md p-4 mt-4">
+                  <h4 className="font-medium mb-2">Example row:</h4>
+                  <code className="text-sm">
+                    Margherita Pizza,"Fresh tomatoes, mozzarella, and basil",12.99,Mains,"Italian;Pizza",milk;gluten
+                  </code>
                 </div>
+
+                <DialogFooter className="mt-6">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsImportDialogOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="button" onClick={handleContinueImport}>
+                    Continue Import
+                  </Button>
+                </DialogFooter>
+
               </div>
 
-              <DialogFooter className="flex gap-2">
-                <Button variant="outline" onClick={() => setIsImportDialogOpen(false)}>
-                  Go back
-                </Button>
-                <Button onClick={handleExportCSV} className="mr-2">
-                  <Download className="mr-2 h-4 w-4" />
-                  Export Template
-                </Button>
-                <Button onClick={handleContinueImport}>
-                  Continue Import
-                </Button>
-              </DialogFooter>
-            </DialogContent>
+              </DialogContent>
           </Dialog>
 
           <Dialog open={isImageUploadDialogOpen} onOpenChange={setIsImageUploadDialogOpen}>
