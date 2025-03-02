@@ -48,6 +48,7 @@ import { Dropbox } from 'dropbox';
 
 // Initialize Dropbox client with OAuth
 const APP_KEY = 's0y3pb9x0ug1yd4';
+const APP_SECRET = 'u0v0lo5w073x34v';
 
 // Generate a random state string for OAuth security
 const generateState = () => {
@@ -75,23 +76,7 @@ export default function HomePage() {
   const [isImageUploadDialogOpen, setIsImageUploadDialogOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageUploadRef = useRef<HTMLInputElement>(null);
-  const [dbxClient, setDbxClient] = useState<Dropbox | null>(null); // Use the initialized dbx client
 
-  const initiateDropboxAuth = () => {
-    const state = generateState();
-    sessionStorage.setItem('dropboxOAuthState', state);
-
-    const authUrl = new URL('https://www.dropbox.com/oauth2/authorize');
-    authUrl.searchParams.append('client_id', APP_KEY);
-    authUrl.searchParams.append('response_type', 'token');
-    authUrl.searchParams.append('redirect_uri', REDIRECT_URI);
-    authUrl.searchParams.append('state', state);
-
-    // For debugging
-    console.log('Redirecting to Dropbox with URI:', REDIRECT_URI);
-
-    window.location.href = authUrl.toString();
-  };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!selectedRestaurant?.id) return;
@@ -107,18 +92,12 @@ export default function HomePage() {
         }
 
         try {
-          // If no client, initiate OAuth flow
-          if (!dbxClient) {
-            initiateDropboxAuth();
-            return;
-          }
-
           const timestamp = new Date().getTime();
           const fileName = `${selectedRestaurant.id}_${timestamp}_${file.name}`;
           const path = `/Magic Menu/${fileName}`;
 
           try {
-            await dbxClient.filesUpload({
+            await dbx.filesUpload({
               path,
               contents: imageData,
             });
@@ -133,9 +112,18 @@ export default function HomePage() {
             });
 
           } catch (error: any) {
-            // If unauthorized, initiate new OAuth flow
+            // If unauthorized, initiate OAuth flow
             if (error?.status === 401) {
-              initiateDropboxAuth();
+              const state = generateState();
+              sessionStorage.setItem('dropboxOAuthState', state);
+
+              const authUrl = new URL('https://www.dropbox.com/oauth2/authorize');
+              authUrl.searchParams.append('client_id', APP_KEY);
+              authUrl.searchParams.append('response_type', 'token');
+              authUrl.searchParams.append('redirect_uri', REDIRECT_URI);
+              authUrl.searchParams.append('state', state);
+
+              window.location.href = authUrl.toString();
             } else {
               throw error;
             }
@@ -170,8 +158,7 @@ export default function HomePage() {
       const storedState = sessionStorage.getItem('dropboxOAuthState');
 
       if (accessToken && state === storedState) {
-        const client = new Dropbox({ accessToken });
-        setDbxClient(client);
+        dbx.setAccessToken(accessToken);
 
         // Clear OAuth state and hash
         sessionStorage.removeItem('dropboxOAuthState');
@@ -180,18 +167,6 @@ export default function HomePage() {
         toast({
           title: "Success",
           description: "Connected to Dropbox successfully",
-        });
-      } else if (accessToken && state !== storedState) {
-        toast({
-          title: "Error",
-          description: "Dropbox OAuth state mismatch. Please try again.",
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Error",
-          description: "Failed to connect to Dropbox. Please check your settings.",
-          variant: "destructive",
         });
       }
     }
@@ -958,40 +933,40 @@ export default function HomePage() {
                 <p className="text-sm text-muted-foreground">
                   To successfully import menu items, please follow these steps:
                 </p>
-                  <div className="bg-amber-100 p-4 rounded-md border border-amber-200">
-                    <h3 className="font-medium mb-2">Important: Use the Export Template</h3>
-                    <p className="text-sm">
-                      For best results, first click "Export CSV" to download a template with the correct format.
-                      Then add your new items to this file.
-                    </p>
-                  </div>
+                <div className="bg-amber-100 p-4 rounded-md border border-amber-200">
+                  <h3 className="font-medium mb-2">Important: Use the Export Template</h3>
+                  <p className="text-sm">
+                    For best results, first click "Export CSV" to download a template with the correct format.
+                    Then add your new items to this file.
+                  </p>
+                </div>
 
-                  <p className="text-sm">Your CSV file should follow this structure:</p>
+                <p className="text-sm">Your CSV file should follow this structure:</p>
 
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Description</TableHead>
-                        <TableHead>Price</TableHead>
-                        <TableHead>Course Type</TableHead>
-                        <TableHead>Custom Tags</TableHead>
-                        <TableHead>Allergens</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      <TableRow>
-                        <TableCell>Sample Item</TableCell>
-                        <TableCell>Description here</TableCell>
-                        <TableCell>$10.00</TableCell>
-                        <TableCell>Mains</TableCell>
-                        <TableCell></TableCell>
-                        <TableCell>milk</TableCell>
-                        <TableCell></TableCell>
-                      </TableRow>
-                    </TableBody>
-                  </Table>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead>Price</TableHead>
+                      <TableHead>Course Type</TableHead>
+                      <TableHead>Custom Tags</TableHead>
+                      <TableHead>Allergens</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <TableRow>
+                      <TableCell>Sample Item</TableCell>
+                      <TableCell>Description here</TableCell>
+                      <TableCell>$10.00</TableCell>
+                      <TableCell>Mains</TableCell>
+                      <TableCell></TableCell>
+                      <TableCell>milk</TableCell>
+                      <TableCell></TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
 
                 <div className="text-sm space-y-2">
                   <p><strong>Guidelines:</strong></p>
