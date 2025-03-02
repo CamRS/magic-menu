@@ -49,6 +49,10 @@ import { Dropbox } from 'dropbox';
 // Initialize Dropbox client with OAuth
 const APP_KEY = 's0y3pb9x0ug1yd4';
 
+// Generate a random state string for OAuth security
+const generateState = () => {
+  return Math.random().toString(36).substring(2);
+};
 
 export default function HomePage() {
   const { user, logoutMutation } = useAuth();
@@ -78,10 +82,14 @@ export default function HomePage() {
         }
 
         try {
-          // If no client or auth error, redirect to Dropbox auth
+          // If no client, initiate OAuth flow
           if (!dbxClient) {
-            const redirectUri = `${window.location.origin}${window.location.pathname}`;
-            const authUrl = `https://www.dropbox.com/oauth2/authorize?client_id=${APP_KEY}&response_type=token&redirect_uri=${encodeURIComponent(redirectUri)}`;
+            const state = generateState();
+            sessionStorage.setItem('dropboxOAuthState', state);
+
+            const redirectUri = encodeURIComponent(`${window.location.origin}`);
+            const authUrl = `https://www.dropbox.com/oauth2/authorize?client_id=${APP_KEY}&response_type=token&redirect_uri=${redirectUri}&state=${state}`;
+
             window.location.href = authUrl;
             return;
           }
@@ -105,10 +113,14 @@ export default function HomePage() {
           });
 
         } catch (error: any) {
-          // If unauthorized, redirect to auth
+          // If unauthorized, initiate new OAuth flow
           if (error?.status === 401) {
-            const redirectUri = `${window.location.origin}${window.location.pathname}`;
-            const authUrl = `https://www.dropbox.com/oauth2/authorize?client_id=${APP_KEY}&response_type=token&redirect_uri=${encodeURIComponent(redirectUri)}`;
+            const state = generateState();
+            sessionStorage.setItem('dropboxOAuthState', state);
+
+            const redirectUri = encodeURIComponent(`${window.location.origin}`);
+            const authUrl = `https://www.dropbox.com/oauth2/authorize?client_id=${APP_KEY}&response_type=token&redirect_uri=${redirectUri}&state=${state}`;
+
             window.location.href = authUrl;
           } else {
             console.error('Dropbox upload error:', error);
@@ -137,11 +149,21 @@ export default function HomePage() {
     if (hash) {
       const params = new URLSearchParams(hash.substring(1));
       const accessToken = params.get('access_token');
-      if (accessToken) {
+      const state = params.get('state');
+      const storedState = sessionStorage.getItem('dropboxOAuthState');
+
+      if (accessToken && state === storedState) {
         const client = new Dropbox({ accessToken });
         setDbxClient(client);
-        // Clear the URL hash
+
+        // Clear OAuth state and hash
+        sessionStorage.removeItem('dropboxOAuthState');
         window.history.replaceState(null, '', window.location.pathname);
+
+        toast({
+          title: "Success",
+          description: "Connected to Dropbox successfully",
+        });
       }
     }
   }, []);
@@ -320,7 +342,6 @@ export default function HomePage() {
 
   useEffect(() => {
     if (editingItem) {
-      console.log("Setting form data for editing:", editingItem);
       const formData = {
         name: editingItem.name,
         description: editingItem.description,
@@ -348,7 +369,6 @@ export default function HomePage() {
   const updateMutation = useMutation({
     mutationFn: async (data: InsertMenuItem & { id: number }) => {
       const { id, ...updateData } = data;
-      console.log("Updating menu item:", { id, ...updateData });
 
       const response = await apiRequest("PATCH", `/api/menu-items/${id}`, updateData);
       if (!response.ok) {
@@ -358,7 +378,6 @@ export default function HomePage() {
       return response.json();
     },
     onSuccess: () => {
-      console.log("Update successful");
       queryClient.invalidateQueries({ queryKey: ["/api/menu-items", selectedRestaurant?.id] });
       setCreateMenuItemOpen(false);
       setEditingItem(null);
@@ -369,7 +388,6 @@ export default function HomePage() {
       });
     },
     onError: (error: Error) => {
-      console.error("Update failed:", error);
       toast({
         title: "Error",
         description: error.message,
@@ -415,10 +433,7 @@ export default function HomePage() {
   });
 
   const handleSubmit = (data: InsertMenuItem) => {
-    console.log("Form submitted with data:", data);
-
     if (editingItem) {
-      console.log("Updating existing item:", editingItem.id);
       const updateData = {
         ...data,
         id: editingItem.id,
@@ -509,7 +524,6 @@ export default function HomePage() {
   const handleDialogOpenChange = (open: boolean) => {
     setCreateMenuItemOpen(open);
     if (!open) {
-      console.log("Resetting form and edit state");
       setEditingItem(null);
       form.reset();
     }
@@ -935,16 +949,18 @@ export default function HomePage() {
                       <TableHead>Course Type</TableHead>
                       <TableHead>Custom Tags</TableHead>
                       <TableHead>Allergens</TableHead>
+                      <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     <TableRow>
-                      <TableCell>Taco</TableCell>
-                      <TableCell>Tasty</TableCell>
-                      <TableCell>2.49</TableCell>
+                      <TableCell>Sample Item</TableCell>
+                      <TableCell>Description here</TableCell>
+                      <TableCell>$10.00</TableCell>
                       <TableCell>Mains</TableCell>
                       <TableCell></TableCell>
                       <TableCell>milk</TableCell>
+                      <TableCell></TableCell>
                     </TableRow>
                   </TableBody>
                 </Table>
