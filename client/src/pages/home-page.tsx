@@ -46,6 +46,8 @@ import { Badge } from "@/components/ui/badge";
 import { X } from "lucide-react";
 import { Dropbox } from 'dropbox';
 import { QRCodeSVG } from 'qrcode.react';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 // Remove the hardcoded token and use environment variables
 const DROPBOX_ACCESS_TOKEN = import.meta.env.VITE_DROPBOX_ACCESS_TOKEN || '';
@@ -105,6 +107,7 @@ export default function HomePage() {
   const [isImageUploadDialogOpen, setIsImageUploadDialogOpen] = useState(false);
   const imageUploadRef = useRef<HTMLInputElement>(null);
   const [showQrCode, setShowQrCode] = useState(false); // Added state for QR code dialog
+  const qrCodeRef = useRef<HTMLDivElement>(null);
 
   const form = useForm<InsertMenuItem>({
     resolver: zodResolver(insertMenuItemSchema),
@@ -280,7 +283,7 @@ export default function HomePage() {
 
   useEffect(() => {
     if (editingItem) {
-      console.log("Setting form data for editing:", editingItem); 
+      console.log("Setting form data for editing:", editingItem);
       const formData = {
         name: editingItem.name,
         description: editingItem.description,
@@ -308,7 +311,7 @@ export default function HomePage() {
   const updateMutation = useMutation({
     mutationFn: async (data: InsertMenuItem & { id: number }) => {
       const { id, ...updateData } = data;
-      console.log("Updating menu item:", { id, ...updateData }); 
+      console.log("Updating menu item:", { id, ...updateData });
 
       const response = await apiRequest("PATCH", `/api/menu-items/${id}`, updateData);
       if (!response.ok) {
@@ -318,7 +321,7 @@ export default function HomePage() {
       return response.json();
     },
     onSuccess: () => {
-      console.log("Update successful"); 
+      console.log("Update successful");
       queryClient.invalidateQueries({ queryKey: ["/api/menu-items", selectedRestaurant?.id] });
       setCreateMenuItemOpen(false);
       setEditingItem(null);
@@ -329,7 +332,7 @@ export default function HomePage() {
       });
     },
     onError: (error: Error) => {
-      console.error("Update failed:", error); 
+      console.error("Update failed:", error);
       toast({
         title: "Error",
         description: error.message,
@@ -375,10 +378,10 @@ export default function HomePage() {
   });
 
   const handleSubmit = (data: InsertMenuItem) => {
-    console.log("Form submitted with data:", data); 
+    console.log("Form submitted with data:", data);
 
     if (editingItem) {
-      console.log("Updating existing item:", editingItem.id); 
+      console.log("Updating existing item:", editingItem.id);
       const updateData = {
         ...data,
         id: editingItem.id,
@@ -473,7 +476,7 @@ export default function HomePage() {
   const handleDialogOpenChange = (open: boolean) => {
     setCreateMenuItemOpen(open);
     if (!open) {
-      console.log("Resetting form and edit state"); 
+      console.log("Resetting form and edit state");
       setEditingItem(null);
       form.reset();
     }
@@ -615,6 +618,53 @@ export default function HomePage() {
     }
   };
 
+
+  const handleDownloadPDF = async () => {
+    if (!qrCodeRef.current || !selectedRestaurant) return;
+
+    try {
+      const canvas = await html2canvas(qrCodeRef.current);
+      const imgData = canvas.toDataURL('image/png');
+
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      // Calculate dimensions to center the QR code on the page
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const qrSize = 100; // Size in mm
+      const x = (pdfWidth - qrSize) / 2;
+      const y = (pdfHeight - qrSize) / 2;
+
+      // Add restaurant name as title
+      pdf.setFontSize(16);
+      pdf.text(selectedRestaurant.name, pdfWidth / 2, y - 20, { align: 'center' });
+
+      // Add QR code
+      pdf.addImage(imgData, 'PNG', x, y, qrSize, qrSize);
+
+      // Add URL text below QR code
+      pdf.setFontSize(10);
+      const url = getPublicMenuUrl(selectedRestaurant.id);
+      pdf.text(url, pdfWidth / 2, y + qrSize + 10, { align: 'center' });
+
+      pdf.save(`${selectedRestaurant.name.toLowerCase().replace(/[^a-z0-9]/g, '_')}_menu_qr.pdf`);
+
+      toast({
+        title: "Success",
+        description: "QR code has been downloaded as PDF",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to generate PDF",
+        variant: "destructive",
+      });
+    }
+  };
 
   if (!restaurants?.length && !isLoadingRestaurants) {
     return (
@@ -889,9 +939,7 @@ export default function HomePage() {
                           };
                           reader.readAsDataURL(file);
                         }
-                      }}
-                      className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
-                    />
+                      }}                    />
                     <p className="text-sm text-muted-foreground mt-2">
                       Drag and drop an image here or click to select
                     </p>
@@ -1087,15 +1135,28 @@ export default function HomePage() {
               <DialogHeader>
                 <DialogTitle>Menu QR Code</DialogTitle>
               </DialogHeader>
-              <div className="flex flex-col items-center justify-center p-6">
+              <div className="flex flex-col items-center justify-center p-6" ref={qrCodeRef}>
                 <QRCodeSVG
                   value={selectedRestaurant ? getPublicMenuUrl(selectedRestaurant.id) : ''}
                   size={256}
                   level="H"
                   includeMargin={true}
                 />
+                {selectedRestaurant && (
+                  <p className="mt-4 text-sm text-center text-muted-foreground">
+                    {getPublicMenuUrl(selectedRestaurant.id)}
+                  </p>
+                )}
               </div>
-              <DialogFooter>
+              <DialogFooter className="flex flex-col sm:flex-row gap-2">
+                <Button
+                  variant="secondary"
+                  className="flex items-center gap-2"
+                  onClick={handleDownloadPDF}
+                >
+                  <Download className="h-4 w-4" />
+                  Download PDF
+                </Button>
                 <Button variant="secondary" onClick={() => setShowQrCode(false)}>
                   Close
                 </Button>
