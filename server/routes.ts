@@ -394,94 +394,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Received request body:", req.body); // Add logging
       let processedData;
 
-      // Check if the request contains stringified JSON in data field
-      if (req.body.data) {
-        try {
-          const parsedData = typeof req.body.data === 'string'
-            ? JSON.parse(req.body.data)
-            : req.body.data;
+      // Check if the request contains array data directly or in data field
+      const inputData = req.body.data || req.body;
+      try {
+        const parsedData = typeof inputData === 'string'
+          ? JSON.parse(inputData)
+          : inputData;
 
-          console.log("Parsed data:", parsedData); // Add logging
+        console.log("Parsed data:", parsedData); // Add logging
 
-          processedData = {
-            name: String(parsedData.name || ''),
-            description: String(parsedData.description || ''),
-            restaurantId: parseInt(parsedData.restaurantId || '0'),
-            price: String(parsedData.price || '0').replace(/[^\d.-]/g, ''),
-            courseType: String(parsedData.courseType || ''),
-            customTags: Array.isArray(parsedData.customTags)
-              ? parsedData.customTags.map(String)
-              : typeof parsedData.customTags === 'string'
-                ? parsedData.customTags.split(',').map(tag => tag.trim())
-                : [],
-            image: String(parsedData.image || ''),
-            allergens: {
-              milk: String(parsedData.allergens?.milk || 'false').toLowerCase() === 'true',
-              eggs: String(parsedData.allergens?.eggs || 'false').toLowerCase() === 'true',
-              peanuts: String(parsedData.allergens?.peanuts || 'false').toLowerCase() === 'true',
-              nuts: String(parsedData.allergens?.nuts || 'false').toLowerCase() === 'true',
-              shellfish: String(parsedData.allergens?.shellfish || 'false').toLowerCase() === 'true',
-              fish: String(parsedData.allergens?.fish || 'false').toLowerCase() === 'true',
-              soy: String(parsedData.allergens?.soy || 'false').toLowerCase() === 'true',
-              gluten: String(parsedData.allergens?.gluten || 'false').toLowerCase() === 'true',
-            }
+        // Handle array of items
+        if (Array.isArray(parsedData)) {
+          const results = {
+            success: 0,
+            failed: 0,
+            errors: [] as string[]
           };
-        } catch (parseError) {
-          console.error("Error parsing data:", parseError); // Add logging
-          return res.status(400).json({
-            message: "Invalid JSON data format",
-            error: parseError instanceof Error ? parseError.message : 'Failed to parse JSON data',
-            receivedData: req.body.data
-          });
-        }
-      } else {
-        // Handle original format where fields are directly in req.body
-        processedData = {
-          name: String(req.body.name || ''),
-          description: String(req.body.description || ''),
-          restaurantId: parseInt(req.body.restaurantId || '0'),
-          price: String(req.body.price || '0').replace(/[^\d.-]/g, ''),
-          courseType: String(req.body.courseType || ''),
-          customTags: Array.isArray(req.body.customTags)
-            ? req.body.customTags.map(String)
-            : typeof req.body.customTags === 'string'
-              ? req.body.customTags.split(',').map(tag => tag.trim())
-              : [],
-          image: String(req.body.image || ''),
-          allergens: {
-            milk: String(req.body.allergens?.milk || 'false').toLowerCase() === 'true',
-            eggs: String(req.body.allergens?.eggs || 'false').toLowerCase() === 'true',
-            peanuts: String(req.body.allergens?.peanuts || 'false').toLowerCase() === 'true',
-            nuts: String(req.body.allergens?.nuts || 'false').toLowerCase() === 'true',
-            shellfish: String(req.body.allergens?.shellfish || 'false').toLowerCase() === 'true',
-            fish: String(req.body.allergens?.fish || 'false').toLowerCase() === 'true',
-            soy: String(req.body.allergens?.soy || 'false').toLowerCase() === 'true',
-            gluten: String(req.body.allergens?.gluten || 'false').toLowerCase() === 'true',
+
+          for (const item of parsedData) {
+            try {
+              const menuItem = {
+                name: String(item.Name || ''),
+                description: String(item.Description || ''),
+                restaurantId: parseInt(item.RestaurantID || '0'),
+                price: String(item.Price || '0').replace(/[^\d.-]/g, ''),
+                courseType: item.Category,
+                customTags: [],
+                image: '',
+                allergens: {
+                  milk: item.Allergens?.toLowerCase().includes('milk') || false,
+                  eggs: item.Allergens?.toLowerCase().includes('eggs') || false,
+                  peanuts: item.Allergens?.toLowerCase().includes('peanuts') || false,
+                  nuts: item.Allergens?.toLowerCase().includes('nuts') || false,
+                  shellfish: item.Allergens?.toLowerCase().includes('shellfish') || false,
+                  fish: item.Allergens?.toLowerCase().includes('fish') || false,
+                  soy: item.Allergens?.toLowerCase().includes('soy') || false,
+                  gluten: item.Allergens?.toLowerCase().includes('gluten') || false,
+                }
+              };
+
+              const parsed = insertMenuItemSchema.safeParse(menuItem);
+              if (!parsed.success) {
+                results.failed++;
+                results.errors.push(`Item '${menuItem.name}': ${parsed.error.errors.map(e => e.message).join(', ')}`);
+                continue;
+              }
+
+              await storage.createMenuItem(parsed.data);
+              results.success++;
+            } catch (itemError) {
+              results.failed++;
+              results.errors.push(`Failed to process item: ${itemError instanceof Error ? itemError.message : 'Unknown error'}`);
+            }
           }
-        };
-      }
 
-      console.log("Processed data:", processedData); // Add logging
+          return res.status(results.failed > 0 ? 207 : 201).json(results);
+        }
 
-      const parsed = insertMenuItemSchema.safeParse(processedData);
-
-      if (!parsed.success) {
-        console.error("Validation errors:", parsed.error.errors); // Add logging
+        // If we get here, it means the data is not an array
+        console.log("Error: Expected array of items but got:", typeof parsedData);
         return res.status(400).json({
-          message: "Invalid menu item data after type conversion",
-          errors: parsed.error.errors,
-          receivedData: processedData
+          message: "Invalid data format",
+          details: "Expected an array of menu items",
+          received: typeof parsedData
+        });
+
+      } catch (parseError) {
+        console.error("Error parsing data:", parseError); // Add logging
+        return res.status(400).json({
+          message: "Invalid JSON data format",
+          error: parseError instanceof Error ? parseError.message : 'Failed to parse JSON data',
+          receivedData: inputData
         });
       }
-
-      // Verify restaurant exists
-      const restaurant = await storage.getRestaurant(parsed.data.restaurantId);
-      if (!restaurant) {
-        return res.status(404).json({ message: "Restaurant not found" });
-      }
-
-      const item = await storage.createMenuItem(parsed.data);
-      res.status(201).json(item);
     } catch (error) {
       console.error('Error creating menu item via Zapier:', error);
       res.status(500).json({
