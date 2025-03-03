@@ -70,10 +70,11 @@ export const insertImageSchema = createInsertSchema(images);
 
 export const insertMenuItemSchema = createInsertSchema(menuItems).extend({
   price: z.string().optional().transform(val => {
-    if (val === undefined || val === null || val.trim() === '') {
+    // Handle all possible empty cases
+    if (val === undefined || val === null || String(val).trim() === '') {
       return '';
     }
-    return val;
+    return String(val).trim();
   }),
   courseType: z.enum(courseTypes, {
     required_error: "Course type is required",

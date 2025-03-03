@@ -126,10 +126,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       if (!req.user) return res.sendStatus(401);
 
-      // If price is not provided or empty in the request body, explicitly set it to empty string
+      // Transform the request body to handle missing or empty price
       const requestBody = {
         ...req.body,
-        price: !req.body.price || req.body.price.trim() === '' ? '' : req.body.price
+        // If price is undefined, null, or empty string, set it to empty string
+        price: req.body.price === undefined || req.body.price === null || req.body.price.trim() === '' ? '' : req.body.price.trim()
       };
 
       const parsed = insertMenuItemSchema.safeParse(requestBody);
