@@ -278,7 +278,7 @@ export default function HomePage() {
 
   useEffect(() => {
     if (editingItem) {
-      console.log("Setting form data for editing:", editingItem);
+      console.log("Setting form data for editing:", editingItem); 
       const formData = {
         name: editingItem.name,
         description: editingItem.description,
@@ -306,7 +306,7 @@ export default function HomePage() {
   const updateMutation = useMutation({
     mutationFn: async (data: InsertMenuItem & { id: number }) => {
       const { id, ...updateData } = data;
-      console.log("Updating menu item:", { id, ...updateData });
+      console.log("Updating menu item:", { id, ...updateData }); 
 
       const response = await apiRequest("PATCH", `/api/menu-items/${id}`, updateData);
       if (!response.ok) {
@@ -316,7 +316,7 @@ export default function HomePage() {
       return response.json();
     },
     onSuccess: () => {
-      console.log("Update successful");
+      console.log("Update successful"); 
       queryClient.invalidateQueries({ queryKey: ["/api/menu-items", selectedRestaurant?.id] });
       setCreateMenuItemOpen(false);
       setEditingItem(null);
@@ -327,7 +327,7 @@ export default function HomePage() {
       });
     },
     onError: (error: Error) => {
-      console.error("Update failed:", error);
+      console.error("Update failed:", error); 
       toast({
         title: "Error",
         description: error.message,
@@ -373,10 +373,10 @@ export default function HomePage() {
   });
 
   const handleSubmit = (data: InsertMenuItem) => {
-    console.log("Form submitted with data:", data);
+    console.log("Form submitted with data:", data); 
 
     if (editingItem) {
-      console.log("Updating existing item:", editingItem.id);
+      console.log("Updating existing item:", editingItem.id); 
       const updateData = {
         ...data,
         id: editingItem.id,
@@ -471,7 +471,7 @@ export default function HomePage() {
   const handleDialogOpenChange = (open: boolean) => {
     setCreateMenuItemOpen(open);
     if (!open) {
-      console.log("Resetting form and edit state");
+      console.log("Resetting form and edit state"); 
       setEditingItem(null);
       form.reset();
     }
@@ -883,7 +883,7 @@ export default function HomePage() {
                             onClick={() => {
                               const newTags = [...form.getValues("customTags")];
                               newTags.splice(index, 1);
-                              form.setValue("customTags", newTags);
+                              form.setValue("customTags",newTags);
                             }}
                           />
                         </Badge>
@@ -913,8 +913,7 @@ export default function HomePage() {
                   <div className="grid grid-cols-2 gap-4 mt-2">
                     {(Object.keys(form.getValues().allergens) as Array<keyof InsertMenuItem['allergens']>).map((key) => (
                       <div key={key} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={key}
+                        <Checkbox                          id={key}
                           checked={form.getValues().allergens[key]}
                           onCheckedChange={(checked) => {
                             form.setValue(`allergens.${key}`, checked as boolean, { shouldValidate: true });
@@ -941,7 +940,7 @@ export default function HomePage() {
             </DialogContent>
           </Dialog>
 
-          <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
+<Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
             <DialogContent className="max-w-3xl">
               <DialogHeader>
                 <DialogTitle>CSV Import Instructions</DialogTitle>
@@ -1044,33 +1043,60 @@ export default function HomePage() {
             </DialogContent>
           </Dialog>
 
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="space-y-8">
             {Object.entries(groupedMenuItems).map(([courseType, items]) => (
               <div key={courseType}>
-                <h2 className="text-2xl font-bold mb-4">{courseType}</h2>
-                <div className="grid gap-4">
+                <h2 className="text-2xl font-semibold mb-4 text-primary">{courseType}</h2>
+                <div className="grid md:grid-cols-2 gap-6">
                   {items.map((item) => (
-                    <Card key={item.id} className="overflow-hidden">
+                    <Card
+                      key={item.id}
+                      className={`relative ${
+                        selectedItems.includes(item.id) ? "ring-2 ring-primary" : ""
+                      }`}
+                      onClick={(e) => {
+                        if (!(e.target as HTMLElement).closest('[data-dropdown-trigger="true"]')) {
+                          toggleItemSelection(item.id);
+                        }
+                      }}
+                    >
                       <CardContent className="p-6">
-                        <div className="flex justify-between items-center mb-4">
-                          <Checkbox
-                            checked={selectedItems.includes(item.id)}
-                            onCheckedChange={() => toggleItemSelection(item.id)}
+                        {item.image && (
+                          <img
+                            src={item.image}
+                            alt={item.name}
+                            className="w-full h-48 object-cover rounded-lg mb-4"
                           />
+                        )}
+                        <div className="absolute top-4 right-4 z-10">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                data-dropdown-trigger="true"
+                                onClick={(e) => e.stopPropagation()}
+                              >
                                 <MoreVertical className="h-4 w-4" />
+                                <span className="sr-only">Open menu</span>
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => setEditingItem(item)}>
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditingItem(item);
+                                }}
+                              >
                                 <Pencil className="mr-2 h-4 w-4" />
                                 Edit
                               </DropdownMenuItem>
                               <DropdownMenuItem
-                                onClick={() => deleteMutation.mutate([item.id])}
-                                className="text-destructive"
+                                className="text-destructive focus:text-destructive"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  deleteMutation.mutate([item.id]);
+                                }}
                               >
                                 <Trash2 className="mr-2 h-4 w-4" />
                                 Delete
@@ -1081,8 +1107,8 @@ export default function HomePage() {
 
                         <div className="flex justify-between items-start">
                           <h3 className="text-xl font-bold">{item.name}</h3>
-                          <span className="text-lg font-semibold min-w-[80px] text-right">
-                            {(item.price && item.price.length > 0 && !isNaN(parseFloat(item.price)))
+                          <span className="text-lg font-semibold text-white min-w-[80px] text-right">
+                            {item.price && item.price.length > 0 && !isNaN(parseFloat(item.price))
                               ? `$${parseFloat(item.price).toFixed(2)}`
                               : ''}
                           </span>
