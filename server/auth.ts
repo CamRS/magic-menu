@@ -42,7 +42,7 @@ export const requireAuth = (req: Request, res: Response, next: NextFunction) => 
   next();
 };
 
-// Add Zapier API key middleware with improved validation
+// Add Zapier API key middleware with improved validation and detailed logging
 export const requireApiKey = (req: Request, res: Response, next: NextFunction) => {
   const apiKey = (req.headers['x-api-key'] as string | undefined)?.trim();
   const expectedApiKey = process.env.ZAPIER_API_KEY?.trim();
@@ -56,9 +56,13 @@ export const requireApiKey = (req: Request, res: Response, next: NextFunction) =
     headerKeys: Object.keys(req.headers),
     apiKeyHeader: typeof apiKey,
     requestPath: req.path,
-    // Add more detailed debugging
+    // Add detailed debugging
     receivedKey: apiKey ? `${apiKey.slice(0, 4)}...${apiKey.slice(-4)}` : 'missing',
-    expectedKeyPrefix: expectedApiKey ? `${expectedApiKey.slice(0, 4)}...` : 'not configured'
+    expectedKeyPrefix: expectedApiKey ? `${expectedApiKey.slice(0, 4)}...` : 'not configured',
+    environment: process.env.NODE_ENV || 'development',
+    host: req.get('host'),
+    protocol: req.protocol,
+    originalUrl: req.originalUrl
   });
 
   if (!apiKey || !expectedApiKey || apiKey !== expectedApiKey) {
@@ -68,13 +72,13 @@ export const requireApiKey = (req: Request, res: Response, next: NextFunction) =
       path: req.path
     });
     return res.status(401).json({ 
-      message: "Invalid API key",
+      message: "Invalid API key. Please check your API key and try again.",
       details: !apiKey ? "No API key provided" : 
                !expectedApiKey ? "API key not configured in environment" : 
                "API key mismatch",
       error_code: !apiKey ? "NO_KEY" : 
-                 !expectedApiKey ? "ENV_NOT_SET" : 
-                 "KEY_MISMATCH"
+                !expectedApiKey ? "ENV_NOT_SET" : 
+                "KEY_MISMATCH"
     });
   }
 
