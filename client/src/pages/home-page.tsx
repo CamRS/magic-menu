@@ -23,7 +23,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Copy, Store, PlusCircle, ChevronDown, Loader2, Download, Upload, Trash2, MoreVertical, Pencil, Globe, Image as ImageIcon } from "lucide-react";
+import { Copy, Store, PlusCircle, ChevronDown, Loader2, Download, Upload, Trash2, MoreVertical, Pencil, Globe, Image as ImageIcon, QrCode } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { type Restaurant, type MenuItem, type InsertMenuItem, insertMenuItemSchema, insertRestaurantSchema, courseTypes } from "@shared/schema";
 import { useState, useEffect, useRef, useCallback } from "react";
@@ -45,6 +45,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { X } from "lucide-react";
 import { Dropbox } from 'dropbox';
+import { QRCodeSVG } from 'qrcode.react';
 
 // Remove the hardcoded token and use environment variables
 const DROPBOX_ACCESS_TOKEN = import.meta.env.VITE_DROPBOX_ACCESS_TOKEN || '';
@@ -103,6 +104,7 @@ export default function HomePage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isImageUploadDialogOpen, setIsImageUploadDialogOpen] = useState(false);
   const imageUploadRef = useRef<HTMLInputElement>(null);
+  const [showQrCode, setShowQrCode] = useState(false); // Added state for QR code dialog
 
   const form = useForm<InsertMenuItem>({
     resolver: zodResolver(insertMenuItemSchema),
@@ -709,14 +711,24 @@ export default function HomePage() {
 
             <div className="flex flex-col sm:flex-row gap-2 flex-wrap">
               {selectedRestaurant && (
-                <Button
-                  variant="outline"
-                  className="flex items-center gap-2 w-full sm:w-auto"
-                  onClick={() => copyMenuUrl(selectedRestaurant.id)}
-                >
-                  <Globe className="h-4 w-4" />
-                  Copy Menu URL
-                </Button>
+                <>
+                  <Button
+                    variant="outline"
+                    className="flex items-center gap-2 w-full sm:w-auto"
+                    onClick={() => copyMenuUrl(selectedRestaurant.id)}
+                  >
+                    <Globe className="h-4 w-4" />
+                    Copy Menu URL
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="flex items-center gap-2 w-full sm:w-auto"
+                    onClick={() => setShowQrCode(true)}
+                  >
+                    <QrCode className="h-4 w-4" />
+                    QR Code
+                  </Button>
+                </>
               )}
               <Button
                 onClick={() => setCreateMenuItemOpen(true)}
@@ -1065,6 +1077,27 @@ export default function HomePage() {
                 </Button>
                 <Button onClick={handleContinueImageUpload}>
                   Choose Image
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={showQrCode} onOpenChange={setShowQrCode}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Menu QR Code</DialogTitle>
+              </DialogHeader>
+              <div className="flex flex-col items-center justify-center p-6">
+                <QRCodeSVG
+                  value={selectedRestaurant ? getPublicMenuUrl(selectedRestaurant.id) : ''}
+                  size={256}
+                  level="H"
+                  includeMargin={true}
+                />
+              </div>
+              <DialogFooter>
+                <Button variant="secondary" onClick={() => setShowQrCode(false)}>
+                  Close
                 </Button>
               </DialogFooter>
             </DialogContent>
