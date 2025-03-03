@@ -12,13 +12,17 @@ function validateEnvironmentVariables() {
   };
 
   const missingVariables = [];
+  const environment = process.env.NODE_ENV || 'development';
+
+  log(`Starting environment validation in ${environment} mode`, 'env-check');
 
   for (const [variable, required] of Object.entries(requiredVariables)) {
     if (!process.env[variable]) {
       if (process.env.NODE_ENV === 'production' && required) {
         missingVariables.push(variable);
+        log(`❌ ${variable} is missing (required in production)`, 'env-check');
       } else if (process.env.NODE_ENV !== 'production') {
-        log(`Warning: ${variable} is not set in development environment`, 'env-check');
+        log(`⚠️ ${variable} is not set in development environment`, 'env-check');
       }
     } else {
       log(`✓ ${variable} is configured`, 'env-check');
@@ -27,8 +31,11 @@ function validateEnvironmentVariables() {
 
   if (missingVariables.length > 0 && process.env.NODE_ENV === 'production') {
     log(`Fatal: Missing required environment variables in production: ${missingVariables.join(', ')}`, 'env-check');
+    log('Application cannot start without required environment variables', 'env-check');
     process.exit(1);
   }
+
+  log('Environment validation completed', 'env-check');
 }
 
 // Check environment variables before starting the server
