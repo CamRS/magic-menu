@@ -19,7 +19,7 @@ export const images = pgTable("images", {
   restaurantId: integer("restaurant_id").notNull().references(() => restaurants.id),
   fileName: text("file_name").notNull(),
   contentType: text("content_type").notNull(),
-  data: text("data").notNull(),
+  data: text("data").notNull(), // We'll store base64 encoded data
   createdAt: text("created_at").notNull().default(new Date().toISOString()),
 });
 
@@ -28,7 +28,7 @@ export const menuItems = pgTable("menu_items", {
   restaurantId: integer("restaurant_id").notNull().references(() => restaurants.id),
   name: text("name").notNull(),
   description: text("description").notNull(),
-  price: text("price"), // Nullable price field
+  price: text("price"), // Remove .notNull()
   image: text("image").default(''),
   imageId: integer("image_id").references(() => images.id),
   courseType: text("course_type").notNull(),
@@ -54,6 +54,9 @@ export const menuItems = pgTable("menu_items", {
   }),
 });
 
+export const insertUserSchema = createInsertSchema(users);
+export const insertRestaurantSchema = createInsertSchema(restaurants);
+
 export const courseTypes = [
   "Appetizers",
   "Mains",
@@ -63,12 +66,10 @@ export const courseTypes = [
   "Custom"
 ] as const;
 
-export const insertUserSchema = createInsertSchema(users);
-export const insertRestaurantSchema = createInsertSchema(restaurants);
 export const insertImageSchema = createInsertSchema(images);
 
 export const insertMenuItemSchema = createInsertSchema(menuItems).extend({
-  price: z.string().nullish(), // Allow null or undefined price
+  price: z.string().optional(), // Make price optional
   courseType: z.enum(courseTypes, {
     required_error: "Course type is required",
     invalid_type_error: "Invalid course type",
