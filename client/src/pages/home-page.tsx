@@ -308,7 +308,13 @@ export default function HomePage() {
       const { id, ...updateData } = data;
       console.log("Updating menu item:", { id, ...updateData }); 
 
-      const response = await apiRequest("PATCH", `/api/menu-items/${id}`, updateData);
+      const formattedData = {
+        ...updateData,
+        // Don't format the price if it's null
+        price: updateData.price ? updateData.price.toString().replace(/^\$/, '') : null,
+      };
+
+      const response = await apiRequest("PATCH", `/api/menu-items/${id}`, formattedData);
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.message || "Failed to update menu item");
@@ -345,6 +351,8 @@ export default function HomePage() {
       const menuItem = {
         ...data,
         restaurantId: selectedRestaurant.id,
+        // Don't format the price if it's null
+        price: data.price ? data.price.toString().replace(/^\$/, '') : null,
       };
 
       const response = await apiRequest("POST", "/api/menu-items", menuItem);
@@ -381,16 +389,16 @@ export default function HomePage() {
         ...data,
         id: editingItem.id,
         restaurantId: editingItem.restaurantId,
-        // Handle empty price
-        price: data.price?.trim() || null,
+        // Handle empty price properly
+        price: data.price?.trim() ? parseFloat(data.price.trim()) : null,
       };
       updateMutation.mutate(updateData);
     } else {
       createMutation.mutate({
         ...data,
         restaurantId: selectedRestaurant!.id,
-        // Handle empty price
-        price: data.price?.trim() || null,
+        // Handle empty price properly
+        price: data.price?.trim() ? parseFloat(data.price.trim()) : null,
       });
     }
   };
@@ -1108,7 +1116,7 @@ export default function HomePage() {
                         <h3 className="text-xl font-semibold mb-2">{item.name}</h3>
                         <p className="text-muted-foreground mb-4">{item.description}</p>
                         <div className="flex justify-between items-center">
-                          <span className="font-semibold">${parseFloat(item.price).toFixed(2)}</span>
+                          <span className="font-semibold">${item.price ? parseFloat(item.price).toFixed(2) : '0.00'}</span>
                           <div className="flex flex-wrap gap-2">
                             {Object.entries(item.allergens)
                               .filter(([_, value]) => value)
