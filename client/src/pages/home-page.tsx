@@ -630,6 +630,32 @@ export default function HomePage() {
     );
   }
 
+  const MenuCard = ({ item }: { item: MenuItem }) => {
+    return (
+      <div className="flex items-center justify-between gap-4 p-4">
+        <div>
+          <h3 className="font-medium">{item.name}</h3>
+          <p className="text-sm text-muted-foreground">{item.description}</p>
+          <span className="font-semibold">
+            {item.price && parseFloat(item.price) > 0 ? `$${parseFloat(item.price).toFixed(2)}` : ''}
+          </span>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {Object.entries(item.allergens)
+            .filter(([_, value]) => value)
+            .map(([key]) => (
+              <span
+                key={key}
+                className="px-2 py-1 bg-primary/10 text-primary text-xs rounded-full capitalize"
+              >
+                {key}
+              </span>
+            ))}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="fixed top-0 left-0 right-0 z-50 bg-gray-50 p-4 md:p-8 border-b">
@@ -913,7 +939,8 @@ export default function HomePage() {
                   <div className="grid grid-cols-2 gap-4 mt-2">
                     {(Object.keys(form.getValues().allergens) as Array<keyof InsertMenuItem['allergens']>).map((key) => (
                       <div key={key} className="flex items-center space-x-2">
-                        <Checkbox                          id={key}
+                        <Checkbox
+                          id={key}
                           checked={form.getValues().allergens[key]}
                           onCheckedChange={(checked) => {
                             form.setValue(`allergens.${key}`, checked as boolean, { shouldValidate: true });
@@ -934,7 +961,7 @@ export default function HomePage() {
                   {(createMutation.isPending || updateMutation.isPending) && (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   )}
-                  {editingItem ? 'Update Item' : 'Add Item'}
+                  {editingItem ? "Update Menu Item" : "Create Menu Item"}
                 </Button>
               </form>
             </DialogContent>
@@ -1105,25 +1132,7 @@ export default function HomePage() {
                           </DropdownMenu>
                         </div>
 
-                        <h3 className="text-xl font-semibold mb-2">{item.name}</h3>
-                        <p className="text-muted-foreground mb-4">{item.description}</p>
-                        <div className="flex justify-between items-center">
-                          <div className="flex items-center">
-                            <span className="font-semibold">{item.price ? `$${parseFloat(item.price).toFixed(2)}` : ''}</span>
-                          </div>
-                          <div className="flex flex-wrap gap-2">
-                            {Object.entries(item.allergens)
-                              .filter(([_, value]) => value)
-                              .map(([key]) => (
-                                <span
-                                  key={key}
-                                  className="px-2 py-1 bg-primary/10 text-primary text-xs rounded-full capitalize"
-                                >
-                                  {key}
-                                </span>
-                              ))}
-                          </div>
-                        </div>
+                        <MenuCard item={item} />
                       </CardContent>
                     </Card>
                   ))}
