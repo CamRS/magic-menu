@@ -392,81 +392,96 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/zapier/menu-items", requireApiKey, async (req, res) => {
     try {
       console.log("Received request body:", req.body); // Add logging
-      let processedData;
 
-      // Check if the request contains array data directly or in data field
-      const inputData = req.body.data || req.body;
+      // Validate request format
+      if (!req.body.data) {
+        return res.status(400).json({
+          message: "Invalid request format",
+          details: "Request must include 'data' field containing stringified JSON",
+          received: Object.keys(req.body)
+        });
+      }
+
+      let parsedData;
       try {
-        const parsedData = typeof inputData === 'string'
-          ? JSON.parse(inputData)
-          : inputData;
+        // Parse the stringified JSON data
+        parsedData = typeof req.body.data === 'string'
+          ? JSON.parse(req.body.data)
+          : req.body.data;
 
         console.log("Parsed data:", parsedData); // Add logging
-
-        // Handle array of items
-        if (Array.isArray(parsedData)) {
-          const results = {
-            success: 0,
-            failed: 0,
-            errors: [] as string[]
-          };
-
-          for (const item of parsedData) {
-            try {
-              const menuItem = {
-                name: String(item.Name || ''),
-                description: String(item.Description || ''),
-                restaurantId: parseInt(item.RestaurantID || '0'),
-                price: String(item.Price || '0').replace(/[^\d.-]/g, ''),
-                courseType: item.Category,
-                customTags: [],
-                image: '',
-                allergens: {
-                  milk: item.Allergens?.toLowerCase().includes('milk') || false,
-                  eggs: item.Allergens?.toLowerCase().includes('eggs') || false,
-                  peanuts: item.Allergens?.toLowerCase().includes('peanuts') || false,
-                  nuts: item.Allergens?.toLowerCase().includes('nuts') || false,
-                  shellfish: item.Allergens?.toLowerCase().includes('shellfish') || false,
-                  fish: item.Allergens?.toLowerCase().includes('fish') || false,
-                  soy: item.Allergens?.toLowerCase().includes('soy') || false,
-                  gluten: item.Allergens?.toLowerCase().includes('gluten') || false,
-                }
-              };
-
-              const parsed = insertMenuItemSchema.safeParse(menuItem);
-              if (!parsed.success) {
-                results.failed++;
-                results.errors.push(`Item '${menuItem.name}': ${parsed.error.errors.map(e => e.message).join(', ')}`);
-                continue;
-              }
-
-              await storage.createMenuItem(parsed.data);
-              results.success++;
-            } catch (itemError) {
-              results.failed++;
-              results.errors.push(`Failed to process item: ${itemError instanceof Error ? itemError.message : 'Unknown error'}`);
-            }
-          }
-
-          return res.status(results.failed > 0 ? 207 : 201).json(results);
-        }
-
-        // If we get here, it means the data is not an array
-        console.log("Error: Expected array of items but got:", typeof parsedData);
-        return res.status(400).json({
-          message: "Invalid data format",
-          details: "Expected an array of menu items",
-          received: typeof parsedData
-        });
-
       } catch (parseError) {
         console.error("Error parsing data:", parseError); // Add logging
         return res.status(400).json({
           message: "Invalid JSON data format",
           error: parseError instanceof Error ? parseError.message : 'Failed to parse JSON data',
-          receivedData: inputData
+          receivedData: req.body.data
         });
       }
+
+      // Handle array of items
+      if (Array.isArray(parsedData)) {
+        const results = {
+          success: 0,
+          failed: 0,
+          errors: [] as string[]
+        };
+
+        for (const item of parsedData) {
+          try {
+            const menuItem = {
+              name: String(item.Name || ''),
+              description: String(item.Description || ''),
+              restaurantId: parseInt(item.RestaurantID || '0'),
+              price: String(item.Price || '0').replace(/[^\d.-]/g, ''),
+              courseType: item.Category,
+              customTags: [],
+              image: '',
+              allergens: {
+                milk: item.Allergens?.toLowerCase().includes('milk') || false,
+                eggs: item.Allergens?.toLowerCase().includes('eggs') || false,
+                peanuts: item.Allergens?.toLowerCase().includes('peanuts') || false,
+                nuts: item.Allergens?.toLowerCase().includes('nuts') || false,
+                shellfish: item.Allergens?.toLowerCase().includes('shellfish') || false,
+                fish: item.Allergens?.toLowerCase().includes('fish') || false,
+                soy: item.Allergens?.toLowerCase().includes('soy') || false,
+                gluten: item.Allergens?.toLowerCase().includes('gluten') || false,
+              }
+            };
+
+            const parsed = insertMenuItemSchema.safeParse(menuItem);
+            if (!parsed.success) {
+              results.failed++;
+              results.errors.push(`Item '${menuItem.name}': ${parsed.error.errors.map(e => e.message).join(', ')}`);
+              continue;
+            }
+
+            // Verify restaurant exists
+            const restaurant = await storage.getRestaurant(menuItem.restaurantId);
+            if (!restaurant) {
+              results.failed++;
+              results.errors.push(`Item '${menuItem.name}': Restaurant with ID ${menuItem.restaurantId} not found`);
+              continue;
+            }
+
+            await storage.createMenuItem(parsed.data);
+            results.success++;
+          } catch (itemError) {
+            results.failed++;
+            results.errors.push(`Failed to process item: ${itemError instanceof Error ? itemError.message : 'Unknown error'}`);
+          }
+        }
+
+        return res.status(results.failed > 0 ? 207 : 201).json(results);
+      }
+
+      // If we get here, it means the data is not an array
+      return res.status(400).json({
+        message: "Invalid data format",
+        details: "Expected an array of menu items",
+        received: typeof parsedData
+      });
+
     } catch (error) {
       console.error('Error creating menu item via Zapier:', error);
       res.status(500).json({

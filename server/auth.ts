@@ -42,10 +42,10 @@ export const requireAuth = (req: Request, res: Response, next: NextFunction) => 
   next();
 };
 
-// Add Zapier API key middleware
+// Add Zapier API key middleware with improved validation
 export const requireApiKey = (req: Request, res: Response, next: NextFunction) => {
-  const apiKey = req.headers['x-api-key'] as string | undefined;
-  const expectedApiKey = process.env.ZAPIER_API_KEY;
+  const apiKey = (req.headers['x-api-key'] as string | undefined)?.trim();
+  const expectedApiKey = process.env.ZAPIER_API_KEY?.trim();
 
   console.log('API Key verification:', { 
     hasApiKey: !!apiKey,
@@ -55,7 +55,10 @@ export const requireApiKey = (req: Request, res: Response, next: NextFunction) =
     expectedKeyLength: expectedApiKey ? expectedApiKey.length : 0,
     headerKeys: Object.keys(req.headers),
     apiKeyHeader: typeof apiKey,
-    requestPath: req.path
+    requestPath: req.path,
+    // Add more detailed debugging
+    receivedKey: apiKey ? `${apiKey.slice(0, 4)}...${apiKey.slice(-4)}` : 'missing',
+    expectedKeyPrefix: expectedApiKey ? `${expectedApiKey.slice(0, 4)}...` : 'not configured'
   });
 
   if (!apiKey || !expectedApiKey || apiKey !== expectedApiKey) {
