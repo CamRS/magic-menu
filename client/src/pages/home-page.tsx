@@ -381,12 +381,16 @@ export default function HomePage() {
         ...data,
         id: editingItem.id,
         restaurantId: editingItem.restaurantId,
+        // Handle empty price
+        price: data.price?.trim() || null,
       };
       updateMutation.mutate(updateData);
     } else {
       createMutation.mutate({
         ...data,
         restaurantId: selectedRestaurant!.id,
+        // Handle empty price
+        price: data.price?.trim() || null,
       });
     }
   };
@@ -795,8 +799,8 @@ export default function HomePage() {
                   )}
                 </div>
                 <div>
-                  <Label htmlFor="price">Price</Label>
-                  <Input {...form.register("price")} />
+                  <Label htmlFor="price">Price (optional)</Label>
+                  <Input {...form.register("price")} placeholder="Leave empty for no price" />
                   {form.formState.errors.price && (
                     <p className="text-sm text-destructive mt-1">{form.formState.errors.price.message}</p>
                   )}

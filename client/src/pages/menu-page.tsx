@@ -106,10 +106,8 @@ export default function MenuPage() {
 
   useEffect(() => {
     if (editItem) {
-      // Validate and format the price to ensure it's a valid number
       const formattedPrice = parseFloat(editItem.price).toFixed(2);
 
-      // Ensure courseType is valid by checking against allowed types
       const courseType = courseTypes.includes(editItem.courseType as any)
         ? editItem.courseType
         : "Appetizers";
@@ -134,7 +132,6 @@ export default function MenuPage() {
         },
       };
 
-      // Reset form with validated data
       form.reset(formData);
     }
   }, [editItem, form]);
@@ -214,7 +211,6 @@ export default function MenuPage() {
 
   const handleSubmit = async (data: InsertMenuItem) => {
     try {
-      // Format price to ensure it's a valid number
       const formattedData = {
         ...data,
         price: parseFloat(data.price.replace(/[^\d.-]/g, '')).toFixed(2),
@@ -471,7 +467,9 @@ export default function MenuPage() {
                 <div className="space-y-2">
                   <div className="flex justify-between items-start">
                     <h3 className="text-xl font-bold">{item.name}</h3>
-                    <span className="text-lg font-semibold text-white">${parseFloat(item.price).toFixed(2)}</span>
+                    <span className="text-lg font-semibold text-white min-w-[80px] text-right">
+                      {item.price ? `$${parseFloat(item.price).toFixed(2)}` : ''}
+                    </span>
                   </div>
                   <p className="text-gray-300">{item.description}</p>
                   <div className="flex flex-wrap gap-2">
