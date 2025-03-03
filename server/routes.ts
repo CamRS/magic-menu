@@ -391,6 +391,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Zapier endpoint to create a menu item
   app.post("/api/zapier/menu-items", requireApiKey, async (req, res) => {
     try {
+      console.log("Received request body:", req.body); // Add logging
       let processedData;
 
       // Check if the request contains stringified JSON in data field
@@ -399,6 +400,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const parsedData = typeof req.body.data === 'string'
             ? JSON.parse(req.body.data)
             : req.body.data;
+
+          console.log("Parsed data:", parsedData); // Add logging
 
           processedData = {
             name: String(parsedData.name || ''),
@@ -424,9 +427,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           };
         } catch (parseError) {
+          console.error("Error parsing data:", parseError); // Add logging
           return res.status(400).json({
             message: "Invalid JSON data format",
-            error: parseError instanceof Error ? parseError.message : 'Failed to parse JSON data'
+            error: parseError instanceof Error ? parseError.message : 'Failed to parse JSON data',
+            receivedData: req.body.data
           });
         }
       } else {
@@ -456,9 +461,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       }
 
+      console.log("Processed data:", processedData); // Add logging
+
       const parsed = insertMenuItemSchema.safeParse(processedData);
 
       if (!parsed.success) {
+        console.error("Validation errors:", parsed.error.errors); // Add logging
         return res.status(400).json({
           message: "Invalid menu item data after type conversion",
           errors: parsed.error.errors,
