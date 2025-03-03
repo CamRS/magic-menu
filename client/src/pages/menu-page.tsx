@@ -213,7 +213,7 @@ export default function MenuPage() {
     try {
       const formattedData = {
         ...data,
-        price: parseFloat(data.price.replace(/[^\d.-]/g, '')).toFixed(2),
+        price: data.price.replace(/[^\d.-]/g, '').length > 0 ? parseFloat(data.price.replace(/[^\d.-]/g, '')).toFixed(2) : '',
       };
 
       if (editItem) {
@@ -468,7 +468,7 @@ export default function MenuPage() {
                   <div className="flex justify-between items-start">
                     <h3 className="text-xl font-bold">{item.name}</h3>
                     <span className="text-lg font-semibold text-white min-w-[80px] text-right">
-                      {item.price ? `$${parseFloat(item.price).toFixed(2)}` : ''}
+                      {item.price ? `$${item.price.length > 0 ? parseFloat(item.price).toFixed(2) : ''}` : ''}
                     </span>
                   </div>
                   <p className="text-gray-300">{item.description}</p>
