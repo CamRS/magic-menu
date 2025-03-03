@@ -28,7 +28,7 @@ export const menuItems = pgTable("menu_items", {
   restaurantId: integer("restaurant_id").notNull().references(() => restaurants.id),
   name: text("name").notNull(),
   description: text("description").notNull(),
-  price: text("price").default(''), // Set default as empty string
+  price: text("price").default(""), // Set default as empty string
   image: text("image").default(''),
   imageId: integer("image_id").references(() => images.id),
   courseType: text("course_type").notNull(),
@@ -69,17 +69,7 @@ export const courseTypes = [
 export const insertImageSchema = createInsertSchema(images);
 
 export const insertMenuItemSchema = createInsertSchema(menuItems).extend({
-  price: z.string().optional().transform(val => {
-    // Handle all possible empty cases
-    if (val === undefined || val === null || String(val).trim() === '') {
-      return '';
-    }
-    return String(val).trim();
-  }),
-  courseType: z.enum(courseTypes, {
-    required_error: "Course type is required",
-    invalid_type_error: "Invalid course type",
-  }),
+  price: z.string().optional().default(""),
   customTags: z.array(z.string()).default([]),
   description: z.string().min(1, "Description is required"),
   image: z.string().optional().default(''),
