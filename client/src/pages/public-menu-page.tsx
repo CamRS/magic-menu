@@ -67,9 +67,7 @@ const MenuCard = ({ item }: { item: MenuItem }) => {
         </p>
 
         <div className="mt-auto">
-          <span className="text-gray-800 text-xl font-bold">
-            ${parseFloat(item.price).toFixed(2)}
-          </span>
+          <span className="font-semibold">{item.price ? `$${parseFloat(item.price).toFixed(2)}` : ''}</span>
         </div>
       </CardContent>
     </Card>
