@@ -940,7 +940,7 @@ export default function HomePage() {
             </DialogContent>
           </Dialog>
 
-          <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
+<Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
             <DialogContent className="max-w-3xl">
               <DialogHeader>
                 <DialogTitle>CSV Import Instructions</DialogTitle>
@@ -1105,22 +1105,26 @@ export default function HomePage() {
                           </DropdownMenu>
                         </div>
 
-                        <h3 className="text-xl font-semibold mb-2">{item.name}</h3>
+                        <div className="flex justify-between items-start">
+                          <h3 className="text-xl font-bold">{item.name}</h3>
+                          <span className="text-lg font-semibold text-white min-w-[80px] text-right">
+                            {item.price && item.price.length > 0 && !isNaN(parseFloat(item.price))
+                              ? `$${parseFloat(item.price).toFixed(2)}`
+                              : ''}
+                          </span>
+                        </div>
                         <p className="text-muted-foreground mb-4">{item.description}</p>
-                        <div className="flex justify-between items-center">
-                          <span className="font-semibold">${parseFloat(item.price).toFixed(2)}</span>
-                          <div className="flex flex-wrap gap-2">
-                            {Object.entries(item.allergens)
-                              .filter(([_, value]) => value)
-                              .map(([key]) => (
-                                <span
-                                  key={key}
-                                  className="px-2 py-1 bg-primary/10 text-primary text-xs rounded-full capitalize"
-                                >
-                                  {key}
-                                </span>
-                              ))}
-                          </div>
+                        <div className="flex flex-wrap gap-2">
+                          {Object.entries(item.allergens)
+                            .filter(([_, value]) => value)
+                            .map(([key]) => (
+                              <span
+                                key={key}
+                                className="px-2 py-1 bg-primary/10 text-primary text-xs rounded-full capitalize"
+                              >
+                                {key}
+                              </span>
+                            ))}
                         </div>
                       </CardContent>
                     </Card>

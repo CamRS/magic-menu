@@ -66,9 +66,11 @@ const MenuCard = ({ item }: { item: MenuItem }) => {
           {item.description}
         </p>
 
-        <div className="mt-auto">
-          <span className="text-gray-800 text-xl font-bold">
-            ${parseFloat(item.price).toFixed(2)}
+        <div className="mt-auto min-h-[30px]">
+          <span className="text-gray-800 text-xl font-bold min-w-[80px] inline-block">
+            {item.price && item.price.length > 0 && !isNaN(parseFloat(item.price))
+              ? `$${parseFloat(item.price).toFixed(2)}`
+              : ''}
           </span>
         </div>
       </CardContent>
