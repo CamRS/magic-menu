@@ -381,16 +381,16 @@ export default function HomePage() {
         ...data,
         id: editingItem.id,
         restaurantId: editingItem.restaurantId,
-        // Handle empty price
-        price: data.price?.trim() || null,
+        // Handle empty price - store empty string instead of null
+        price: data.price?.trim() || '',
       };
       updateMutation.mutate(updateData);
     } else {
       createMutation.mutate({
         ...data,
         restaurantId: selectedRestaurant!.id,
-        // Handle empty price
-        price: data.price?.trim() || null,
+        // Handle empty price - store empty string instead of null
+        price: data.price?.trim() || '',
       });
     }
   };
