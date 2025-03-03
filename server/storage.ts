@@ -150,13 +150,26 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createMenuItem(item: InsertMenuItem): Promise<MenuItem> {
+    console.log("Creating menu item with data:", {
+      ...item,
+      price: item.price === undefined || item.price === null ? 'undefined/null' : `'${item.price}'`
+    });
+
+    // Ensure price is empty string if undefined/null/empty
+    const itemToCreate = {
+      ...item,
+      price: item.price === undefined || item.price === null || item.price === '' ? '' : item.price
+    };
+
     // Verify restaurant ownership before creating menu item
-    const restaurant = await this.getRestaurant(item.restaurantId);
+    const restaurant = await this.getRestaurant(itemToCreate.restaurantId);
     if (!restaurant) {
       throw new Error("Restaurant not found");
     }
 
-    const [menuItem] = await db.insert(menuItems).values(item).returning();
+    const [menuItem] = await db.insert(menuItems).values(itemToCreate).returning();
+    console.log("Created menu item in database:", menuItem);
+
     return menuItem;
   }
 

@@ -28,7 +28,7 @@ export const menuItems = pgTable("menu_items", {
   restaurantId: integer("restaurant_id").notNull().references(() => restaurants.id),
   name: text("name").notNull(),
   description: text("description").notNull(),
-  price: text("price"), 
+  price: text("price").default(''), // Set default as empty string
   image: text("image").default(''),
   imageId: integer("image_id").references(() => images.id),
   courseType: text("course_type").notNull(),

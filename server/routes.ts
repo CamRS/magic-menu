@@ -126,12 +126,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       if (!req.user) return res.sendStatus(401);
 
+      console.log("Original request body:", req.body);
+
       // Transform the request body to handle missing or empty price
       const requestBody = {
         ...req.body,
         // If price is undefined, null, or empty string, set it to empty string
-        price: req.body.price === undefined || req.body.price === null || req.body.price.trim() === '' ? '' : req.body.price.trim()
+        price: req.body.price === undefined || req.body.price === null || req.body.price === '' ? '' : req.body.price
       };
+
+      console.log("Transformed request body:", requestBody);
 
       const parsed = insertMenuItemSchema.safeParse(requestBody);
 
@@ -142,6 +146,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      console.log("Parsed data:", parsed.data);
+
       // Verify restaurant belongs to user
       const restaurant = await storage.getRestaurant(parsed.data.restaurantId);
       if (!restaurant || restaurant.userId !== req.user.id) {
@@ -149,6 +155,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const item = await storage.createMenuItem(parsed.data);
+      console.log("Created menu item:", item);
+
       res.status(201).json(item);
     } catch (error) {
       console.error('Error creating menu item:', error);
