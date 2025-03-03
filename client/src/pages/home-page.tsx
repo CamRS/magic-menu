@@ -310,16 +310,18 @@ export default function HomePage() {
 
       const formattedData = {
         ...updateData,
-        // Don't format the price if it's null
-        price: updateData.price ? updateData.price.toString().replace(/^\$/, '') : null,
+        restaurantId: parseInt(String(updateData.restaurantId)), // added to handle restaurantId type
+        price: updateData.price?.toString().replace(/^\$/, '') || null,
+        image: updateData.image || '',
+        customTags: updateData.customTags || [],
       };
 
-      const response = await apiRequest("PATCH", `/api/menu-items/${id}`, formattedData);
-      if (!response.ok) {
-        const error = await response.json();
+      const res = await apiRequest("PATCH", `/api/menu-items/${id}`, formattedData);
+      if (!res.ok) {
+        const error = await res.json();
         throw new Error(error.message || "Failed to update menu item");
       }
-      return response.json();
+      return res.json();
     },
     onSuccess: () => {
       console.log("Update successful"); 
@@ -348,14 +350,15 @@ export default function HomePage() {
         throw new Error("No restaurant selected");
       }
 
-      const menuItem = {
+      const formattedData = {
         ...data,
         restaurantId: selectedRestaurant.id,
-        // Don't format the price if it's null
-        price: data.price ? data.price.toString().replace(/^\$/, '') : null,
+        price: data.price?.toString().replace(/^\$/, '') || null,
+        image: data.image || '',
+        customTags: data.customTags || [],
       };
 
-      const response = await apiRequest("POST", "/api/menu-items", menuItem);
+      const response = await apiRequest("POST", "/api/menu-items", formattedData);
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.message || "Failed to create menu item");
@@ -389,7 +392,6 @@ export default function HomePage() {
         ...data,
         id: editingItem.id,
         restaurantId: editingItem.restaurantId,
-        // Handle empty price properly
         price: data.price?.trim() ? parseFloat(data.price.trim()) : null,
       };
       updateMutation.mutate(updateData);
@@ -397,7 +399,6 @@ export default function HomePage() {
       createMutation.mutate({
         ...data,
         restaurantId: selectedRestaurant!.id,
-        // Handle empty price properly
         price: data.price?.trim() ? parseFloat(data.price.trim()) : null,
       });
     }
@@ -924,8 +925,7 @@ export default function HomePage() {
                         <Checkbox                          id={key}
                           checked={form.getValues().allergens[key]}
                           onCheckedChange={(checked) => {
-                            form.setValue(`allergens.${key}`, checked as boolean, { shouldValidate: true });
-                          }}
+                            form.setValue(`allergens.${key}`, checked as boolean, { shouldValidate: true });                          }}
                         />
                         <Label htmlFor={key} className="capitalize">
                           {key}
