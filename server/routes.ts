@@ -391,30 +391,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Zapier endpoint to create a menu item
   app.post("/api/zapier/menu-items", requireApiKey, async (req, res) => {
     try {
-      // Convert input values to expected types
-      const processedData = {
-        name: String(req.body.name || ''),
-        description: String(req.body.description || ''),
-        restaurantId: parseInt(req.body.restaurantId || '0'),
-        price: String(req.body.price || '0').replace(/[^\d.-]/g, ''),
-        courseType: String(req.body.courseType || ''),
-        customTags: Array.isArray(req.body.customTags)
-          ? req.body.customTags.map(String)
-          : typeof req.body.customTags === 'string'
-            ? req.body.customTags.split(',').map(tag => tag.trim())
-            : [],
-        image: String(req.body.image || ''),
-        allergens: {
-          milk: String(req.body.allergens?.milk || 'false').toLowerCase() === 'true',
-          eggs: String(req.body.allergens?.eggs || 'false').toLowerCase() === 'true',
-          peanuts: String(req.body.allergens?.peanuts || 'false').toLowerCase() === 'true',
-          nuts: String(req.body.allergens?.nuts || 'false').toLowerCase() === 'true',
-          shellfish: String(req.body.allergens?.shellfish || 'false').toLowerCase() === 'true',
-          fish: String(req.body.allergens?.fish || 'false').toLowerCase() === 'true',
-          soy: String(req.body.allergens?.soy || 'false').toLowerCase() === 'true',
-          gluten: String(req.body.allergens?.gluten || 'false').toLowerCase() === 'true',
+      let processedData;
+
+      // Check if the request contains stringified JSON in data field
+      if (req.body.data) {
+        try {
+          const parsedData = typeof req.body.data === 'string'
+            ? JSON.parse(req.body.data)
+            : req.body.data;
+
+          processedData = {
+            name: String(parsedData.name || ''),
+            description: String(parsedData.description || ''),
+            restaurantId: parseInt(parsedData.restaurantId || '0'),
+            price: String(parsedData.price || '0').replace(/[^\d.-]/g, ''),
+            courseType: String(parsedData.courseType || ''),
+            customTags: Array.isArray(parsedData.customTags)
+              ? parsedData.customTags.map(String)
+              : typeof parsedData.customTags === 'string'
+                ? parsedData.customTags.split(',').map(tag => tag.trim())
+                : [],
+            image: String(parsedData.image || ''),
+            allergens: {
+              milk: String(parsedData.allergens?.milk || 'false').toLowerCase() === 'true',
+              eggs: String(parsedData.allergens?.eggs || 'false').toLowerCase() === 'true',
+              peanuts: String(parsedData.allergens?.peanuts || 'false').toLowerCase() === 'true',
+              nuts: String(parsedData.allergens?.nuts || 'false').toLowerCase() === 'true',
+              shellfish: String(parsedData.allergens?.shellfish || 'false').toLowerCase() === 'true',
+              fish: String(parsedData.allergens?.fish || 'false').toLowerCase() === 'true',
+              soy: String(parsedData.allergens?.soy || 'false').toLowerCase() === 'true',
+              gluten: String(parsedData.allergens?.gluten || 'false').toLowerCase() === 'true',
+            }
+          };
+        } catch (parseError) {
+          return res.status(400).json({
+            message: "Invalid JSON data format",
+            error: parseError instanceof Error ? parseError.message : 'Failed to parse JSON data'
+          });
         }
-      };
+      } else {
+        // Handle original format where fields are directly in req.body
+        processedData = {
+          name: String(req.body.name || ''),
+          description: String(req.body.description || ''),
+          restaurantId: parseInt(req.body.restaurantId || '0'),
+          price: String(req.body.price || '0').replace(/[^\d.-]/g, ''),
+          courseType: String(req.body.courseType || ''),
+          customTags: Array.isArray(req.body.customTags)
+            ? req.body.customTags.map(String)
+            : typeof req.body.customTags === 'string'
+              ? req.body.customTags.split(',').map(tag => tag.trim())
+              : [],
+          image: String(req.body.image || ''),
+          allergens: {
+            milk: String(req.body.allergens?.milk || 'false').toLowerCase() === 'true',
+            eggs: String(req.body.allergens?.eggs || 'false').toLowerCase() === 'true',
+            peanuts: String(req.body.allergens?.peanuts || 'false').toLowerCase() === 'true',
+            nuts: String(req.body.allergens?.nuts || 'false').toLowerCase() === 'true',
+            shellfish: String(req.body.allergens?.shellfish || 'false').toLowerCase() === 'true',
+            fish: String(req.body.allergens?.fish || 'false').toLowerCase() === 'true',
+            soy: String(req.body.allergens?.soy || 'false').toLowerCase() === 'true',
+            gluten: String(req.body.allergens?.gluten || 'false').toLowerCase() === 'true',
+          }
+        };
+      }
 
       const parsed = insertMenuItemSchema.safeParse(processedData);
 
