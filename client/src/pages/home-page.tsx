@@ -1108,7 +1108,9 @@ export default function HomePage() {
                         <h3 className="text-xl font-semibold mb-2">{item.name}</h3>
                         <p className="text-muted-foreground mb-4">{item.description}</p>
                         <div className="flex justify-between items-center">
-                          <span className="font-semibold">${parseFloat(item.price).toFixed(2)}</span>
+                          <div className="flex items-center">
+                            <span className="font-semibold">{item.price ? `$${parseFloat(item.price).toFixed(2)}` : ''}</span>
+                          </div>
                           <div className="flex flex-wrap gap-2">
                             {Object.entries(item.allergens)
                               .filter(([_, value]) => value)
