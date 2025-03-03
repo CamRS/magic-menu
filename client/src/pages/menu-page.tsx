@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { X } from "lucide-react";
-import { courseTypes, type MenuItem, type InsertMenuItem, insertMenuItemSchema, type Restaurant } from "@shared/schema";
+import { courseTypes, type MenuItem, type InsertMenuItem, insertMenuItemSchema } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -106,17 +106,11 @@ export default function MenuPage() {
 
   useEffect(() => {
     if (editItem) {
-      const formattedPrice = parseFloat(editItem.price).toFixed(2);
-
-      const courseType = courseTypes.includes(editItem.courseType as any)
-        ? editItem.courseType
-        : "Appetizers";
-
       const formData = {
         name: editItem.name,
         description: editItem.description,
-        price: formattedPrice,
-        courseType,
+        price: editItem.price || "",
+        courseType: editItem.courseType,
         customTags: editItem.customTags || [],
         restaurantId: editItem.restaurantId,
         image: editItem.image || "",
@@ -142,7 +136,7 @@ export default function MenuPage() {
       const formattedData = {
         ...updateData,
         restaurantId: parseInt(restaurantId || "0"),
-        price: updateData.price.toString().replace(/^\$/, ''),
+        price: updateData.price?.trim() || null,
         image: updateData.image || '',
         customTags: updateData.customTags || [],
       };
@@ -165,7 +159,6 @@ export default function MenuPage() {
       });
     },
     onError: (error: Error) => {
-      console.error('Update mutation error:', error);
       toast({
         title: "Error",
         description: error.message,
@@ -179,7 +172,7 @@ export default function MenuPage() {
       const formattedData = {
         ...data,
         restaurantId: parseInt(restaurantId || "0"),
-        price: data.price.replace(/^\$/, ''),
+        price: data.price?.trim() || null,
         image: data.image || '',
         customTags: data.customTags || [],
       };
@@ -213,14 +206,13 @@ export default function MenuPage() {
     try {
       const formattedData = {
         ...data,
-        price: parseFloat(data.price.replace(/[^\d.-]/g, '')).toFixed(2),
+        price: data.price?.trim() || null,
       };
 
       if (editItem) {
         await updateMutation.mutateAsync({
           ...formattedData,
           id: editItem.id,
-          restaurantId: parseInt(restaurantId || "0"),
         });
       } else {
         await createMutation.mutateAsync(formattedData);
@@ -457,13 +449,13 @@ export default function MenuPage() {
               className="bg-[#1E1E1E]/80 border-none text-white overflow-hidden"
             >
               <CardContent className="p-4">
-                {item.image ? (
+                {item.image && (
                   <img
                     src={item.image}
                     alt={item.name}
                     className="w-full h-48 object-cover rounded-lg mb-4"
                   />
-                ) : null}
+                )}
                 <div className="space-y-2">
                   <div className="flex justify-between items-start">
                     <h3 className="text-xl font-bold">{item.name}</h3>
@@ -511,147 +503,140 @@ export default function MenuPage() {
                   <DialogHeader>
                     <DialogTitle>{editItem ? "Edit Menu Item" : "Add Menu Item"}</DialogTitle>
                   </DialogHeader>
-                  <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-                    <div className="grid grid-cols-2 gap-6">
-                      <div className="space-y-4">
-                        <div>
-                          <Label htmlFor="name">Name</Label>
-                          <Input id="name" {...form.register("name")} />
-                          {form.formState.errors.name && (
-                            <p className="text-sm text-red-500 mt-1">
-                              {form.formState.errors.name.message}
-                            </p>
-                          )}
-                        </div>
-                        <div>
-                          <Label htmlFor="description">Description</Label>
-                          <Textarea id="description" {...form.register("description")} />
-                          {form.formState.errors.description && (
-                            <p className="text-sm text-red-500 mt-1">
-                              {form.formState.errors.description.message}
-                            </p>
-                          )}
-                        </div>
-                        <div>
-                          <Label htmlFor="price">Price</Label>
-                          <Input id="price" {...form.register("price")} />
-                          {form.formState.errors.price && (
-                            <p className="text-sm text-red-500 mt-1">
-                              {form.formState.errors.price.message}
-                            </p>
-                          )}
-                        </div>
-                        <div>
-                          <Label htmlFor="courseType">Course Type</Label>
-                          <Select
-                            onValueChange={(value) => form.setValue("courseType", value as any)}
-                            defaultValue={form.getValues("courseType")}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select course type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {courseTypes.map((type) => (
-                                <SelectItem key={type} value={type}>
-                                  {type}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          {form.formState.errors.courseType && (
-                            <p className="text-sm text-red-500 mt-1">
-                              {form.formState.errors.courseType.message}
-                            </p>
-                          )}
-                        </div>
-                        {form.watch("courseType") === "Custom" && (
-                          <div>
-                            <Label htmlFor="customTag">Custom Tags</Label>
-                            <div className="flex gap-2 mb-2">
-                              {form.watch("customTags").map((tag, index) => (
-                                <Badge key={index} variant="secondary" className="flex items-center gap-1">
-                                  {tag}
-                                  <X
-                                    className="h-3 w-3 cursor-pointer text-white"
-                                    onClick={() => {
-                                      const newTags = [...form.getValues("customTags")];
-                                      newTags.splice(index, 1);
-                                      form.setValue("customTags", newTags);
-                                    }}
-                                  />
-                                </Badge>
-                              ))}
-                            </div>
-                            <div className="flex gap-2">
-                              <Input
-                                id="customTag"
-                                placeholder="Add a custom tag"
-                                onKeyPress={(e) => {
-                                  if (e.key === "Enter") {
-                                    e.preventDefault();
-                                    const input = e.currentTarget;
-                                    const value = input.value.trim();
-                                    if (value && !form.getValues("customTags").includes(value)) {
-                                      form.setValue("customTags", [...form.getValues("customTags"), value]);
-                                      input.value = "";
-                                    }
-                                  }
+                  <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+                    <div>
+                      <Label htmlFor="name">Name</Label>
+                      <Input {...form.register("name")} />
+                      {form.formState.errors.name && (
+                        <p className="text-sm text-destructive mt-1">{form.formState.errors.name.message}</p>
+                      )}
+                    </div>
+                    <div>
+                      <Label htmlFor="description">Description</Label>
+                      <Textarea {...form.register("description")} />
+                      {form.formState.errors.description && (
+                        <p className="text-sm text-destructive mt-1">{form.formState.errors.description.message}</p>
+                      )}
+                    </div>
+                    <div>
+                      <Label htmlFor="price">Price (optional)</Label>
+                      <Input 
+                        {...form.register("price")} 
+                        placeholder="Leave empty for no price"
+                      />
+                      {form.formState.errors.price && (
+                        <p className="text-sm text-destructive mt-1">{form.formState.errors.price.message}</p>
+                      )}
+                    </div>
+                    <div>
+                      <Label htmlFor="courseType">Course Type</Label>
+                      <Select
+                        onValueChange={(value) => form.setValue("courseType", value as any)}
+                        defaultValue={form.getValues("courseType")}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select course type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {courseTypes.map((type) => (
+                            <SelectItem key={type} value={type}>
+                              {type}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {form.formState.errors.courseType && (
+                        <p className="text-sm text-destructive mt-1">
+                          {form.formState.errors.courseType.message}
+                        </p>
+                      )}
+                    </div>
+                    {form.watch("courseType") === "Custom" && (
+                      <div>
+                        <Label htmlFor="customTag">Custom Tags</Label>
+                        <div className="flex gap-2 mb-2">
+                          {form.watch("customTags").map((tag, index) => (
+                            <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                              {tag}
+                              <X
+                                className="h-3 w-3 cursor-pointer text-white"
+                                onClick={() => {
+                                  const newTags = [...form.getValues("customTags")];
+                                  newTags.splice(index, 1);
+                                  form.setValue("customTags", newTags);
                                 }}
                               />
-                            </div>
-                          </div>
-                        )}
-                        <div>
-                          <Label htmlFor="image">Image</Label>
-                          <div
-                            className="border-2 border-dashed border-gray-300 rounded-lg p-6 cursor-pointer hover:border-primary transition-colors"
-                            onDragOver={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                            }}
-                            onDrop={handleImageDrop}
-                          >
-                            <Input
-                              id="image"
-                              type="file"
-                              accept="image/*"
-                              onChange={handleImageUpload}
-                              className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
-                            />
-                            <p className="text-sm text-muted-foreground mt-2">
-                              Drag and drop an image here or click to select
-                            </p>
-                            {form.watch("image") && (
-                              <img
-                                src={form.watch("image")}
-                                alt="Preview"
-                                className="mt-4 max-h-40 rounded-lg"
-                              />
-                            )}
-                          </div>
-                          {form.formState.errors.image && (
-                            <p className="text-sm text-destructive mt-1">
-                              {form.formState.errors.image.message}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                      <div>
-                        <Label>Allergens</Label>
-                        <div className="grid grid-cols-2 gap-4 mt-2">
-                          {(Object.keys(form.getValues().allergens) as Array<keyof AllergenInfo>).map((key) => (
-                            <div key={key} className="flex items-center space-x-2">
-                              <Checkbox
-                                id={key}
-                                checked={form.getValues().allergens[key]}
-                                onCheckedChange={(checked) => handleAllergenChange(key, checked as boolean)}
-                              />
-                              <Label htmlFor={key} className="capitalize">
-                                {key}
-                              </Label>
-                            </div>
+                            </Badge>
                           ))}
                         </div>
+                        <div className="flex gap-2">
+                          <Input
+                            id="customTag"
+                            placeholder="Add a custom tag"
+                            onKeyPress={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                const input = e.currentTarget;
+                                const value = input.value.trim();
+                                if (value && !form.getValues("customTags").includes(value)) {
+                                  form.setValue("customTags", [...form.getValues("customTags"), value]);
+                                  input.value = "";
+                                }
+                              }
+                            }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                    <div>
+                      <Label htmlFor="image">Image</Label>
+                      <div
+                        className="border-2 border-dashed border-gray-300 rounded-lg p-6 cursor-pointer hover:border-primary transition-colors"
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                        }}
+                        onDrop={handleImageDrop}
+                      >
+                        <Input
+                          id="image"
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageUpload}
+                          className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+                        />
+                        <p className="text-sm text-muted-foreground mt-2">
+                          Drag and drop an image here or click to select
+                        </p>
+                        {form.watch("image") && (
+                          <img
+                            src={form.watch("image")}
+                            alt="Preview"
+                            className="mt-4 max-h-40 rounded-lg"
+                          />
+                        )}
+                      </div>
+                      {form.formState.errors.image && (
+                        <p className="text-sm text-destructive mt-1">
+                          {form.formState.errors.image.message}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <Label>Allergens</Label>
+                      <div className="grid grid-cols-2 gap-4 mt-2">
+                        {(Object.keys(form.getValues().allergens) as Array<keyof AllergenInfo>).map((key) => (
+                          <div key={key} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={key}
+                              checked={form.getValues().allergens[key]}
+                              onCheckedChange={(checked) => handleAllergenChange(key, checked as boolean)}
+                            />
+                            <Label htmlFor={key} className="capitalize">
+                              {key}
+                            </Label>
+                          </div>
+                        ))}
                       </div>
                     </div>
                     <Button
