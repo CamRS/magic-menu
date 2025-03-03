@@ -69,7 +69,7 @@ export const courseTypes = [
 export const insertImageSchema = createInsertSchema(images);
 
 export const insertMenuItemSchema = createInsertSchema(menuItems).extend({
-  price: z.string().optional().default(''), // Make price optional with empty string default
+  price: z.string().optional().transform(val => val === undefined ? '' : val), // Transform undefined to empty string
   courseType: z.enum(courseTypes, {
     required_error: "Course type is required",
     invalid_type_error: "Invalid course type",
