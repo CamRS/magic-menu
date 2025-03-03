@@ -2,6 +2,38 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
+function validateEnvironmentVariables() {
+  const requiredVariables = {
+    'ZAPIER_API_KEY': true, // true means it's required in production
+    'VITE_DROPBOX_ACCESS_TOKEN': true,
+    'VITE_DROPBOX_APP_KEY': true,
+    'VITE_DROPBOX_APP_SECRET': true,
+    'VITE_DROPBOX_REFRESH_TOKEN': true
+  };
+
+  const missingVariables = [];
+
+  for (const [variable, required] of Object.entries(requiredVariables)) {
+    if (!process.env[variable]) {
+      if (process.env.NODE_ENV === 'production' && required) {
+        missingVariables.push(variable);
+      } else if (process.env.NODE_ENV !== 'production') {
+        log(`Warning: ${variable} is not set in development environment`, 'env-check');
+      }
+    } else {
+      log(`✓ ${variable} is configured`, 'env-check');
+    }
+  }
+
+  if (missingVariables.length > 0 && process.env.NODE_ENV === 'production') {
+    log(`Fatal: Missing required environment variables in production: ${missingVariables.join(', ')}`, 'env-check');
+    process.exit(1);
+  }
+}
+
+// Check environment variables before starting the server
+validateEnvironmentVariables();
+
 const app = express();
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: false, limit: '10mb' }));
