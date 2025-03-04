@@ -32,7 +32,8 @@ export const menuItems = pgTable("menu_items", {
   price: text("price").default(""),
   image: text("image").default(''),
   imageId: integer("image_id").references(() => images.id),
-  courseTags: text("course_type").array().default([]),
+  // Change the column definition to properly handle array type
+  courseTags: text("course_type").array().default([]).notNull(),
   course_original: text("course_original").default(""),
   displayOrder: integer("display_order").default(0),
   allergens: jsonb("allergens").$type<{

@@ -312,66 +312,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "CSV file is empty" });
       }
 
-      // Verify header row - case insensitive comparison
-      const expectedHeaders = ["Name", "Description", "Price", "Course Tags", "Custom Tags", "Allergens"];
-      const headers = rows[0].map(header => header.trim());
-      const headersMatch = expectedHeaders.every(expected =>
-        headers.some(header => header.toLowerCase() === expected.toLowerCase())
-      );
-
-      if (!headersMatch) {
-        return res.status(400).json({
-          message: "Invalid CSV format. Please use the template from the export function.",
-          expected: expectedHeaders,
-          received: headers
-        });
-      }
-
-      const results = {
-        success: 0,
-        failed: 0,
-        errors: [] as string[],
-      };
 
       // Process each row (skip header)
       for (let i = 1; i < rows.length; i++) {
         const row = rows[i].map(cell => cell.trim());
-        if (row.length !== expectedHeaders.length) {
-          results.failed++;
-          results.errors.push(`Row ${i}: Invalid number of columns`);
-          continue;
-        }
 
         try {
-          // Process course tags properly
+          // Process course tags properly - ensure we get the full tag name
           const courseTags = row[3]
-            .split(';')
-            .map(tag => {
-              // Capitalize first letter and ensure full word
-              const trimmed = tag.trim();
-              return trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
-            })
-            .filter(tag => tag.length >= 2); // Ensure minimum length
-
-          // Initialize allergens object with all false
-          const allergens = {
-            milk: false,
-            eggs: false,
-            peanuts: false,
-            nuts: false,
-            shellfish: false,
-            fish: false,
-            soy: false,
-            gluten: false,
-          };
-
-          // Process allergens string
-          const allergensList = row[5] ? row[5].split(';').map(a => a.trim().toLowerCase()) : [];
-          for (const allergen of allergensList) {
-            if (allergen in allergens) {
-              allergens[allergen as keyof typeof allergens] = true;
-            }
-          }
+            ? row[3]
+                .split(';')
+                .map(tag => tag.trim())
+                .filter(tag => tag.length > 0)
+            : [];
 
           // Clean price value - remove currency symbol and trim
           const price = row[2].replace(/^[\$£€]/, '').trim();
@@ -382,26 +335,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
             description: row[1],
             price,
             courseTags,
-            allergens,
-            image: '', // Default empty string for image
+            allergens: {
+              milk: false,
+              eggs: false,
+              peanuts: false,
+              nuts: false,
+              shellfish: false,
+              fish: false,
+              soy: false,
+              gluten: false,
+            },
+            image: '',
           };
 
-          const parsed = insertMenuItemSchema.safeParse(menuItem);
-          if (!parsed.success) {
-            results.failed++;
-            results.errors.push(`Row ${i}: ${parsed.error.errors.map(e => e.message).join(', ')}`);
-            continue;
+          // Process allergens
+          if (row[5]) {
+            const allergensList = row[5].split(';').map(a => a.trim().toLowerCase());
+            allergensList.forEach(allergen => {
+              if (allergen in menuItem.allergens) {
+                menuItem.allergens[allergen as keyof typeof menuItem.allergens] = true;
+              }
+            });
           }
 
-          await storage.createMenuItem(parsed.data);
-          results.success++;
+          await storage.createMenuItem(menuItem);
         } catch (error) {
-          results.failed++;
-          results.errors.push(`Row ${i}: Failed to process row - ${error instanceof Error ? error.message : 'Unknown error'}`);
+          console.error(`Error processing row ${i}:`, error);
+          throw error;
         }
       }
 
-      res.json(results);
+      res.json({ message: "Menu items imported successfully" });
     } catch (error) {
       console.error('Error importing menu:', error);
       res.status(500).json({ message: "Internal server error" });

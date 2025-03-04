@@ -160,7 +160,11 @@ export class DatabaseStorage implements IStorage {
       ...item,
       price: item.price === undefined || item.price === null || item.price === '' ? '' : item.price,
       // Ensure courseTags is properly handled as a string array
-      courseTags: Array.isArray(item.courseTags) ? item.courseTags : []
+      courseTags: Array.isArray(item.courseTags)
+        ? item.courseTags
+            .map(tag => tag.trim())
+            .filter(tag => tag.length > 0)
+        : []
     };
 
     // Verify restaurant ownership before creating menu item
@@ -185,9 +189,19 @@ export class DatabaseStorage implements IStorage {
       throw new Error("Menu item not found");
     }
 
+    // Process course tags if they are being updated
+    const processedUpdates = {
+      ...updates,
+      courseTags: Array.isArray(updates.courseTags)
+        ? updates.courseTags
+            .map(tag => tag.trim())
+            .filter(tag => tag.length > 0)
+        : existingItem.courseTags
+    };
+
     const [updated] = await db
       .update(menuItems)
-      .set(updates)
+      .set(processedUpdates)
       .where(eq(menuItems.id, id))
       .returning();
     return updated;
