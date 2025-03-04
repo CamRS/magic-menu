@@ -33,53 +33,69 @@ const allergensList: AllergenType[] = ['milk', 'eggs', 'peanuts', 'nuts', 'shell
 const dietaryPreferences = ['Vegetarian', 'Vegan'] as const;
 
 const MenuCard = ({ item }: { item: MenuItem }) => {
+  // Get active allergens
+  const activeAllergens = Object.entries(item.allergens)
+    .filter(([_, value]) => value)
+    .map(([key]) => key);
+
   return (
-    <Card className="h-full bg-white rounded-xl shadow-lg border border-gray-200">
+    <Card className="h-full bg-white rounded-3xl shadow-sm border border-gray-100">
       <CardContent className="p-6 flex flex-col h-full">
-        <h3 className="text-2xl font-bold text-gray-900 mb-4">
-          {item.name}
+        {/* Course type with original name */}
+        {(item.courseTags?.[0] || item.course_original) && (
+          <div className="mb-2 text-gray-600">
+            <div className="text-base">{item.courseTags?.[0]}</div>
+            {item.course_original && (
+              <div className="text-sm text-gray-500">
+                {item.course_original}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Title with original name */}
+        <div className="mb-4">
+          <h3 className="text-2xl font-bold text-gray-900">
+            {item.name}
+          </h3>
           {item.name_original && (
-            <div className="text-lg font-normal text-gray-600">
+            <div className="text-base text-gray-600">
               {item.name_original}
             </div>
           )}
-        </h3>
-
-        {/* Allergens and Dietary Tags */}
-        <div className="flex flex-wrap gap-1 items-center mb-4">
-          {Object.entries(item.allergens)
-            .filter(([_, value]) => value)
-            .map(([key]) => (
-              <Badge
-                key={key}
-                variant="outline"
-                className="bg-blue-50 text-blue-700 border-blue-200 rounded-full px-2 py-0.5 text-xs"
-              >
-                {key}
-              </Badge>
-            ))}
         </div>
 
-        <div className="flex-grow mb-4">
-          <img
-            src={item.image || foodImages[0]} // Use the new default image
-            alt={`${item.name} presentation`}
-            className="w-full h-48 object-cover rounded-lg"
-            draggable="false"
-          />
-        </div>
-
-        <p className="text-gray-700 text-sm font-medium mb-4 line-clamp-2">
-          {item.description}
-        </p>
-
-        <div className="mt-auto">
-          {item.course_original && (
-            <div className="text-sm text-gray-600 mb-2">
-              {item.course_original}
+        {/* Allergens section */}
+        {activeAllergens.length > 0 && (
+          <div className="mb-4">
+            <div className="text-sm text-gray-600 mb-2">Often Contains</div>
+            <div className="flex flex-wrap gap-2">
+              {activeAllergens.map((allergen) => (
+                <Badge
+                  key={allergen}
+                  variant="secondary"
+                  className="bg-blue-100 text-blue-700 border-none rounded-full capitalize"
+                >
+                  {allergen}
+                </Badge>
+              ))}
             </div>
-          )}
-          <span className="font-semibold">
+          </div>
+        )}
+
+        {/* Description section */}
+        {item.description && (
+          <div className="mb-4">
+            <div className="text-sm text-gray-600 mb-1">Common Description</div>
+            <p className="text-gray-800">
+              {item.description}
+            </p>
+          </div>
+        )}
+
+        {/* Price */}
+        <div className="mt-auto">
+          <span className="text-xl font-semibold text-gray-900">
             {item.price && parseFloat(item.price) > 0 ? `$${parseFloat(item.price).toFixed(2)}` : ''}
           </span>
         </div>
@@ -194,7 +210,7 @@ export default function PublicMenuPage() {
 
   return (
     <div
-      className="h-screen flex flex-col overflow-hidden bg-white"
+      className="h-screen flex flex-col overflow-hidden bg-gray-50"
       data-restaurant-id={restaurantId}
       id="public-menu-container"
     >
@@ -365,13 +381,13 @@ export default function PublicMenuPage() {
             >
               <CarouselContent className="-ml-2 md:-ml-4">
                 {filteredItems.map((item) => (
-                  <CarouselItem key={item.id} className="pl-2 md:pl-4 md:basis-1/2 lg:basis-1/3 h-[420px]">
+                  <CarouselItem key={item.id} className="pl-2 md:pl-4 md:basis-1/2 lg:basis-1/3">
                     <MenuCard item={item} />
                   </CarouselItem>
                 ))}
               </CarouselContent>
-              <CarouselPrevious className="absolute left-1 -translate-y-1/2" />
-              <CarouselNext className="absolute right-1 -translate-y-1/2" />
+              <CarouselPrevious />
+              <CarouselNext />
             </Carousel>
           )}
         </div>
@@ -380,21 +396,14 @@ export default function PublicMenuPage() {
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-3 flex justify-between items-center z-50">
         <div className="w-8 h-8 flex items-center justify-center">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M20 2H4C2.9 2 2 2.9 2 4V22L6 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2Z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M20 2H4C2.9 2 2 2.9 2 4V22L6 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </div>
         <h2 className="text-lg font-bold text-gray-800">{restaurant?.name}</h2>
         <div className="w-8 h-8 flex items-center justify-center">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="12" cy="12" r="5" stroke="white" strokeWidth="2"/>
-            <path d="M12 2V4" stroke="white" strokeWidth="2" strokeLinecap="round"/>
-            <path d="M12 20V22" stroke="white" strokeWidth="2" strokeLinecap="round"/>
-            <path d="M4.92993 4.93005L6.33993 6.34005" stroke="white" strokeWidth="2" strokeLinecap="round"/>
-            <path d="M17.6599 17.66L19.0699 19.07" stroke="white" strokeWidth="2" strokeLinecap="round"/>
-            <path d="M2 12H4" stroke="white" strokeWidth="2" strokeLinecap="round"/>
-            <path d="M20 12H22" stroke="white" strokeWidth="2" strokeLinecap="round"/>
-            <path d="M6.33993 17.66L4.92993 19.07" stroke="white" strokeWidth="2" strokeLinecap="round"/>
-            <path d="M19.0699 4.93005L17.6599 6.34005" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+            <circle cx="12" cy="12" r="5" stroke="currentColor" strokeWidth="2"/>
+            <path d="M12 2V4M12 20V22M4.93 4.93L6.34 6.34M17.66 17.66L19.07 19.07M2 12H4M20 12H22M6.34 17.66L4.93 19.07M19.07 4.93L17.66 6.34" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
           </svg>
         </div>
       </div>
