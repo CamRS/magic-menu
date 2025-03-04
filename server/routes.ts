@@ -3,7 +3,7 @@ import { z } from "zod";
 import { createServer, type Server } from "http";
 import { setupAuth, requireAuth, requireApiKey } from "./auth.js";
 import { storage } from "./storage";
-import { insertMenuItemSchema, insertRestaurantSchema, courseTypes } from "@shared/schema";
+import { insertMenuItemSchema, insertRestaurantSchema } from "@shared/schema";
 
 // Helper function to parse CSV data
 function parseCSV(csvText: string): string[][] {
@@ -237,7 +237,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const menuItems = await storage.getMenuItems(restaurantId);
 
       // Create CSV header
-      const csvHeader = "Name,Description,Price,Course Type,Custom Tags,Allergens\n";
+      const csvHeader = "Name,Description,Price,Course Tags,Custom Tags,Allergens\n";
 
       // Create CSV rows
       const csvRows = menuItems.map(item => {
@@ -246,15 +246,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .map(([key]) => key)
           .join('; ');
 
-        const customTags = item.customTags ? item.customTags.join('; ') : '';
+        const courseTags = item.courseTags ? item.courseTags.join('; ') : '';
 
         // Escape fields that might contain commas
         const escapedFields = [
           item.name.replace(/"/g, '""'),
           item.description.replace(/"/g, '""'),
           item.price,
-          item.courseType.replace(/"/g, '""'),
-          customTags.replace(/"/g, '""'),
+          courseTags.replace(/"/g, '""'),
+          "",
           allergens
         ].map(field => `"${field}"`);
 
@@ -301,7 +301,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Verify header row - case insensitive comparison
-      const expectedHeaders = ["Name", "Description", "Price", "Course Type", "Custom Tags", "Allergens"];
+      const expectedHeaders = ["Name", "Description", "Price", "Course Tags", "Custom Tags", "Allergens"];
       const headers = rows[0].map(header => header.trim());
       const headersMatch = expectedHeaders.every(expected =>
         headers.some(header => header.toLowerCase() === expected.toLowerCase())
@@ -361,8 +361,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             name: row[0],
             description: row[1],
             price,
-            courseType: row[3].trim(),
-            customTags,
+            courseTags: row[3].split(';').map(tag => tag.trim()).filter(Boolean),
             allergens,
             image: '', // Default empty string for image
           };
@@ -449,7 +448,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               description: String(item.Description || ''),
               restaurantId: parseInt(item.RestaurantID || '0'),
               price: String(item.Price || '0').replace(/[^\d.-]/g, ''),
-              courseType: item.Category,
+              courseTags: item.Category,
               customTags: [],
               image: '',
               allergens: {

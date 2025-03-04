@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Copy, Store, PlusCircle, ChevronDown, Loader2, Download, Upload, Trash2, MoreVertical, Pencil, Globe, Image as ImageIcon, QrCode } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { type Restaurant, type MenuItem, type InsertMenuItem, insertMenuItemSchema, insertRestaurantSchema, courseTypes } from "@shared/schema";
+import { type Restaurant, type MenuItem, type InsertMenuItem, insertMenuItemSchema, insertRestaurantSchema } from "@shared/schema";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -35,13 +35,6 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { X } from "lucide-react";
 import { Dropbox } from 'dropbox';
@@ -115,8 +108,7 @@ export default function HomePage() {
       name: "",
       description: "",
       price: "",
-      courseType: "Appetizers",
-      customTags: [],
+      courseTags: [], // Changed from courseType to courseTags
       restaurantId: 0,
       image: "",
       allergens: {
@@ -289,8 +281,7 @@ export default function HomePage() {
         description: editingItem.description,
         price: editingItem.price,
         image: editingItem.image || "",
-        customTags: editingItem.customTags || [],
-        courseType: editingItem.courseType as typeof courseTypes[number],
+        courseTags: editingItem.courseTags || [],
         allergens: editingItem.allergens || {
           milk: false,
           eggs: false,
@@ -380,23 +371,20 @@ export default function HomePage() {
   const handleSubmit = (data: InsertMenuItem) => {
     console.log("Form submitted with data:", data);
 
+    const formattedData = {
+      ...data,
+      restaurantId: selectedRestaurant!.id,
+      // Handle empty price - store empty string instead of null
+      price: data.price?.trim() || '',
+    };
+
     if (editingItem) {
-      console.log("Updating existing item:", editingItem.id);
-      const updateData = {
-        ...data,
+      updateMutation.mutate({
+        ...formattedData,
         id: editingItem.id,
-        restaurantId: editingItem.restaurantId,
-        // Handle empty price - store empty string instead of null
-        price: data.price?.trim() || '',
-      };
-      updateMutation.mutate(updateData);
-    } else {
-      createMutation.mutate({
-        ...data,
-        restaurantId: selectedRestaurant!.id,
-        // Handle empty price - store empty string instead of null
-        price: data.price?.trim() || '',
       });
+    } else {
+      createMutation.mutate(formattedData);
     }
   };
 
@@ -496,7 +484,7 @@ export default function HomePage() {
   };
 
   const groupedMenuItems = menuItems?.reduce((groups, item) => {
-    const group = item.courseType;
+    const group = item.courseTags; //changed from courseType to courseTags
     if (!groups[group]) {
       groups[group] = [];
     }
@@ -894,25 +882,40 @@ export default function HomePage() {
                   )}
                 </div>
                 <div>
-                  <Label htmlFor="courseType">Course Type</Label>
-                  <Select
-                    onValueChange={(value) => form.setValue("courseType", value as any)}
-                    defaultValue={form.getValues("courseType")}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select course type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {courseTypes.map((type) => (
-                        <SelectItem key={type} value={type}>
-                          {type}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {form.formState.errors.courseType && (
+                  <Label htmlFor="courseTags">Course Tags</Label> {/* Changed Label to reflect courseTags */}
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {form.watch("courseTags").map((tag, index) => (
+                      <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                        {tag}
+                        <X
+                          className="h-3 w-3 cursor-pointer"
+                          onClick={() => {
+                            const newTags = [...form.getValues("courseTags")];
+                            newTags.splice(index, 1);
+                            form.setValue("courseTags", newTags);
+                          }}
+                        />
+                      </Badge>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Add a new tag"
+                      onKeyPress={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          const value = e.currentTarget.value.trim();
+                          if (value && !form.getValues("courseTags").includes(value)) {
+                            form.setValue("courseTags", [...form.getValues("courseTags"), value]);
+                            e.currentTarget.value = "";
+                          }
+                        }
+                      }}
+                    />
+                  </div>
+                  {form.formState.errors.courseTags && (
                     <p className="text-sm text-destructive mt-1">
-                      {form.formState.errors.courseType.message}
+                      {form.formState.errors.courseTags.message}
                     </p>
                   )}
                 </div>
@@ -939,61 +942,24 @@ export default function HomePage() {
                           };
                           reader.readAsDataURL(file);
                         }
-                      }}                    />
+                      }}
+                    />
                     <p className="text-sm text-muted-foreground mt-2">
                       Drag and drop an image here or click to select
                     </p>
-                    {form.watch("image") && (
-                      <img
+                    {form.watch("image") && (                      <img
                         src={form.watch("image")}
                         alt="Preview"
-                        className="mt-4 max-h-40 rounded-lg"
+                        className="mt-4 max-w-full h-auto max-h-48 rounded"
                       />
                     )}
                   </div>
                   {form.formState.errors.image && (
-                    <p className="text-sm text-destructive mt-1">
+                    <p className="text-sm text-red-500 mt-1">
                       {form.formState.errors.image.message}
                     </p>
                   )}
                 </div>
-                {form.watch("courseType") === "Custom" && (
-                  <div>
-                    <Label htmlFor="customTag">Custom Tags</Label>
-                    <div className="flex gap-2 mb-2">
-                      {form.watch("customTags").map((tag, index) => (
-                        <Badge key={index} variant="secondary" className="flex items-center gap-1">
-                          {tag}
-                          <X
-                            className="h-3 w-3 cursor-pointer"
-                            onClick={() => {
-                              const newTags = [...form.getValues("customTags")];
-                              newTags.splice(index, 1);
-                              form.setValue("customTags",newTags);
-                            }}
-                          />
-                        </Badge>
-                      ))}
-                    </div>
-                    <div className="flex gap-2">
-                      <Input
-                        id="customTag"
-                        placeholder="Add a custom tag"
-                        onKeyPress={(e) => {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            const input = e.currentTarget;
-                            const value = input.value.trim();
-                            if (value && !form.getValues("customTags").includes(value)) {
-                              form.setValue("customTags", [...form.getValues("customTags"), value]);
-                              input.value = "";
-                            }
-                          }
-                        }}
-                      />
-                    </div>
-                  </div>
-                )}
                 <div>
                   <Label>Allergens</Label>
                   <div className="grid grid-cols-2 gap-4 mt-2">
@@ -1054,7 +1020,7 @@ export default function HomePage() {
                       <TableHead>Name</TableHead>
                       <TableHead>Description</TableHead>
                       <TableHead>Price</TableHead>
-                      <TableHead>Course Type</TableHead>
+                      <TableHead>Course Tags</TableHead> {/* Changed to courseTags */}
                       <TableHead>Custom Tags</TableHead>
                       <TableHead>Allergens</TableHead>
                     </TableRow>
@@ -1074,7 +1040,7 @@ export default function HomePage() {
                 <div className="text-sm space-y-2">
                   <p><strong>Guidelines:</strong></p>
                   <ul className="list-disc list-inside space-y-1">
-                    <li>Course Type must be one of: {courseTypes.join(", ")}</li>
+                    <li>Course Tags should be a valid tag (This needs to be defined based on the schema)</li> {/* Changed to courseTags */}
                     <li>Price should be a decimal number (e.g., 2.49)</li>
                     <li>Custom Tags should be semicolon-separated (e.g., "Spicy;Vegetarian")</li>
                     <li>Allergens should be semicolon-separated, valid options: milk, eggs, peanuts, nuts, shellfish, fish, soy, gluten</li>

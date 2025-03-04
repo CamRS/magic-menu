@@ -31,8 +31,7 @@ export const menuItems = pgTable("menu_items", {
   price: text("price").default(""), // Set default as empty string
   image: text("image").default(''),
   imageId: integer("image_id").references(() => images.id),
-  courseType: text("course_type").notNull(),
-  customTags: text("custom_tags").array().default([]),
+  courseTags: text("course_type").array().default([]), // Changed from courseType to courseTags array
   allergens: jsonb("allergens").$type<{
     milk: boolean;
     eggs: boolean;
@@ -56,24 +55,14 @@ export const menuItems = pgTable("menu_items", {
 
 export const insertUserSchema = createInsertSchema(users);
 export const insertRestaurantSchema = createInsertSchema(restaurants);
-
-export const courseTypes = [
-  "Appetizers",
-  "Mains",
-  "Desserts",
-  "Alcoholic",
-  "Non-Alcoholic",
-  "Custom"
-] as const;
-
 export const insertImageSchema = createInsertSchema(images);
 
 export const insertMenuItemSchema = createInsertSchema(menuItems).extend({
   price: z.string().optional().default(""),
-  customTags: z.array(z.string()).default([]),
   description: z.string().min(1, "Description is required"),
   image: z.string().optional().default(''),
   imageId: z.number().optional(),
+  courseTags: z.array(z.string()).default([]),
   allergens: z.object({
     milk: z.boolean().default(false),
     eggs: z.boolean().default(false),

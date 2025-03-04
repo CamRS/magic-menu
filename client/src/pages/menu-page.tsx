@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { X } from "lucide-react";
-import { courseTypes, type MenuItem, type InsertMenuItem, insertMenuItemSchema, type Restaurant } from "@shared/schema";
+import { type MenuItem, type InsertMenuItem, insertMenuItemSchema, type Restaurant } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -30,23 +30,14 @@ import { useState, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 
-type AllergenInfo = {
-  milk: boolean;
-  eggs: boolean;
-  peanuts: boolean;
-  nuts: boolean;
-  shellfish: boolean;
-  fish: boolean;
-  soy: boolean;
-  gluten: boolean;
-};
+type AllergenType = keyof MenuItem['allergens'];
 
 export default function MenuPage() {
   const [open, setOpen] = useState(false);
   const [editItem, setEditItem] = useState<MenuItem | null>(null);
   const [selectedItems, setSelectedItems] = useState<number[]>([]);
-  const [selectedCourse, setSelectedCourse] = useState("All Courses");
-  const [selectedAllergens, setSelectedAllergens] = useState<string[]>([]);
+  const [newTag, setNewTag] = useState("");
+  const [selectedAllergens, setSelectedAllergens] = useState<AllergenType[]>([]);
   const [location] = useLocation();
   const { toast } = useToast();
   const restaurantId = new URLSearchParams(location.split('?')[1]).get('restaurantId');
@@ -57,8 +48,7 @@ export default function MenuPage() {
       name: "",
       description: "",
       price: "",
-      courseType: "Appetizers",
-      customTags: [],
+      courseTags: [],
       restaurantId: parseInt(restaurantId || "0"),
       image: "",
       allergens: {
@@ -106,18 +96,13 @@ export default function MenuPage() {
 
   useEffect(() => {
     if (editItem) {
-      const formattedPrice = parseFloat(editItem.price).toFixed(2);
-
-      const courseType = courseTypes.includes(editItem.courseType as any)
-        ? editItem.courseType
-        : "Appetizers";
+      const formattedPrice = editItem.price ? parseFloat(editItem.price).toFixed(2) : '';
 
       const formData = {
         name: editItem.name,
         description: editItem.description,
         price: formattedPrice,
-        courseType,
-        customTags: editItem.customTags || [],
+        courseTags: editItem.courseTags || [],
         restaurantId: editItem.restaurantId,
         image: editItem.image || "",
         allergens: editItem.allergens || {
@@ -144,7 +129,7 @@ export default function MenuPage() {
         restaurantId: parseInt(restaurantId || "0"),
         price: updateData.price.toString().replace(/^\$/, ''),
         image: updateData.image || '',
-        customTags: updateData.customTags || [],
+        courseTags: updateData.courseTags || [],
       };
 
       const res = await apiRequest("PATCH", `/api/menu-items/${id}`, formattedData);
@@ -181,7 +166,7 @@ export default function MenuPage() {
         restaurantId: parseInt(restaurantId || "0"),
         price: data.price.replace(/^\$/, ''),
         image: data.image || '',
-        customTags: data.customTags || [],
+        courseTags: data.courseTags || [],
       };
 
       const res = await apiRequest("POST", "/api/menu-items", formattedData);
@@ -372,10 +357,9 @@ export default function MenuPage() {
   });
 
   const filteredMenuItems = menuItems?.filter(item => {
-    const matchesCourse = selectedCourse === "All Courses" || item.courseType === selectedCourse;
     const matchesAllergens = selectedAllergens.length === 0 ||
-      !selectedAllergens.some(allergen => item.allergens[allergen as keyof AllergenInfo]);
-    return matchesCourse && matchesAllergens;
+      !selectedAllergens.some(allergen => item.allergens[allergen]);
+    return matchesAllergens;
   });
 
   if (!restaurantId) {
@@ -411,17 +395,17 @@ export default function MenuPage() {
                 {Object.keys(form.getValues().allergens).map((allergen) => (
                   <Button
                     key={allergen}
-                    variant={selectedAllergens.includes(allergen) ? "default" : "outline"}
+                    variant={selectedAllergens.includes(allergen as AllergenType) ? "default" : "outline"}
                     className={`rounded-full ${
-                      selectedAllergens.includes(allergen)
+                      selectedAllergens.includes(allergen as AllergenType)
                         ? "bg-blue-600 text-white"
                         : "bg-[#1E1E1E] text-white hover:bg-[#2E2E2E]"
                     }`}
                     onClick={() => {
-                      setSelectedAllergens(prev =>
-                        prev.includes(allergen)
-                          ? prev.filter(a => a !== allergen)
-                          : [...prev, allergen]
+                      setSelectedAllergens((prev) =>
+                        prev.includes(allergen as AllergenType)
+                          ? prev.filter((a) => a !== allergen)
+                          : [...prev, allergen as AllergenType]
                       );
                     }}
                   >
@@ -431,22 +415,6 @@ export default function MenuPage() {
               </div>
             </div>
 
-            <Select
-              value={selectedCourse}
-              onValueChange={setSelectedCourse}
-            >
-              <SelectTrigger className="bg-[#1E1E1E] border-none text-white w-full">
-                <SelectValue placeholder="All Courses" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="All Courses">All Courses</SelectItem>
-                {courseTypes.map((type) => (
-                  <SelectItem key={type} value={type}>
-                    {type}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
         </div>
 
@@ -542,65 +510,52 @@ export default function MenuPage() {
                           )}
                         </div>
                         <div>
-                          <Label htmlFor="courseType">Course Type</Label>
-                          <Select
-                            onValueChange={(value) => form.setValue("courseType", value as any)}
-                            defaultValue={form.getValues("courseType")}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select course type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {courseTypes.map((type) => (
-                                <SelectItem key={type} value={type}>
-                                  {type}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          {form.formState.errors.courseType && (
-                            <p className="text-sm text-red-500 mt-1">
-                              {form.formState.errors.courseType.message}
-                            </p>
-                          )}
-                        </div>
-                        {form.watch("courseType") === "Custom" && (
-                          <div>
-                            <Label htmlFor="customTag">Custom Tags</Label>
-                            <div className="flex gap-2 mb-2">
-                              {form.watch("customTags").map((tag, index) => (
-                                <Badge key={index} variant="secondary" className="flex items-center gap-1">
-                                  {tag}
-                                  <X
-                                    className="h-3 w-3 cursor-pointer text-white"
-                                    onClick={() => {
-                                      const newTags = [...form.getValues("customTags")];
-                                      newTags.splice(index, 1);
-                                      form.setValue("customTags", newTags);
-                                    }}
-                                  />
-                                </Badge>
-                              ))}
-                            </div>
-                            <div className="flex gap-2">
-                              <Input
-                                id="customTag"
-                                placeholder="Add a custom tag"
-                                onKeyPress={(e) => {
-                                  if (e.key === "Enter") {
-                                    e.preventDefault();
-                                    const input = e.currentTarget;
-                                    const value = input.value.trim();
-                                    if (value && !form.getValues("customTags").includes(value)) {
-                                      form.setValue("customTags", [...form.getValues("customTags"), value]);
-                                      input.value = "";
-                                    }
-                                  }
-                                }}
-                              />
-                            </div>
+                          <Label>Course Tags</Label>
+                          <div className="flex flex-wrap gap-2 mb-2">
+                            {form.watch("courseTags").map((tag, index) => (
+                              <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                                {tag}
+                                <X
+                                  className="h-3 w-3 cursor-pointer text-white"
+                                  onClick={() => {
+                                    const newTags = [...form.getValues("courseTags")];
+                                    newTags.splice(index, 1);
+                                    form.setValue("courseTags", newTags);
+                                  }}
+                                />
+                              </Badge>
+                            ))}
                           </div>
-                        )}
+                          <div className="flex gap-2">
+                            <Input
+                              value={newTag}
+                              onChange={(e) => setNewTag(e.target.value)}
+                              placeholder="Add a new tag"
+                              onKeyPress={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  const value = newTag.trim();
+                                  if (value && !form.getValues("courseTags").includes(value)) {
+                                    form.setValue("courseTags", [...form.getValues("courseTags"), value]);
+                                    setNewTag("");
+                                  }
+                                }
+                              }}
+                            />
+                            <Button
+                              type="button"
+                              onClick={() => {
+                                const value = newTag.trim();
+                                if (value && !form.getValues("courseTags").includes(value)) {
+                                  form.setValue("courseTags", [...form.getValues("courseTags"), value]);
+                                  setNewTag("");
+                                }
+                              }}
+                            >
+                              Add
+                            </Button>
+                          </div>
+                        </div>
                         <div>
                           <Label htmlFor="image">Image</Label>
                           <div

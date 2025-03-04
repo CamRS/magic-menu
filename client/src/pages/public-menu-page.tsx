@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useRoute } from "wouter";
-import { type MenuItem, type Restaurant, courseTypes } from "@shared/schema";
+import { type MenuItem, type Restaurant } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { ChevronDown, Loader2, Search, ChevronUp } from "lucide-react";
@@ -92,10 +92,10 @@ export default function PublicMenuPage() {
   const [matches, params] = useRoute("/menu/:restaurantId");
   const restaurantId = params?.restaurantId ? parseInt(params.restaurantId) : null;
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCourse, setSelectedCourse] = useState<string>("all");
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedAllergens, setSelectedAllergens] = useState<AllergenType[]>([]);
   const [selectedDietary, setSelectedDietary] = useState<typeof dietaryPreferences[number][]>([]);
-  const [activeDropdown, setActiveDropdown] = useState<"filters" | "courses" | null>(null);
+  const [activeDropdown, setActiveDropdown] = useState<"filters" | "tags" | null>(null);
 
   const { data: restaurant, isLoading: isLoadingRestaurant } = useQuery<Restaurant>({
     queryKey: [`/api/restaurants/${restaurantId}`],
@@ -129,21 +129,34 @@ export default function PublicMenuPage() {
     return <p className="text-red-500">Error loading menu items: {error.message}</p>;
   }
 
+  // Get unique tags from all menu items
+  const uniqueTags = useMemo(() => {
+    if (!menuItems) return [];
+    const tagSet = new Set<string>();
+    menuItems.forEach(item => {
+      item.courseTags?.forEach(tag => tagSet.add(tag));
+    });
+    return Array.from(tagSet).sort();
+  }, [menuItems]);
+
   const filteredItems = useMemo(() => {
     if (!menuItems) return [];
 
     const lowerSearch = searchTerm.toLowerCase();
 
-    return menuItems.filter(({ name, description, courseType, allergens, dietaryPreferences }) => {
-      return (
-        (!searchTerm || name.toLowerCase().includes(lowerSearch) || description.toLowerCase().includes(lowerSearch)) &&
-        (selectedCourse === "all" || courseType === selectedCourse) &&
-        selectedAllergens.every(allergen => !allergens[allergen]) &&
-        selectedDietary.every(diet => dietaryPreferences?.includes(diet))
+    return menuItems.filter(({ name, description, courseTags, allergens, dietaryPreferences }) => {
+      const matchesSearch = !searchTerm || 
+        name.toLowerCase().includes(lowerSearch) || 
+        description.toLowerCase().includes(lowerSearch);
 
-      );
+      const matchesTags = selectedTags.length === 0 || 
+        selectedTags.every(tag => courseTags?.includes(tag));
+
+      const matchesAllergens = selectedAllergens.every(allergen => !allergens[allergen]);
+
+      return matchesSearch && matchesTags && matchesAllergens;
     });
-  }, [menuItems, searchTerm, selectedCourse, selectedAllergens, selectedDietary]);
+  }, [menuItems, searchTerm, selectedTags, selectedAllergens]);
 
   if (!matches || !restaurantId) {
     return (
@@ -161,7 +174,7 @@ export default function PublicMenuPage() {
     );
   }
 
-  const toggleDropdown = (dropdown: "filters" | "courses") => {
+  const toggleDropdown = (dropdown: "filters" | "tags") => {
     setActiveDropdown(activeDropdown === dropdown ? null : dropdown);
   };
 
@@ -203,13 +216,13 @@ export default function PublicMenuPage() {
 
             <Button
               variant="outline"
-              onClick={() => toggleDropdown("courses")}
+              onClick={() => toggleDropdown("tags")}
               className={`flex-1 justify-between items-center px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 ${
-                activeDropdown === "courses" ? "bg-gray-50" : ""
+                activeDropdown === "tags" ? "bg-gray-50" : ""
               }`}
             >
-              {selectedCourse === "all" ? "All Items" : selectedCourse}
-              {activeDropdown === "courses" ? (
+              {selectedTags.length === 0 ? "All Items" : `${selectedTags.length} Selected`}
+              {activeDropdown === "tags" ? (
                 <ChevronUp className="h-4 w-4" />
               ) : (
                 <ChevronDown className="h-4 w-4" />
@@ -280,8 +293,8 @@ export default function PublicMenuPage() {
         </Collapsible>
 
         <Collapsible
-          open={activeDropdown === "courses"}
-          onOpenChange={(open) => setActiveDropdown(open ? "courses" : null)}
+          open={activeDropdown === "tags"}
+          onOpenChange={(open) => setActiveDropdown(open ? "tags" : null)}
         >
           <CollapsibleContent className="bg-white shadow-sm border-t">
             <div className="max-w-md mx-auto px-4 py-6">
@@ -289,28 +302,31 @@ export default function PublicMenuPage() {
                 <Button
                   variant="ghost"
                   className={`w-full justify-start text-lg ${
-                    selectedCourse === "all" ? "bg-gray-50" : ""
+                    selectedTags.length === 0 ? "bg-gray-50" : ""
                   }`}
                   onClick={() => {
-                    setSelectedCourse("all");
+                    setSelectedTags([]);
                     setActiveDropdown(null);
                   }}
                 >
                   All Items
                 </Button>
-                {courseTypes.map((type) => (
+                {uniqueTags.map((tag) => (
                   <Button
-                    key={type}
+                    key={tag}
                     variant="ghost"
                     className={`w-full justify-start text-lg ${
-                      selectedCourse === type ? "bg-gray-50" : ""
+                      selectedTags.includes(tag) ? "bg-gray-50" : ""
                     }`}
                     onClick={() => {
-                      setSelectedCourse(type);
-                      setActiveDropdown(null);
+                      setSelectedTags(prev =>
+                        prev.includes(tag)
+                          ? prev.filter(t => t !== tag)
+                          : [...prev, tag]
+                      );
                     }}
                   >
-                    {type}
+                    {tag}
                   </Button>
                 ))}
               </div>
