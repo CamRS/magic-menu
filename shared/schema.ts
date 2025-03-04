@@ -27,11 +27,13 @@ export const menuItems = pgTable("menu_items", {
   id: serial("id").primaryKey(),
   restaurantId: integer("restaurant_id").notNull().references(() => restaurants.id),
   name: text("name").notNull(),
+  name_original: text("name_original").default(""),
   description: text("description").notNull(),
   price: text("price").default(""), // Set default as empty string
   image: text("image").default(''),
   imageId: integer("image_id").references(() => images.id),
   courseTags: text("course_type").array().default([]), // Changed from courseType to courseTags array
+  course_original: text("course_original").default(""),
   allergens: jsonb("allergens").$type<{
     milk: boolean;
     eggs: boolean;
@@ -62,6 +64,8 @@ export const insertMenuItemSchema = createInsertSchema(menuItems).extend({
   description: z.string().min(1, "Description is required"),
   image: z.string().optional().default(''),
   imageId: z.number().optional(),
+  name_original: z.string().optional().default(""),
+  course_original: z.string().optional().default(""),
   courseTags: z.array(z.string()).default([]),
   allergens: z.object({
     milk: z.boolean().default(false),
