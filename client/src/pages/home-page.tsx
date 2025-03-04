@@ -106,9 +106,11 @@ export default function HomePage() {
     resolver: zodResolver(insertMenuItemSchema),
     defaultValues: {
       name: "",
+      name_original: "",
       description: "",
       price: "",
-      courseTags: [], // Changed from courseType to courseTags
+      courseTags: [],
+      course_original: "",
       restaurantId: 0,
       image: "",
       allergens: {
@@ -278,10 +280,12 @@ export default function HomePage() {
       console.log("Setting form data for editing:", editingItem);
       const formData = {
         name: editingItem.name,
+        name_original: editingItem.name_original || "",
         description: editingItem.description,
         price: editingItem.price,
         image: editingItem.image || "",
         courseTags: editingItem.courseTags || [],
+        course_original: editingItem.course_original || "",
         allergens: editingItem.allergens || {
           milk: false,
           eggs: false,
@@ -484,7 +488,7 @@ export default function HomePage() {
   };
 
   const groupedMenuItems = menuItems?.reduce((groups, item) => {
-    const group = item.courseTags; //changed from courseType to courseTags
+    const group = item.courseTags;
     if (!groups[group]) {
       groups[group] = [];
     }
@@ -868,6 +872,13 @@ export default function HomePage() {
                   )}
                 </div>
                 <div>
+                  <Label htmlFor="name_original">Original Name</Label>
+                  <Input {...form.register("name_original")} placeholder="Leave empty if same as Name" />
+                  {form.formState.errors.name_original && (
+                    <p className="text-sm text-destructive mt-1">{form.formState.errors.name_original.message}</p>
+                  )}
+                </div>
+                <div>
                   <Label htmlFor="description">Description</Label>
                   <Textarea {...form.register("description")} />
                   {form.formState.errors.description && (
@@ -882,7 +893,7 @@ export default function HomePage() {
                   )}
                 </div>
                 <div>
-                  <Label htmlFor="courseTags">Course Tags</Label> {/* Changed Label to reflect courseTags */}
+                  <Label htmlFor="courseTags">Course Tags</Label>
                   <div className="flex flex-wrap gap-2 mb-2">
                     {form.watch("courseTags").map((tag, index) => (
                       <Badge key={index} variant="secondary" className="flex items-center gap-1">
@@ -913,11 +924,13 @@ export default function HomePage() {
                       }}
                     />
                   </div>
-                  {form.formState.errors.courseTags && (
-                    <p className="text-sm text-destructive mt-1">
-                      {form.formState.errors.courseTags.message}
-                    </p>
-                  )}
+                  <div className="mt-2">
+                    <Label htmlFor="course_original">Original Course</Label>
+                    <Input {...form.register("course_original")} placeholder="Original course category if different" />
+                    {form.formState.errors.course_original && (
+                      <p className="text-sm text-destructive mt-1">{form.formState.errors.course_original.message}</p>
+                    )}
+                  </div>
                 </div>
                 <div>
                   <Label htmlFor="image">Image</Label>
@@ -947,7 +960,8 @@ export default function HomePage() {
                     <p className="text-sm text-muted-foreground mt-2">
                       Drag and drop an image here or click to select
                     </p>
-                    {form.watch("image") && (                      <img
+                    {form.watch("image") && (
+                      <img
                         src={form.watch("image")}
                         alt="Preview"
                         className="mt-4 max-w-full h-auto max-h-48 rounded"
@@ -1020,7 +1034,7 @@ export default function HomePage() {
                       <TableHead>Name</TableHead>
                       <TableHead>Description</TableHead>
                       <TableHead>Price</TableHead>
-                      <TableHead>Course Tags</TableHead> {/* Changed to courseTags */}
+                      <TableHead>Course Tags</TableHead>
                       <TableHead>Custom Tags</TableHead>
                       <TableHead>Allergens</TableHead>
                     </TableRow>
@@ -1040,7 +1054,7 @@ export default function HomePage() {
                 <div className="text-sm space-y-2">
                   <p><strong>Guidelines:</strong></p>
                   <ul className="list-disc list-inside space-y-1">
-                    <li>Course Tags should be a valid tag (This needs to be defined based on the schema)</li> {/* Changed to courseTags */}
+                    <li>Course Tags should be a valid tag (This needs to be defined based on the schema)</li>
                     <li>Price should be a decimal number (e.g., 2.49)</li>
                     <li>Custom Tags should be semicolon-separated (e.g., "Spicy;Vegetarian")</li>
                     <li>Allergens should be semicolon-separated, valid options: milk, eggs, peanuts, nuts, shellfish, fish, soy, gluten</li>
