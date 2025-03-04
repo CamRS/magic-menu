@@ -144,18 +144,20 @@ export default function PublicMenuPage() {
 
     const lowerSearch = searchTerm.toLowerCase();
 
-    return menuItems.filter(({ name, description, courseTags, allergens, dietaryPreferences }) => {
-      const matchesSearch = !searchTerm || 
-        name.toLowerCase().includes(lowerSearch) || 
-        description.toLowerCase().includes(lowerSearch);
+    return menuItems
+      .filter(({ name, description, courseTags, allergens }) => {
+        const matchesSearch = !searchTerm || 
+          name.toLowerCase().includes(lowerSearch) || 
+          description.toLowerCase().includes(lowerSearch);
 
-      const matchesTags = selectedTags.length === 0 || 
-        selectedTags.every(tag => courseTags?.includes(tag));
+        const matchesTags = selectedTags.length === 0 || 
+          selectedTags.every(tag => courseTags?.includes(tag));
 
-      const matchesAllergens = selectedAllergens.every(allergen => !allergens[allergen]);
+        const matchesAllergens = selectedAllergens.every(allergen => !allergens[allergen]);
 
-      return matchesSearch && matchesTags && matchesAllergens;
-    });
+        return matchesSearch && matchesTags && matchesAllergens;
+      })
+      .sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0)); // Sort by displayOrder
   }, [menuItems, searchTerm, selectedTags, selectedAllergens]);
 
   if (!matches || !restaurantId) {

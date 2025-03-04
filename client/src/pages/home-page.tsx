@@ -41,6 +41,7 @@ import { Dropbox } from 'dropbox';
 import { QRCodeSVG } from 'qrcode.react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 
 // Remove the hardcoded token and use environment variables
 const DROPBOX_ACCESS_TOKEN = import.meta.env.VITE_DROPBOX_ACCESS_TOKEN || '';
@@ -459,6 +460,31 @@ export default function HomePage() {
     },
   });
 
+  const reorderMutation = useMutation({
+    mutationFn: async ({ id, displayOrder }: { id: number; displayOrder: number }) => {
+      const response = await apiRequest("PATCH", `/api/menu-items/${id}`, { displayOrder });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to reorder menu items");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/menu-items", selectedRestaurant?.id] });
+      toast({
+        title: "Success",
+        description: "Menu items reordered successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   useEffect(() => {
     if (!selectedRestaurant && restaurants?.length) {
       setSelectedRestaurant(restaurants[0]);
@@ -698,6 +724,27 @@ export default function HomePage() {
         </div>
       </div>
     );
+  };
+
+  const handleDragEnd = async (result: any) => {
+    if (!result.destination) return;
+
+    const { source, destination } = result;
+    const sourceTag = source.droppableId;
+    const destTag = destination.droppableId;
+
+    if (sourceTag === destTag) {
+      const items = Array.from(groupedMenuItems[sourceTag] || []);
+      const [reorderedItem] = items.splice(source.index, 1);
+      items.splice(destination.index, 0, reorderedItem);
+
+      // Update displayOrder for all affected items
+      await Promise.all(
+        items.map((item, index) =>
+          reorderMutation.mutate({ id: item.id, displayOrder: index })
+        )
+      );
+    }
   };
 
   return (
@@ -1156,76 +1203,46 @@ export default function HomePage() {
             </DialogContent>
           </Dialog>
 
-          <div className="space-y-8">
-            {Object.entries(groupedMenuItems).map(([courseType, items]) => (
-              <div key={courseType}>
-                <h2 className="text-2xl font-semibold mb-4 text-primary">{courseType}</h2>
-                <div className="grid md:grid-cols-2 gap-6">
-                  {items.map((item) => (
-                    <Card
-                      key={item.id}
-                      className={`relative ${
-                        selectedItems.includes(item.id) ? "ring-2 ring-primary" : ""
-                      }`}
-                      onClick={(e) => {
-                        if (!(e.target as HTMLElement).closest('[data-dropdown-trigger="true"]')) {
-                          toggleItemSelection(item.id);
-                        }
-                      }}
+          <DragDropContext onDragEnd={handleDragEnd}>
+            {Object.entries(groupedMenuItems).map(([tag, items]) => (
+              <div key={tag} className="mb-8">
+                <h2 className="text-xl font-semibold mb-4">{tag}</h2>
+                <Droppable droppableId={tag}>
+                  {(provided) => (
+                    <div
+                      {...provided.droppableProps}
+                      ref={provided.innerRef}
+                      className="space-y-4"
                     >
-                      <CardContent className="p-6">
-                        {item.image && (
-                          <img
-                            src={item.image}
-                            alt={item.name}
-                            className="w-full h-48 object-cover rounded-lg mb-4"
-                          />
-                        )}
-                        <div className="absolute top-4 right-4 z-10">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                data-dropdown-trigger="true"
-                                onClick={(e) => e.stopPropagation()}
+                      {items
+                        .sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0))
+                        .map((item, index) => (
+                          <Draggable
+                            key={item.id}
+                            draggableId={item.id.toString()}
+                            index={index}
+                          >
+                            {(provided) => (
+                              <Card
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                {...provided.dragHandleProps}
+                                className="bg-white"
                               >
-                                <MoreVertical className="h-4 w-4" />
-                                <span className="sr-only">Open menu</span>
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setEditingItem(item);
-                                }}
-                              >
-                                <Pencil className="mr-2 h-4 w-4" />
-                                Edit
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                className="text-destructive focus:text-destructive"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  deleteMutation.mutate([item.id]);
-                                }}
-                              >
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-
-                        <MenuCard item={item} />
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
+                                <CardContent className="p-4">
+                                  <MenuCard item={item} />
+                                </CardContent>
+                              </Card>
+                            )}
+                          </Draggable>
+                        ))}
+                      {provided.placeholder}
+                    </div>
+                  )}
+                </Droppable>
               </div>
             ))}
-          </div>
+          </DragDropContext>
         </div>
       </div>
     </div>

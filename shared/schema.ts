@@ -19,7 +19,7 @@ export const images = pgTable("images", {
   restaurantId: integer("restaurant_id").notNull().references(() => restaurants.id),
   fileName: text("file_name").notNull(),
   contentType: text("content_type").notNull(),
-  data: text("data").notNull(), // We'll store base64 encoded data
+  data: text("data").notNull(),
   createdAt: text("created_at").notNull().default(new Date().toISOString()),
 });
 
@@ -29,11 +29,12 @@ export const menuItems = pgTable("menu_items", {
   name: text("name").notNull(),
   name_original: text("name_original").default(""),
   description: text("description").notNull(),
-  price: text("price").default(""), // Set default as empty string
+  price: text("price").default(""),
   image: text("image").default(''),
   imageId: integer("image_id").references(() => images.id),
-  courseTags: text("course_type").array().default([]), // Changed from courseType to courseTags array
+  courseTags: text("course_type").array().default([]),
   course_original: text("course_original").default(""),
+  displayOrder: integer("display_order").default(0),
   allergens: jsonb("allergens").$type<{
     milk: boolean;
     eggs: boolean;
@@ -67,6 +68,7 @@ export const insertMenuItemSchema = createInsertSchema(menuItems).extend({
   name_original: z.string().optional().default(""),
   course_original: z.string().optional().default(""),
   courseTags: z.array(z.string()).default([]),
+  displayOrder: z.number().optional().default(0),
   allergens: z.object({
     milk: z.boolean().default(false),
     eggs: z.boolean().default(false),
