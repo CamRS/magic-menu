@@ -274,7 +274,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Add new CSV import endpoint
+  // Update the CSV import function to properly handle course tags
   app.post("/api/restaurants/:id/menu/import", requireAuth, async (req, res) => {
     try {
       if (!req.user) return res.sendStatus(401);
@@ -331,7 +331,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         try {
-          const customTags = row[4] ? row[4].split(';').map(tag => tag.trim()).filter(Boolean) : [];
+          // Process course tags properly
+          const courseTags = row[3]
+            .split(';')
+            .map(tag => {
+              // Capitalize first letter and ensure full word
+              const trimmed = tag.trim();
+              return trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
+            })
+            .filter(tag => tag.length >= 2); // Ensure minimum length
 
           // Initialize allergens object with all false
           const allergens = {
@@ -361,7 +369,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             name: row[0],
             description: row[1],
             price,
-            courseTags: row[3].split(';').map(tag => tag.trim()).filter(Boolean),
+            courseTags,
             allergens,
             image: '', // Default empty string for image
           };

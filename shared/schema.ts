@@ -67,7 +67,7 @@ export const insertMenuItemSchema = createInsertSchema(menuItems).extend({
   imageId: z.number().optional(),
   name_original: z.string().optional().default(""),
   course_original: z.string().optional().default(""),
-  courseTags: z.array(z.string()).default([]),
+  courseTags: z.array(z.string().min(2, "Course tag must be at least 2 characters")).default([]),
   displayOrder: z.number().optional().default(0),
   allergens: z.object({
     milk: z.boolean().default(false),
