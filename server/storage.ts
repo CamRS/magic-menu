@@ -158,7 +158,9 @@ export class DatabaseStorage implements IStorage {
     // Ensure price is empty string if undefined/null/empty
     const itemToCreate = {
       ...item,
-      price: item.price === undefined || item.price === null || item.price === '' ? '' : item.price
+      price: item.price === undefined || item.price === null || item.price === '' ? '' : item.price,
+      // Ensure courseTags is properly handled as a string array
+      courseTags: Array.isArray(item.courseTags) ? item.courseTags : []
     };
 
     // Verify restaurant ownership before creating menu item
