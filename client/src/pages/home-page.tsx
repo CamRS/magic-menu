@@ -1246,13 +1246,6 @@ export default function HomePage() {
                                 }}
                               >
                                 <CardContent className="p-6">
-                                  {item.image && (
-                                    <img
-                                      src={item.image}
-                                      alt={item.name}
-                                      className="w-full h-48 object-cover rounded-lg mb-4"
-                                    />
-                                  )}
                                   <div className="absolute top-4 right-4 z-10">
                                     <DropdownMenu>
                                       <DropdownMenuTrigger asChild>
