@@ -702,15 +702,24 @@ export default function HomePage() {
 
   const MenuCard = ({ item }: { item: MenuItem }) => {
     return (
-      <div className="flex items-center justify-between gap-4 p-4">
-        <div>
+      <div className="flex items-start gap-4 p-4">
+        {item.image && (
+          <div className="w-48 flex-shrink-0">
+            <img
+              src={item.image}
+              alt={item.name}
+              className="w-full h-32 object-cover rounded-lg"
+            />
+          </div>
+        )}
+        <div className="flex-grow">
           <h3 className="font-medium">{item.name}</h3>
-          <p className="text-sm text-muted-foreground">{item.description}</p>
+          <p className="text-sm text-muted-foreground line-clamp-2">{item.description}</p>
           <span className="font-semibold">
             {item.price && parseFloat(item.price) > 0 ? `$${parseFloat(item.price).toFixed(2)}` : ''}
           </span>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-1 min-w-[120px]">
           {Object.entries(item.allergens)
             .filter(([_, value]) => value)
             .map(([key]) => (
