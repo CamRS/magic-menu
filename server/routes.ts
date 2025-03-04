@@ -132,7 +132,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const requestBody = {
         ...req.body,
         // If price is undefined, null, or empty string, set it to empty string
-        price: req.body.price === undefined || req.body.price === null || req.body.price === '' ? '' : req.body.price
+        price: req.body.price === undefined || req.body.price === null || req.body.price === '' ? '' : req.body.price,
+        // Ensure course tags are properly formatted
+        courseTags: Array.isArray(req.body.courseTags)
+          ? req.body.courseTags.map((tag: string) => tag.trim())
+          : []
       };
 
       console.log("Transformed request body:", requestBody);
@@ -183,7 +187,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Unauthorized access to menu item" });
       }
 
-      const updated = await storage.updateMenuItem(item.id, req.body);
+      // Ensure course tags are properly handled in updates
+      const updateData = {
+        ...req.body,
+        courseTags: Array.isArray(req.body.courseTags)
+          ? req.body.courseTags.map((tag: string) => tag.trim())
+          : item.courseTags
+      };
+
+      const updated = await storage.updateMenuItem(item.id, updateData);
       res.json(updated);
     } catch (error) {
       console.error('Error updating menu item:', error);
