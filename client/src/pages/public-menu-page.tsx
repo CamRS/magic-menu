@@ -40,13 +40,13 @@ const MenuCard = ({ item }: { item: MenuItem }) => {
 
   return (
     <Card className="h-full bg-white rounded-3xl shadow-sm border border-gray-100">
-      <CardContent className="p-6 flex flex-col h-full">
+      <CardContent className="p-8 flex flex-col h-full min-h-[400px]">
         {/* Course type with original name */}
         {(item.courseTags?.[0] || item.course_original) && (
-          <div className="mb-2 text-gray-600">
-            <div className="text-base">{item.courseTags?.[0]}</div>
+          <div className="mb-4">
+            <div className="text-lg text-gray-700">{item.courseTags?.[0]}</div>
             {item.course_original && (
-              <div className="text-sm text-gray-500">
+              <div className="text-base text-gray-500 mt-1">
                 {item.course_original}
               </div>
             )}
@@ -54,12 +54,12 @@ const MenuCard = ({ item }: { item: MenuItem }) => {
         )}
 
         {/* Title with original name */}
-        <div className="mb-4">
-          <h3 className="text-2xl font-bold text-gray-900">
+        <div className="mb-6">
+          <h3 className="text-3xl font-bold text-gray-900">
             {item.name}
           </h3>
           {item.name_original && (
-            <div className="text-base text-gray-600">
+            <div className="text-xl text-gray-600 mt-2">
               {item.name_original}
             </div>
           )}
@@ -67,14 +67,14 @@ const MenuCard = ({ item }: { item: MenuItem }) => {
 
         {/* Allergens section */}
         {activeAllergens.length > 0 && (
-          <div className="mb-4">
-            <div className="text-sm text-gray-600 mb-2">Often Contains</div>
+          <div className="mb-8">
+            <div className="text-base text-gray-600 mb-3">Often Contains</div>
             <div className="flex flex-wrap gap-2">
               {activeAllergens.map((allergen) => (
                 <Badge
                   key={allergen}
                   variant="secondary"
-                  className="bg-blue-100 text-blue-700 border-none rounded-full capitalize"
+                  className="bg-[#4169E1]/10 text-[#4169E1] border-none rounded-full capitalize px-4 py-1 text-sm"
                 >
                   {allergen}
                 </Badge>
@@ -85,9 +85,9 @@ const MenuCard = ({ item }: { item: MenuItem }) => {
 
         {/* Description section */}
         {item.description && (
-          <div className="mb-4">
-            <div className="text-sm text-gray-600 mb-1">Common Description</div>
-            <p className="text-gray-800">
+          <div className="mb-8">
+            <div className="text-base text-gray-600 mb-2">Common Description</div>
+            <p className="text-lg text-gray-800 leading-relaxed">
               {item.description}
             </p>
           </div>
@@ -95,7 +95,7 @@ const MenuCard = ({ item }: { item: MenuItem }) => {
 
         {/* Price */}
         <div className="mt-auto">
-          <span className="text-xl font-semibold text-gray-900">
+          <span className="text-3xl font-semibold text-gray-900">
             {item.price && parseFloat(item.price) > 0 ? `$${parseFloat(item.price).toFixed(2)}` : ''}
           </span>
         </div>
