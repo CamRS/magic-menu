@@ -956,20 +956,32 @@ export default function HomePage() {
                           reader.readAsDataURL(file);
                         }
                       }}
+                      className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
                     />
                     <p className="text-sm text-muted-foreground mt-2">
                       Drag and drop an image here or click to select
                     </p>
                     {form.watch("image") && (
-                      <img
-                        src={form.watch("image")}
-                        alt="Preview"
-                        className="mt-4 max-w-full h-auto max-h-48 rounded"
-                      />
+                      <div className="mt-4 relative">
+                        <img
+                          src={form.watch("image")}
+                          alt="Preview"
+                          className="max-w-full h-auto max-h-48 rounded"
+                        />
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          className="absolute top-2 right-2"
+                          onClick={() => form.setValue("image", "", { shouldValidate: true })}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     )}
                   </div>
                   {form.formState.errors.image && (
-                    <p className="text-sm text-red-500 mt-1">
+                    <p className="text-sm text-destructive mt-1">
                       {form.formState.errors.image.message}
                     </p>
                   )}
