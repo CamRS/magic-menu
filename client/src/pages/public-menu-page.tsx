@@ -36,7 +36,14 @@ const MenuCard = ({ item }: { item: MenuItem }) => {
   return (
     <Card className="h-full bg-white rounded-xl shadow-lg border border-gray-200">
       <CardContent className="p-6 flex flex-col h-full">
-        <h3 className="text-2xl font-bold text-gray-900 mb-4">{item.name}</h3>
+        <h3 className="text-2xl font-bold text-gray-900 mb-4">
+          {item.name}
+          {item.name_original && (
+            <div className="text-lg font-normal text-gray-600">
+              {item.name_original}
+            </div>
+          )}
+        </h3>
 
         {/* Allergens and Dietary Tags */}
         <div className="flex flex-wrap gap-1 items-center mb-4">
@@ -55,7 +62,7 @@ const MenuCard = ({ item }: { item: MenuItem }) => {
 
         <div className="flex-grow mb-4">
           <img
-            src={item.image || foodImages[item.id % foodImages.length]}
+            src={item.image || foodImages[0]} // Use the new default image
             alt={`${item.name} presentation`}
             className="w-full h-48 object-cover rounded-lg"
             draggable="false"
@@ -67,6 +74,11 @@ const MenuCard = ({ item }: { item: MenuItem }) => {
         </p>
 
         <div className="mt-auto">
+          {item.course_original && (
+            <div className="text-sm text-gray-600 mb-2">
+              {item.course_original}
+            </div>
+          )}
           <span className="font-semibold">
             {item.price && parseFloat(item.price) > 0 ? `$${parseFloat(item.price).toFixed(2)}` : ''}
           </span>
@@ -78,6 +90,7 @@ const MenuCard = ({ item }: { item: MenuItem }) => {
 
 // Array of food-related image URLs
 const foodImages = [
+  '/attached_assets/image_1741128275695.png',
   'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800&h=600&fit=crop&q=80',
   'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&h=600&fit=crop&q=80',
   'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=800&h=600&fit=crop&q=80',
@@ -85,7 +98,6 @@ const foodImages = [
   'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=800&h=600&fit=crop&q=80',
   'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=800&h=600&fit=crop&q=80',
   'https://images.unsplash.com/photo-1482049016688-2d3e1b311543?w=800&h=600&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1484723091739-30a097e8f929?w=800&h=600&fit=crop&q=80',
 ];
 
 export default function PublicMenuPage() {
