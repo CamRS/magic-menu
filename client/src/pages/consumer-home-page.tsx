@@ -22,11 +22,29 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { type ConsumerMenuItem } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
+
+const ITEMS_PER_PAGE = 9;
 
 type AllergenType = keyof ConsumerMenuItem['allergens'];
 const allergensList: AllergenType[] = ['milk', 'eggs', 'peanuts', 'nuts', 'shellfish', 'fish', 'soy', 'gluten'];
 
 const dietaryPreferences = ['Vegetarian', 'Vegan'] as const;
+
+const MenuItemSkeleton = () => (
+  <Card className="w-full bg-white rounded-xl shadow-sm border border-gray-100 h-full">
+    <CardContent className="p-6 space-y-4">
+      <Skeleton className="h-6 w-3/4" />
+      <Skeleton className="h-4 w-full" />
+      <Skeleton className="h-4 w-2/3" />
+      <div className="flex gap-2">
+        <Skeleton className="h-6 w-16" />
+        <Skeleton className="h-6 w-16" />
+      </div>
+      <Skeleton className="h-8 w-24" />
+    </CardContent>
+  </Card>
+);
 
 const MenuCard = ({ item }: { item: ConsumerMenuItem }) => {
   const activeAllergens = Object.entries(item.allergens)
@@ -92,11 +110,16 @@ export default function ConsumerHomePage() {
   const [selectedDietary, setSelectedDietary] = useState<typeof dietaryPreferences[number][]>([]);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [page, setPage] = useState(1);
 
-  const { data: menuItems } = useQuery<ConsumerMenuItem[]>({
-    queryKey: ["/api/consumer-menu-items"],
+  const { data: menuItemsResponse, isLoading } = useQuery<{ items: ConsumerMenuItem[], total: number }>({
+    queryKey: ["/api/consumer-menu-items", page, searchTerm, selectedAllergens, selectedTags],
     enabled: !!user?.id,
   });
+
+  const menuItems = menuItemsResponse?.items ?? [];
+  const totalItems = menuItemsResponse?.total ?? 0;
+  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
 
   const uploadMutation = useMutation({
     mutationFn: async (file: File) => {
@@ -149,19 +172,6 @@ export default function ConsumerHomePage() {
     return tags;
   }, new Set<string>()) || new Set<string>();
 
-  const filteredItems = menuItems?.filter(({ name, description, courseTags, allergens }) => {
-    const matchesSearch = !searchTerm ||
-      name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      description.toLowerCase().includes(searchTerm.toLowerCase());
-
-    const matchesTags = selectedTags.length === 0 ||
-      (courseTags && selectedTags.includes(courseTags[0] || ''));
-
-    const matchesAllergens = selectedAllergens.every(allergen => !allergens[allergen]);
-
-    return matchesSearch && matchesTags && matchesAllergens;
-  });
-
   const handleTagSelection = (value: string) => {
     if (value === "all") {
       setSelectedTags([]);
@@ -169,6 +179,7 @@ export default function ConsumerHomePage() {
       const tags = value.split(",").filter(Boolean);
       setSelectedTags(tags);
     }
+    setPage(1); // Reset to first page when changing filters
   };
 
   return (
@@ -179,7 +190,10 @@ export default function ConsumerHomePage() {
             <Input
               placeholder="Search menu..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setPage(1); // Reset to first page when searching
+              }}
               className="w-full pl-10 pr-4 h-11 rounded-full border-gray-200 bg-white"
             />
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -237,6 +251,7 @@ export default function ConsumerHomePage() {
                             ? prev.filter((a) => a !== allergen)
                             : [...prev, allergen]
                         );
+                        setPage(1); // Reset to first page when changing filters
                       }}
                     >
                       <span className="capitalize">{allergen}</span>
@@ -263,6 +278,7 @@ export default function ConsumerHomePage() {
                             ? prev.filter((p) => p !== pref)
                             : [...prev, pref]
                         );
+                        setPage(1); // Reset page to 1 when filtering
                       }}
                     >
                       {pref}
@@ -276,16 +292,47 @@ export default function ConsumerHomePage() {
       </header>
 
       <main className={`pt-[180px] px-4 pb-20 max-w-4xl mx-auto`}>
-        {(!menuItems || menuItems.length === 0) ? (
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {Array.from({ length: ITEMS_PER_PAGE }).map((_, index) => (
+              <MenuItemSkeleton key={index} />
+            ))}
+          </div>
+        ) : !menuItems || menuItems.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
             No menu items found
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredItems?.map((item) => (
-              <MenuCard key={item.id} item={item} />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {menuItems.map((item) => (
+                <MenuCard key={item.id} item={item} />
+              ))}
+            </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex justify-center gap-2 mt-8">
+                <Button
+                  variant="outline"
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                >
+                  Previous
+                </Button>
+                <span className="flex items-center px-4 text-sm">
+                  Page {page} of {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                >
+                  Next
+                </Button>
+              </div>
+            )}
+          </>
         )}
       </main>
 
@@ -328,7 +375,9 @@ export default function ConsumerHomePage() {
               </div>
             </label>
 
-            <SettingsMenu className="flex flex-col items-center gap-1" />
+            <div className="flex flex-col items-center gap-1">
+              <SettingsMenu />
+            </div>
           </div>
         </div>
       </nav>
