@@ -126,18 +126,15 @@ export class DatabaseStorage implements IStorage {
       throw new Error("Restaurant not found");
     }
 
-    // Create base query
-    let query = db
-      .select()
-      .from(menuItems)
-      .where(eq(menuItems.restaurantId, restaurantId));
+    let query = db.select().from(menuItems);
 
-    // Add status filter if provided
     if (status) {
       query = query.where(and(
         eq(menuItems.restaurantId, restaurantId),
         eq(menuItems.status, status)
       ));
+    } else {
+      query = query.where(eq(menuItems.restaurantId, restaurantId));
     }
 
     const items = await query;

@@ -4,7 +4,7 @@ import { setupVite, serveStatic, log } from "./vite";
 
 function validateEnvironmentVariables() {
   const requiredVariables = {
-    'ZAPIER_API_KEY': true, // true means it's required in production
+    'ZAPIER_API_KEY': true,
     'VITE_DROPBOX_ACCESS_TOKEN': true,
     'VITE_DROPBOX_APP_KEY': true,
     'VITE_DROPBOX_APP_SECRET': true,
@@ -79,7 +79,6 @@ app.use((req, res, next) => {
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    // Handle payload too large error specifically
     if (err.type === 'entity.too.large') {
       return res.status(413).json({
         message: 'File too large. Maximum size is 10MB.'
@@ -93,19 +92,46 @@ app.use((req, res, next) => {
     throw err;
   });
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
   if (app.get("env") === "development") {
     await setupVite(app, server);
   } else {
     serveStatic(app);
   }
 
-  // ALWAYS serve the app on port 5000
-  // this serves both the API and the client
+  // Try to start the server with port handling
+  const startServer = (port: number) => {
+    return new Promise((resolve, reject) => {
+      server.listen(port, "0.0.0.0")
+        .once('listening', () => {
+          log(`Server started successfully on port ${port}`);
+          resolve(true);
+        })
+        .once('error', (err: NodeJS.ErrnoException) => {
+          if (err.code === 'EADDRINUSE') {
+            log(`Port ${port} is already in use`);
+            resolve(false);
+          } else {
+            reject(err);
+          }
+        });
+    });
+  };
+
+  // Try port 5000 first, then fallback to other ports if needed
   const PORT = 5000;
-  server.listen(PORT, "0.0.0.0", () => {
-    log(`serving on port ${PORT}`);
-  });
+  const MAX_PORT_ATTEMPTS = 10;
+
+  for (let port = PORT; port < PORT + MAX_PORT_ATTEMPTS; port++) {
+    try {
+      const success = await startServer(port);
+      if (success) break;
+    } catch (error) {
+      log(`Error starting server on port ${port}: ${error}`);
+      if (port === PORT + MAX_PORT_ATTEMPTS - 1) {
+        // If we've tried all ports and still failed, exit the process
+        log('Failed to start server after trying multiple ports');
+        process.exit(1);
+      }
+    }
+  }
 })();
