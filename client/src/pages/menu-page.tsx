@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { X } from "lucide-react";
-import { type MenuItem, type InsertMenuItem, insertMenuItemSchema, type Restaurant } from "@shared/schema";
+import { type MenuItem, type InsertMenuItem, insertMenuItemSchema } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -64,6 +64,7 @@ export default function MenuPage() {
       courseTags: [],
       restaurantId: parseInt(restaurantId || "0"),
       image: "",
+      status: "draft" as MenuItemStatus,
       allergens: {
         milk: false,
         eggs: false,
@@ -97,11 +98,6 @@ export default function MenuPage() {
     }
   }, [form, toast]);
 
-  const { data: restaurant } = useQuery<Restaurant>({
-    queryKey: ["/api/restaurants", restaurantId],
-    enabled: !!restaurantId,
-  });
-
   const { data: menuItems, isLoading } = useQuery<MenuItem[]>({
     queryKey: ["/api/menu-items", restaurantId, statusFilter],
     queryFn: async () => {
@@ -115,15 +111,14 @@ export default function MenuPage() {
 
   useEffect(() => {
     if (editItem) {
-      const formattedPrice = editItem.price ? parseFloat(editItem.price).toFixed(2) : '';
-
       const formData = {
         name: editItem.name,
         description: editItem.description,
-        price: formattedPrice,
+        price: editItem.price ? parseFloat(editItem.price).toFixed(2) : '',
         courseTags: editItem.courseTags || [],
         restaurantId: editItem.restaurantId,
         image: editItem.image || "",
+        status: editItem.status as MenuItemStatus,
         allergens: editItem.allergens || {
           milk: false,
           eggs: false,
@@ -135,7 +130,6 @@ export default function MenuPage() {
           gluten: false,
         },
       };
-
       form.reset(formData);
     }
   }, [editItem, form]);
@@ -169,7 +163,6 @@ export default function MenuPage() {
       });
     },
     onError: (error: Error) => {
-      console.error('Update mutation error:', error);
       toast({
         title: "Error",
         description: error.message,
@@ -186,6 +179,7 @@ export default function MenuPage() {
         price: data.price.replace(/^\$/, ''),
         image: data.image || '',
         courseTags: data.courseTags || [],
+        status: "draft" as MenuItemStatus,
       };
 
       const res = await apiRequest("POST", "/api/menu-items", formattedData);
@@ -256,7 +250,6 @@ export default function MenuPage() {
 
   const handleExportCSV = async () => {
     if (!restaurantId) return;
-
     try {
       const response = await fetch(`/api/restaurants/${restaurantId}/menu/export`);
       if (!response.ok) throw new Error('Failed to export menu');
@@ -265,7 +258,7 @@ export default function MenuPage() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${restaurant?.name.toLowerCase().replace(/[^a-z0-9]/gi, '_')}_menu.csv`;
+      a.download = 'menu.csv';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -284,52 +277,27 @@ export default function MenuPage() {
     if (!file || !restaurantId) return;
 
     try {
-      const reader = new FileReader();
-      reader.onload = async (event) => {
-        try {
-          const csvData = event.target?.result;
+      const formData = new FormData();
+      formData.append('file', file);
 
-          const response = await fetch(`/api/restaurants/${restaurantId}/menu/import`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ csvData }),
-          });
+      const response = await fetch(`/api/restaurants/${restaurantId}/menu/import`, {
+        method: 'POST',
+        body: formData,
+      });
 
-          const result = await response.json();
+      if (!response.ok) {
+        throw new Error('Failed to import menu items');
+      }
 
-          if (!response.ok) {
-            throw new Error(result.message || 'Failed to import menu items');
-          }
-
-          e.target.value = '';
-
-          toast({
-            title: "Import Complete",
-            description: `Successfully imported ${result.success} items. ${
-              result.failed > 0 ? `Failed to import ${result.failed} items.` : ''
-            }`,
-            variant: result.failed > 0 ? "destructive" : "default",
-          });
-
-          queryClient.invalidateQueries({ queryKey: ["/api/menu-items", restaurantId] });
-        } catch (error) {
-          console.error('Error importing CSV:', error);
-          toast({
-            title: "Error",
-            description: error instanceof Error ? error.message : "Failed to import menu items",
-            variant: "destructive",
-          });
-        }
-      };
-
-      reader.readAsText(file);
+      queryClient.invalidateQueries({ queryKey: ["/api/menu-items", restaurantId] });
+      toast({
+        title: "Success",
+        description: "Menu items imported successfully",
+      });
     } catch (error) {
-      console.error('Error reading file:', error);
       toast({
         title: "Error",
-        description: "Failed to read the CSV file",
+        description: "Failed to import menu items",
         variant: "destructive",
       });
     }
@@ -337,15 +305,8 @@ export default function MenuPage() {
 
   const toggleItemSelection = (id: number) => {
     setSelectedItems((prev) =>
-      prev.includes(id)
-        ? prev.filter((itemId) => itemId !== id)
-        : [...prev, id]
+      prev.includes(id) ? prev.filter((itemId) => itemId !== id) : [...prev, id]
     );
-  };
-
-  const handleDeleteSelected = () => {
-    if (selectedItems.length === 0) return;
-    deleteMutation.mutate(selectedItems);
   };
 
   const deleteMutation = useMutation({
@@ -375,11 +336,10 @@ export default function MenuPage() {
     },
   });
 
-  const filteredMenuItems = menuItems?.filter(item => {
-    const matchesAllergens = selectedAllergens.length === 0 ||
-      !selectedAllergens.some(allergen => item.allergens[allergen]);
-    return matchesAllergens;
-  });
+  const handleDeleteSelected = () => {
+    if (selectedItems.length === 0) return;
+    deleteMutation.mutate(selectedItems);
+  };
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: number; status: MenuItemStatus }) => {
@@ -444,13 +404,16 @@ export default function MenuPage() {
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold text-white">Menu Items</h1>
           <div className="flex items-center gap-4">
-            <Dialog open={open} onOpenChange={(isOpen) => {
-              setOpen(isOpen);
-              if (!isOpen) {
-                setEditItem(null);
-                form.reset();
-              }
-            }}>
+            <Dialog 
+              open={open} 
+              onOpenChange={(isOpen) => {
+                setOpen(isOpen);
+                if (!isOpen) {
+                  setEditItem(null);
+                  form.reset();
+                }
+              }}
+            >
               <DialogTrigger asChild>
                 <Button>
                   <PlusCircle className="mr-2 h-4 w-4" />
@@ -566,11 +529,6 @@ export default function MenuPage() {
                             />
                           )}
                         </div>
-                        {form.formState.errors.image && (
-                          <p className="text-sm text-destructive mt-1">
-                            {form.formState.errors.image.message}
-                          </p>
-                        )}
                       </div>
                     </div>
                     <div>
@@ -597,7 +555,7 @@ export default function MenuPage() {
                     disabled={createMutation.isPending || updateMutation.isPending}
                   >
                     {(createMutation.isPending || updateMutation.isPending) && (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin text-white" />
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     )}
                     {editItem ? "Update Item" : "Add Item"}
                   </Button>
@@ -619,42 +577,6 @@ export default function MenuPage() {
                 <Upload className="mr-2 h-4 w-4" />
                 Import CSV
               </Button>
-            </div>
-          </div>
-        </div>
-
-        <div className="mb-8">
-          <div className="flex flex-col gap-6">
-            <Input
-              type="search"
-              placeholder="Search menu"
-              className="bg-[#1E1E1E] border-none text-white placeholder:text-gray-400"
-            />
-
-            <div>
-              <p className="text-white mb-2">I'm allergic to</p>
-              <div className="flex flex-wrap gap-2">
-                {Object.keys(form.getValues().allergens).map((allergen) => (
-                  <Button
-                    key={allergen}
-                    variant={selectedAllergens.includes(allergen as AllergenType) ? "default" : "outline"}
-                    className={`rounded-full ${
-                      selectedAllergens.includes(allergen as AllergenType)
-                        ? "bg-blue-600 text-white"
-                        : "bg-[#1E1E1E] text-white hover:bg-[#2E2E2E]"
-                    }`}
-                    onClick={() => {
-                      setSelectedAllergens((prev) =>
-                        prev.includes(allergen as AllergenType)
-                          ? prev.filter((a) => a !== allergen)
-                          : [...prev, allergen as AllergenType]
-                      );
-                    }}
-                  >
-                    {allergen}
-                  </Button>
-                ))}
-              </div>
             </div>
           </div>
         </div>
