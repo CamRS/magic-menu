@@ -18,7 +18,7 @@ import {
 import { Copy, Store, PlusCircle, ChevronDown, Loader2, Download, Upload, Trash2, MoreVertical, Pencil, Globe, Image as ImageIcon, QrCode, Search, Eye, EyeOff, X } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { type Restaurant, type MenuItem, type InsertMenuItem, insertMenuItemSchema } from "@shared/schema";
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef, useMemo, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Label } from "@/components/ui/label";
@@ -54,7 +54,7 @@ export default function HomePage() {
       description: "",
       price: "",
       courseTags: [],
-      restaurantId: 0,
+      restaurantId: selectedRestaurant?.id || 0,
       image: "",
       status: "draft",
       allergens: {
@@ -69,6 +69,13 @@ export default function HomePage() {
       },
     },
   });
+
+  // Update form's restaurantId when selected restaurant changes
+  useEffect(() => {
+    if (selectedRestaurant) {
+      form.setValue("restaurantId", selectedRestaurant.id);
+    }
+  }, [selectedRestaurant, form]);
 
   const handleImageDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -174,7 +181,7 @@ export default function HomePage() {
 
       const response = await apiRequest("POST", "/api/menu-items", {
         ...data,
-        restaurantId: selectedRestaurant.id,
+        restaurantId: selectedRestaurant.id, // Ensure restaurantId is set here
       });
       if (!response.ok) {
         const error = await response.json();
@@ -185,7 +192,10 @@ export default function HomePage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/menu-items", selectedRestaurant?.id] });
       setCreateMenuItemOpen(false);
-      form.reset();
+      form.reset({
+        ...form.getValues(), // Keep current values as base
+        restaurantId: selectedRestaurant?.id || 0, // Ensure restaurantId is kept
+      });
       toast({
         title: "Success",
         description: "Menu item created successfully",
@@ -492,7 +502,7 @@ export default function HomePage() {
             </DropdownMenu>
 
             {/* Action buttons */}
-            <Button onClick={() => setCreateMenuItemOpen(true)}>
+            <Button onClick={() => setCreateMenuItemOpen(true)} disabled={!selectedRestaurant}>
               <PlusCircle className="mr-2 h-4 w-4" />
               Add Item
             </Button>
@@ -592,8 +602,8 @@ export default function HomePage() {
         />
 
         {/* Create/Edit Menu Item Dialog */}
-        <Dialog 
-          open={isCreateMenuItemOpen} 
+        <Dialog
+          open={isCreateMenuItemOpen}
           onOpenChange={(isOpen) => {
             setCreateMenuItemOpen(isOpen);
             if (!isOpen) {
