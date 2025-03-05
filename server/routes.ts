@@ -4,6 +4,8 @@ import { createServer, type Server } from "http";
 import { setupAuth, requireAuth, requireApiKey } from "./auth.js";
 import { storage } from "./storage";
 import { insertMenuItemSchema, insertRestaurantSchema } from "@shared/schema";
+import { comparePasswords, hashPassword } from "./utils"; // Assuming these functions exist in utils.ts
+
 
 // Helper function to parse CSV data
 function parseCSV(csvText: string): string[][] {
@@ -504,6 +506,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Internal server error" });
     }
   });
+
+  // Update user preferences
+  app.patch("/api/user/preferences", requireAuth, async (req, res) => {
+    try {
+      if (!req.user) return res.sendStatus(401);
+
+      const updates = {
+        ...(req.body.preferredLanguage && { preferredLanguage: req.body.preferredLanguage }),
+        ...(req.body.savedAllergies && { savedAllergies: req.body.savedAllergies }),
+      };
+
+      const updatedUser = await storage.updateUser(req.user.id, updates);
+      res.json(updatedUser);
+    } catch (error) {
+      console.error('Error updating user preferences:', error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Update user account details
+  app.patch("/api/user", requireAuth, async (req, res) => {
+    try {
+      if (!req.user) return res.sendStatus(401);
+
+      const { currentPassword, newPassword, email } = req.body;
+
+      // Verify current password
+      if (!currentPassword || !(await comparePasswords(currentPassword, req.user.password))) {
+        return res.status(400).json({ message: "Current password is incorrect" });
+      }
+
+      const updates: any = {};
+      if (email) updates.email = email;
+      if (newPassword) updates.password = await hashPassword(newPassword);
+
+      const updatedUser = await storage.updateUser(req.user.id, updates);
+      res.json(updatedUser);
+    } catch (error) {
+      console.error('Error updating user account:', error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
 
   const httpServer = createServer(app);
   return httpServer;
