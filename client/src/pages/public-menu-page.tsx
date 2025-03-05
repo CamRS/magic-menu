@@ -38,21 +38,21 @@ const MenuCard = ({ item }: { item: MenuItem }) => {
 
   return (
     <Card className="w-full bg-white rounded-3xl shadow-sm border border-gray-100">
-      <CardContent className="p-8 flex flex-col gap-6">
+      <CardContent className="p-8 flex flex-col gap-4">
         {/* Course Type */}
         {courseTag && (
-          <div className="text-gray-600 text-base">
+          <div className="text-gray-600 text-sm">
             {courseTag}
           </div>
         )}
 
         {/* Title */}
         <div>
-          <h3 className="text-[40px] leading-tight font-normal text-gray-900">
+          <h3 className="text-2xl leading-tight font-normal text-gray-900">
             {item.name}
           </h3>
           {item.name_original && (
-            <div className="text-base text-gray-600 mt-1">
+            <div className="text-sm text-gray-600 mt-1">
               {item.name_original}
             </div>
           )}
@@ -61,17 +61,19 @@ const MenuCard = ({ item }: { item: MenuItem }) => {
         {/* Allergens */}
         {activeAllergens.length > 0 && (
           <div>
-            <div className="text-base mb-3">Contains</div>
-            <div className="flex flex-wrap gap-2">
-              {activeAllergens.map((allergen) => (
-                <Badge
-                  key={allergen}
-                  variant="secondary"
-                  className="bg-[#4169E1]/10 text-[#4169E1] border-none rounded-full capitalize px-4 py-1.5 text-base"
-                >
-                  {allergen}
-                </Badge>
-              ))}
+            <div className="flex items-center gap-3">
+              <span className="text-sm">Contains</span>
+              <div className="flex flex-wrap gap-2">
+                {activeAllergens.map((allergen) => (
+                  <Badge
+                    key={allergen}
+                    variant="secondary"
+                    className="bg-[#4169E1]/10 text-[#4169E1] border-none rounded-full capitalize px-3 py-0.5 text-sm"
+                  >
+                    {allergen}
+                  </Badge>
+                ))}
+              </div>
             </div>
           </div>
         )}
@@ -79,32 +81,34 @@ const MenuCard = ({ item }: { item: MenuItem }) => {
         {/* Dietary Preferences */}
         {activeDietary.length > 0 && (
           <div>
-            <div className="text-base mb-3">Is</div>
-            <div className="flex flex-wrap gap-2">
-              {activeDietary.map((pref) => (
-                <Badge
-                  key={pref}
-                  variant="default"
-                  className="bg-[#22C55E] text-white border-none rounded-full capitalize px-4 py-1.5 text-base"
-                >
-                  {pref}
-                </Badge>
-              ))}
+            <div className="flex items-center gap-3">
+              <span className="text-sm">Is</span>
+              <div className="flex flex-wrap gap-2">
+                {activeDietary.map((pref) => (
+                  <Badge
+                    key={pref}
+                    variant="default"
+                    className="bg-[#22C55E] text-white border-none rounded-full capitalize px-3 py-0.5 text-sm"
+                  >
+                    {pref}
+                  </Badge>
+                ))}
+              </div>
             </div>
           </div>
         )}
 
         {/* Description */}
         {item.description && (
-          <p className="text-gray-900 text-base leading-normal">
+          <p className="text-gray-900 text-sm leading-relaxed">
             {item.description}
           </p>
         )}
 
         {/* Price */}
         <div>
-          <span className="text-[32px] font-normal text-gray-900">
-            {item.price && parseFloat(item.price) > 0 ? `${parseFloat(item.price).toFixed(2)}` : ''}
+          <span className="text-xl font-normal text-gray-900">
+            {item.price && parseFloat(item.price) > 0 ? `$${parseFloat(item.price).toFixed(2)}` : ''}
           </span>
         </div>
       </CardContent>
