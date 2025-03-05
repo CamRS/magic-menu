@@ -68,6 +68,12 @@ export default function HomePage() {
         soy: false,
         gluten: false,
       },
+      dietary_preferences: {
+        vegan: false,
+        vegetarian: false,
+        kosher: false,
+        halal: false
+      }
     },
   });
 
@@ -233,6 +239,7 @@ export default function HomePage() {
       status: item.status as MenuItemStatus,
       allergens: item.allergens,
       restaurantId: item.restaurantId,
+      dietary_preferences: item.dietary_preferences,
     });
     setCreateMenuItemOpen(true);
   };
@@ -447,6 +454,13 @@ export default function HomePage() {
                 .filter(([_, value]) => value)
                 .map(([key]) => (
                   <Badge key={key} variant="outline" className="capitalize">
+                    {key}
+                  </Badge>
+                ))}
+              {Object.entries(item.dietary_preferences)
+                .filter(([_, value]) => value)
+                .map(([key]) => (
+                  <Badge key={key} variant="default" className="capitalize bg-green-600">
                     {key}
                   </Badge>
                 ))}
@@ -737,6 +751,26 @@ export default function HomePage() {
                         checked={form.watch(`allergens.${key}`)}
                         onCheckedChange={(checked) => {
                           form.setValue(`allergens.${key}`, checked as boolean);
+                        }}
+                      />
+                      <Label htmlFor={key} className="capitalize">
+                        {key}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <Label>Dietary Preferences</Label>
+                <div className="grid grid-cols-2 gap-4 mt-2">
+                  {(Object.keys(form.getValues().dietary_preferences) as Array<keyof InsertMenuItem['dietary_preferences']>).map((key) => (
+                    <div key={key} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={key}
+                        checked={form.watch(`dietary_preferences.${key}`)}
+                        onCheckedChange={(checked) => {
+                          form.setValue(`dietary_preferences.${key}`, checked as boolean);
                         }}
                       />
                       <Label htmlFor={key} className="capitalize">
