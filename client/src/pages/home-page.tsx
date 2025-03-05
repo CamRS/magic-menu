@@ -233,9 +233,9 @@ export default function HomePage() {
     form.reset({
       name: item.name,
       description: item.description,
-      price: item.price,
+      price: item.price || '', // Handle potential null price
       courseTags: item.courseTags,
-      image: item.image,
+      image: item.image || '', // Handle potential null image
       status: item.status as MenuItemStatus,
       allergens: item.allergens,
       restaurantId: item.restaurantId,
