@@ -33,8 +33,13 @@ export function SettingsMenu() {
   return (
     <Sheet>
       <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full">
+        <Button 
+          variant="outline" 
+          size="default"
+          className="rounded-full bg-white shadow-lg border-gray-200 hover:bg-gray-50 transition-all duration-200 gap-2 px-6"
+        >
           <User className="h-5 w-5" />
+          <span>Settings</span>
         </Button>
       </SheetTrigger>
       <SheetContent side="bottom" className="w-full p-0">
