@@ -2,7 +2,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Search, Camera, Upload, ChevronDown, ChevronUp } from "lucide-react";
+import { Search, Camera, Upload, ChevronDown, ChevronUp, Plus, Settings } from "lucide-react";
 import { useState } from "react";
 import { SettingsMenu } from "@/components/settings-dialogs";
 import { Badge } from "@/components/ui/badge";
@@ -36,7 +36,6 @@ const MenuCard = ({ item }: { item: ConsumerMenuItem }) => {
   return (
     <Card className="w-full bg-white rounded-xl shadow-sm border border-gray-100 h-full">
       <div className="p-6">
-        {/* Title with original name */}
         <div className="mb-4">
           <h3 className="text-xl font-semibold text-gray-900">
             {item.name}
@@ -48,14 +47,12 @@ const MenuCard = ({ item }: { item: ConsumerMenuItem }) => {
           )}
         </div>
 
-        {/* Description */}
         {item.description && (
           <p className="text-gray-700 mb-4 line-clamp-3">
             {item.description}
           </p>
         )}
 
-        {/* Allergens */}
         {activeAllergens.length > 0 && (
           <div className="mb-4">
             <div className="flex flex-wrap gap-2">
@@ -72,7 +69,6 @@ const MenuCard = ({ item }: { item: ConsumerMenuItem }) => {
           </div>
         )}
 
-        {/* Price */}
         <div className="mt-auto pt-2">
           <span className="text-xl font-semibold text-gray-900">
             {item.price && parseFloat(item.price) > 0 ? `$${parseFloat(item.price).toFixed(2)}` : ''}
@@ -165,8 +161,7 @@ export default function ConsumerHomePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50/50 to-white">
-      {/* Header */}
+    <div className="min-h-screen bg-gradient-to-b from-gray-50/50 to-white pb-20">
       <header className="fixed top-0 left-0 right-0 bg-white/80 backdrop-blur-sm border-b border-gray-100 z-50">
         <div className="max-w-3xl mx-auto px-4 py-3">
           <div className="flex items-center justify-between mb-3">
@@ -176,7 +171,6 @@ export default function ConsumerHomePage() {
             <SettingsMenu />
           </div>
 
-          {/* Search Bar Only */}
           <div>
             <div className="relative">
               <Input
@@ -189,7 +183,6 @@ export default function ConsumerHomePage() {
             </div>
           </div>
 
-          {/* Show filters only when there are menu items */}
           {menuItems && menuItems.length > 0 && (
             <>
               <div className="flex gap-2 mt-3">
@@ -224,7 +217,6 @@ export default function ConsumerHomePage() {
                 </Select>
               </div>
 
-              {/* Collapsible Filters */}
               <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
                 <CollapsibleContent className="py-4 space-y-4">
                   <div>
@@ -285,9 +277,7 @@ export default function ConsumerHomePage() {
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="pt-[110px] px-4 pb-16 max-w-3xl mx-auto">
-        {/* Show upload options when no menu items exist */}
+      <main className="pt-[110px] px-4 pb-24 max-w-3xl mx-auto">
         {(!menuItems || menuItems.length === 0) && (
           <div className="grid gap-3">
             <Card className="p-6 hover:shadow-md transition-all duration-300 rounded-xl cursor-pointer border-gray-100 bg-gradient-to-br from-white to-gray-50/50 group">
@@ -324,7 +314,6 @@ export default function ConsumerHomePage() {
           </div>
         )}
 
-        {/* Show menu items when they exist */}
         {menuItems && menuItems.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {filteredItems?.map((item) => (
@@ -333,6 +322,45 @@ export default function ConsumerHomePage() {
           </div>
         )}
       </main>
+
+      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 py-2 px-6 z-50">
+        <div className="max-w-3xl mx-auto">
+          <div className="flex justify-around items-center">
+            <button
+              className="flex flex-col items-center gap-1 text-gray-600 hover:text-[#4F46E5] transition-colors"
+              onClick={() => {/* TODO: Implement camera capture */}}
+            >
+              <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center">
+                <Camera className="h-5 w-5" />
+              </div>
+              <span className="text-xs font-medium">Take Photo</span>
+            </button>
+
+            <label className="flex flex-col items-center gap-1 text-gray-600 hover:text-[#4F46E5] transition-colors cursor-pointer">
+              <div className="w-12 h-12 rounded-full bg-[#4F46E5] flex items-center justify-center -mt-4 shadow-lg">
+                <Plus className="h-6 w-6 text-white" />
+              </div>
+              <span className="text-xs font-medium mt-1">Upload Menu</span>
+              <Input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleFileSelect}
+              />
+            </label>
+
+            <button
+              className="flex flex-col items-center gap-1 text-gray-600 hover:text-[#4F46E5] transition-colors"
+              onClick={() => document.querySelector<HTMLButtonElement>('[role="combobox"]')?.click()}
+            >
+              <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center">
+                <Settings className="h-5 w-5" />
+              </div>
+              <span className="text-xs font-medium">Settings</span>
+            </button>
+          </div>
+        </div>
+      </nav>
     </div>
   );
 }
