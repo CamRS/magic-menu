@@ -288,7 +288,7 @@ export default function ConsumerHomePage() {
         </div>
       </header>
 
-      <main 
+      <main
         className={`px-4 pb-24 max-w-3xl mx-auto ${
           isFiltersOpen ? 'pt-[300px]' : 'pt-[180px]'
         }`}
@@ -341,21 +341,11 @@ export default function ConsumerHomePage() {
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 py-2 px-6 z-50">
         <div className="max-w-3xl mx-auto">
           <div className="flex justify-around items-center">
-            <button
-              className="flex flex-col items-center gap-1 text-gray-600 hover:text-[#4F46E5] transition-colors"
-              onClick={() => {/* TODO: Implement camera capture */}}
-            >
-              <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center">
-                <Camera className="h-5 w-5" />
-              </div>
-              <span className="text-xs font-medium">Take Photo</span>
-            </button>
-
             <label className="flex flex-col items-center gap-1 text-gray-600 hover:text-[#4F46E5] transition-colors cursor-pointer">
-              <div className="w-12 h-12 rounded-full bg-[#4F46E5] flex items-center justify-center -mt-4">
-                <Plus className="h-6 w-6 text-white" />
+              <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center">
+                <Upload className="h-5 w-5" />
               </div>
-              <span className="text-xs font-medium mt-1">Upload Menu</span>
+              <span className="text-xs font-medium">Upload Menu</span>
               <Input
                 type="file"
                 accept="image/*"
@@ -363,6 +353,16 @@ export default function ConsumerHomePage() {
                 onChange={handleFileSelect}
               />
             </label>
+
+            <button
+              className="flex flex-col items-center gap-1 text-gray-600 hover:text-[#4F46E5] transition-colors"
+              onClick={() => {/* TODO: Implement camera capture */}}
+            >
+              <div className="w-12 h-12 rounded-full bg-[#4F46E5] flex items-center justify-center -mt-4">
+                <Plus className="h-6 w-6 text-white" />
+              </div>
+              <span className="text-xs font-medium mt-1">Take Photo</span>
+            </button>
 
             <SettingsMenu />
           </div>
