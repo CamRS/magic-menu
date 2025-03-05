@@ -9,18 +9,38 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
-import { Camera, Upload, Search, LogOut, ChevronDown, ChevronUp } from "lucide-react";
+import { Camera, Upload, Search, LogOut, ChevronDown, ChevronUp, Settings } from "lucide-react";
 import { useState } from "react";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import {
+  Menubar,
+  MenubarContent,
+  MenubarItem,
+  MenubarMenu,
+  MenubarSeparator,
+  MenubarShortcut,
+  MenubarTrigger,
+} from "@/components/ui/menubar";
 
 type AllergenType = 'milk' | 'eggs' | 'peanuts' | 'nuts' | 'shellfish' | 'fish' | 'soy' | 'gluten';
 const allergensList: AllergenType[] = ['milk', 'eggs', 'peanuts', 'nuts', 'shellfish', 'fish', 'soy', 'gluten'];
 
 const dietaryPreferences = ['Vegetarian', 'Vegan'] as const;
+
+const SUPPORTED_LANGUAGES = [
+  { code: "en", name: "English" },
+  { code: "es", name: "Español" },
+  { code: "fr", name: "Français" },
+  { code: "de", name: "Deutsch" },
+  { code: "it", name: "Italiano" },
+  { code: "ja", name: "日本語" },
+  { code: "ko", name: "한국어" },
+  { code: "zh", name: "中文" },
+];
 
 export default function ConsumerHomePage() {
   const { user, logoutMutation } = useAuth();
@@ -42,6 +62,20 @@ export default function ConsumerHomePage() {
     logoutMutation.mutate();
   };
 
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Menu Explorer',
+          text: 'Translate any menu, save your dietary preferences, and identify potential allergens on any menu.',
+          url: window.location.href
+        });
+      } catch (error) {
+        console.log('Error sharing:', error);
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -49,6 +83,35 @@ export default function ConsumerHomePage() {
         <div className="max-w-4xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between mb-4">
             <h1 className="text-xl font-bold text-gray-900">Menu Explorer</h1>
+            <Menubar>
+              <MenubarMenu>
+                <MenubarTrigger>
+                  <Settings className="h-5 w-5" />
+                </MenubarTrigger>
+                <MenubarContent align="end">
+                  <MenubarItem onClick={handleShare}>
+                    Refer a friend
+                  </MenubarItem>
+                  <MenubarSeparator />
+                  <MenubarItem>
+                    Language: {SUPPORTED_LANGUAGES.find(lang => lang.code === user?.preferredLanguage)?.name || 'English'}
+                    <MenubarShortcut>
+                      <ChevronDown className="h-4 w-4" />
+                    </MenubarShortcut>
+                  </MenubarItem>
+                  <MenubarItem>
+                    Saved allergies
+                    <MenubarShortcut>
+                      <ChevronDown className="h-4 w-4" />
+                    </MenubarShortcut>
+                  </MenubarItem>
+                  <MenubarSeparator />
+                  <MenubarItem>
+                    Update login details
+                  </MenubarItem>
+                </MenubarContent>
+              </MenubarMenu>
+            </Menubar>
           </div>
 
           {/* Search and Filters */}
