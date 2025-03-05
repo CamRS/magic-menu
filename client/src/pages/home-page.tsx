@@ -15,7 +15,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Copy, Store, PlusCircle, ChevronDown, Loader2, Download, Upload, Trash2, MoreVertical, Pencil, Globe, Image as ImageIcon, QrCode, Search, Eye, EyeOff } from "lucide-react";
+import { Copy, Store, PlusCircle, ChevronDown, Loader2, Download, Upload, Trash2, MoreVertical, Pencil, Globe, Image as ImageIcon, QrCode, Search, Eye, EyeOff, X } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { type Restaurant, type MenuItem, type InsertMenuItem, insertMenuItemSchema } from "@shared/schema";
 import { useState, useRef, useMemo } from "react";
@@ -43,6 +43,7 @@ export default function HomePage() {
   const [showQrCode, setShowQrCode] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<MenuItemStatus | null>(null);
+  const [newTag, setNewTag] = useState('');
   const qrCodeRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -68,6 +69,31 @@ export default function HomePage() {
       },
     },
   });
+
+  const handleImageDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        form.setValue("image", reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        form.setValue("image", reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const { data: restaurants, isLoading: isLoadingRestaurants } = useQuery<Restaurant[]>({
     queryKey: ["/api/restaurants"],
@@ -142,9 +168,13 @@ export default function HomePage() {
 
   const createMutation = useMutation({
     mutationFn: async (data: InsertMenuItem) => {
+      if (!selectedRestaurant?.id) {
+        throw new Error("No restaurant selected");
+      }
+
       const response = await apiRequest("POST", "/api/menu-items", {
         ...data,
-        restaurantId: selectedRestaurant?.id,
+        restaurantId: selectedRestaurant.id,
       });
       if (!response.ok) {
         const error = await response.json();
@@ -217,6 +247,7 @@ export default function HomePage() {
       image: item.image,
       status: item.status as MenuItemStatus,
       allergens: item.allergens,
+      restaurantId: item.restaurantId,
     });
     setCreateMenuItemOpen(true);
   };
@@ -579,15 +610,112 @@ export default function HomePage() {
               <div>
                 <Label htmlFor="name">Name</Label>
                 <Input {...form.register("name")} />
+                {form.formState.errors.name && (
+                  <p className="text-sm text-destructive mt-1">
+                    {form.formState.errors.name.message}
+                  </p>
+                )}
               </div>
               <div>
                 <Label htmlFor="description">Description</Label>
                 <Textarea {...form.register("description")} />
+                {form.formState.errors.description && (
+                  <p className="text-sm text-destructive mt-1">
+                    {form.formState.errors.description.message}
+                  </p>
+                )}
               </div>
               <div>
                 <Label htmlFor="price">Price</Label>
                 <Input {...form.register("price")} />
+                {form.formState.errors.price && (
+                  <p className="text-sm text-destructive mt-1">
+                    {form.formState.errors.price.message}
+                  </p>
+                )}
               </div>
+
+              {/* Course Tags */}
+              <div>
+                <Label>Course Tags</Label>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {form.watch("courseTags").map((tag, index) => (
+                    <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                      {tag}
+                      <X
+                        className="h-3 w-3 cursor-pointer"
+                        onClick={() => {
+                          const newTags = [...form.getValues("courseTags")];
+                          newTags.splice(index, 1);
+                          form.setValue("courseTags", newTags);
+                        }}
+                      />
+                    </Badge>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    value={newTag}
+                    onChange={(e) => setNewTag(e.target.value)}
+                    placeholder="Add a new tag"
+                    onKeyPress={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        const value = newTag.trim();
+                        if (value && !form.getValues("courseTags").includes(value)) {
+                          form.setValue("courseTags", [...form.getValues("courseTags"), value]);
+                          setNewTag("");
+                        }
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      const value = newTag.trim();
+                      if (value && !form.getValues("courseTags").includes(value)) {
+                        form.setValue("courseTags", [...form.getValues("courseTags"), value]);
+                        setNewTag("");
+                      }
+                    }}
+                  >
+                    Add Tag
+                  </Button>
+                </div>
+              </div>
+
+              {/* Image Upload */}
+              <div>
+                <Label htmlFor="image">Image</Label>
+                <div
+                  className="border-2 border-dashed border-gray-300 rounded-lg p-6 cursor-pointer hover:border-primary transition-colors"
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
+                  onDrop={handleImageDrop}
+                >
+                  <Input
+                    id="image"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+                  />
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Drag and drop an image here or click to select
+                  </p>
+                  {form.watch("image") && (
+                    <img
+                      src={form.watch("image")}
+                      alt="Preview"
+                      className="mt-4 max-h-40 rounded-lg"
+                    />
+                  )}
+                </div>
+              </div>
+
+              {/* Allergens */}
               <div>
                 <Label>Allergens</Label>
                 <div className="grid grid-cols-2 gap-4 mt-2">
@@ -595,7 +723,7 @@ export default function HomePage() {
                     <div key={key} className="flex items-center space-x-2">
                       <Checkbox
                         id={key}
-                        checked={form.getValues().allergens[key]}
+                        checked={form.watch(`allergens.${key}`)}
                         onCheckedChange={(checked) => {
                           form.setValue(`allergens.${key}`, checked as boolean);
                         }}
@@ -607,6 +735,8 @@ export default function HomePage() {
                   ))}
                 </div>
               </div>
+
+              {/* Status */}
               <div>
                 <Label htmlFor="status">Status</Label>
                 <select {...form.register("status")} className="w-full p-2 border rounded-md">
@@ -614,6 +744,7 @@ export default function HomePage() {
                   <option value="live">Live</option>
                 </select>
               </div>
+
               <Button type="submit" className="w-full">
                 {editingItem ? "Update Item" : "Add Item"}
               </Button>
