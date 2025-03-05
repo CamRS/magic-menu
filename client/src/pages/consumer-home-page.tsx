@@ -1,6 +1,6 @@
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Search, Camera, Upload, ChevronDown, ChevronUp, Plus } from "lucide-react";
 import { useState } from "react";
@@ -35,28 +35,14 @@ const MenuCard = ({ item }: { item: ConsumerMenuItem }) => {
 
   return (
     <Card className="w-full bg-white rounded-xl shadow-sm border border-gray-100 h-full">
-      <div className="p-8 space-y-6 antialiased">
-        {/* Course Type */}
-        {item.courseTags && item.courseTags.length > 0 && (
-          <div>
-            <div className="text-sm font-semibold text-gray-800 capitalize subpixel-antialiased">
-              {item.courseTags[0]}
-            </div>
-            {item.course_original && (
-              <div className="text-xs font-normal text-gray-500 mt-0.5">
-                {item.course_original}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Name */}
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900 subpixel-antialiased tracking-tight">
+      <CardContent className="p-6">
+        {/* Title with original name */}
+        <div className="mb-4">
+          <h3 className="text-xl font-semibold text-gray-900">
             {item.name}
           </h3>
           {item.name_original && (
-            <div className="text-sm font-normal text-gray-600 mt-1">
+            <div className="text-base text-gray-600 mt-1">
               {item.name_original}
             </div>
           )}
@@ -64,29 +50,20 @@ const MenuCard = ({ item }: { item: ConsumerMenuItem }) => {
 
         {/* Description */}
         {item.description && (
-          <div>
-            <p className="text-sm font-normal text-gray-700 leading-relaxed subpixel-antialiased">
-              {item.description}
-            </p>
-          </div>
-        )}
-
-        {/* Price */}
-        {item.price && parseFloat(item.price) > 0 && (
-          <div className="text-lg font-semibold text-gray-900 subpixel-antialiased">
-            ${parseFloat(item.price).toFixed(2)}
-          </div>
+          <p className="text-gray-700 mb-4 line-clamp-3">
+            {item.description}
+          </p>
         )}
 
         {/* Allergens */}
         {activeAllergens.length > 0 && (
-          <div>
+          <div className="mb-4">
             <div className="flex flex-wrap gap-2">
               {activeAllergens.map((allergen) => (
                 <Badge
                   key={allergen}
                   variant="secondary"
-                  className="bg-[#4169E1]/10 text-[#4169E1] border-none rounded-full capitalize px-3 py-1 text-xs font-medium subpixel-antialiased"
+                  className="bg-[#4169E1]/10 text-[#4169E1] border-none rounded-full capitalize px-3 py-1 text-xs"
                 >
                   {allergen}
                 </Badge>
@@ -94,7 +71,14 @@ const MenuCard = ({ item }: { item: ConsumerMenuItem }) => {
             </div>
           </div>
         )}
-      </div>
+
+        {/* Price */}
+        <div className="mt-auto pt-2">
+          <span className="text-xl font-semibold text-gray-900">
+            {item.price && parseFloat(item.price) > 0 ? `$${parseFloat(item.price).toFixed(2)}` : ''}
+          </span>
+        </div>
+      </CardContent>
     </Card>
   );
 };
@@ -286,49 +270,13 @@ export default function ConsumerHomePage() {
         </div>
       </header>
 
-      <main
-        className={`px-4 pb-24 max-w-3xl mx-auto ${
-          isFiltersOpen ? 'pt-[300px]' : 'pt-[180px]'
-        }`}
-      >
-        {(!menuItems || menuItems.length === 0) && (
-          <div className="grid gap-3">
-            <Card className="p-6 hover:shadow-md transition-all duration-300 rounded-xl cursor-pointer border-gray-100 bg-gradient-to-br from-white to-gray-50/50 group">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-lg bg-[#4F46E5]/5 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                  <Camera className="h-6 w-6 text-[#4F46E5]" />
-                </div>
-                <div>
-                  <h3 className="text-base font-medium text-gray-900 mb-0.5">Snap a photo of a menu</h3>
-                  <p className="text-sm text-gray-500">Take a photo of any menu to instantly digitize it</p>
-                </div>
-              </div>
-            </Card>
-
-            <Card className="p-6 hover:shadow-md transition-all duration-300 rounded-xl cursor-pointer border-gray-100 bg-gradient-to-br from-white to-gray-50/50 group">
-              <label className="cursor-pointer">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-lg bg-[#4F46E5]/5 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                    <Upload className="h-6 w-6 text-[#4F46E5]" />
-                  </div>
-                  <div>
-                    <h3 className="text-base font-medium text-gray-900 mb-0.5">Upload a menu image</h3>
-                    <p className="text-sm text-gray-500">Select a menu photo from your device</p>
-                  </div>
-                </div>
-                <Input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleFileSelect}
-                />
-              </label>
-            </Card>
+      <main className={`pt-[180px] px-4 pb-20 max-w-4xl mx-auto`}>
+        {(!menuItems || menuItems.length === 0) ? (
+          <div className="text-center py-8 text-gray-500">
+            No menu items found
           </div>
-        )}
-
-        {menuItems && menuItems.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredItems?.map((item) => (
               <MenuCard key={item.id} item={item} />
             ))}
