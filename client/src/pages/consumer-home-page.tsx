@@ -176,11 +176,11 @@ export default function ConsumerHomePage() {
 
           {menuItems && menuItems.length > 0 && (
             <>
-              <div className="flex flex-col gap-2 mt-3">
+              <div className="flex gap-2 mt-3">
                 <Button
                   variant="outline"
                   onClick={() => setIsFiltersOpen(!isFiltersOpen)}
-                  className="w-full justify-between gap-2"
+                  className="flex-1 justify-between gap-2"
                 >
                   Filters
                   {isFiltersOpen ? (
@@ -194,10 +194,10 @@ export default function ConsumerHomePage() {
                   value={selectedTags.length === 0 ? "all" : selectedTags.join(",")}
                   onValueChange={handleTagSelection}
                 >
-                  <SelectTrigger className="w-full justify-between">
+                  <SelectTrigger className="flex-1 justify-between">
                     <SelectValue placeholder="All Courses" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="w-[100vw] left-0 right-0 translate-x-[-50%]">
                     <SelectItem value="all">All Courses</SelectItem>
                     {Array.from(uniqueTags).map((tag) => (
                       <SelectItem key={tag} value={tag}>
