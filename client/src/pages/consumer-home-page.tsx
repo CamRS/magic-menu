@@ -51,44 +51,84 @@ const MenuCard = ({ item }: { item: ConsumerMenuItem }) => {
     .filter(([_, value]) => value)
     .map(([key]) => key);
 
+  const activeDietary = Object.entries(item.dietary_preferences || {})
+    .filter(([_, value]) => value)
+    .map(([key]) => key);
+
+  const courseTag = item.courseTags?.[0] || '';
+
   return (
-    <Card className="w-full bg-white rounded-xl shadow-sm border border-gray-100 h-full">
-      <CardContent className="p-6">
-        <div className="mb-4">
-          <h3 className="text-xl font-semibold text-gray-900">
+    <Card className="w-full bg-white rounded-3xl shadow-sm border border-gray-100">
+      <CardContent className="p-8 flex flex-col gap-4">
+        {/* Course Type */}
+        {courseTag && (
+          <div className="text-gray-600 text-sm">
+            {courseTag}
+          </div>
+        )}
+
+        {/* Title */}
+        <div>
+          <h3 className="text-2xl leading-tight font-normal text-gray-900">
             {item.name}
           </h3>
           {item.name_original && (
-            <div className="text-base text-gray-600 mt-1">
+            <div className="text-sm text-gray-600 mt-1">
               {item.name_original}
             </div>
           )}
         </div>
 
-        {item.description && (
-          <p className="text-gray-700 mb-4 line-clamp-3">
-            {item.description}
-          </p>
-        )}
-
+        {/* Allergens */}
         {activeAllergens.length > 0 && (
-          <div className="mb-4">
-            <div className="flex flex-wrap gap-2">
-              {activeAllergens.map((allergen) => (
-                <Badge
-                  key={allergen}
-                  variant="secondary"
-                  className="bg-[#4169E1]/10 text-[#4169E1] border-none rounded-full capitalize px-3 py-1 text-xs"
-                >
-                  {allergen}
-                </Badge>
-              ))}
+          <div>
+            <div className="flex items-center gap-3">
+              <span className="text-sm">Contains</span>
+              <div className="flex flex-wrap gap-2">
+                {activeAllergens.map((allergen) => (
+                  <Badge
+                    key={allergen}
+                    variant="secondary"
+                    className="bg-[#4169E1]/10 text-[#4169E1] border-none rounded-full capitalize px-3 py-0.5 text-sm"
+                  >
+                    {allergen}
+                  </Badge>
+                ))}
+              </div>
             </div>
           </div>
         )}
 
-        <div className="mt-auto pt-2">
-          <span className="text-xl font-semibold text-gray-900">
+        {/* Dietary Preferences */}
+        {activeDietary && activeDietary.length > 0 && (
+          <div>
+            <div className="flex items-center gap-3">
+              <span className="text-sm">Is</span>
+              <div className="flex flex-wrap gap-2">
+                {activeDietary.map((pref) => (
+                  <Badge
+                    key={pref}
+                    variant="default"
+                    className="bg-[#22C55E] text-white border-none rounded-full capitalize px-3 py-0.5 text-sm"
+                  >
+                    {pref}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Description */}
+        {item.description && (
+          <p className="text-gray-900 text-sm leading-relaxed">
+            {item.description}
+          </p>
+        )}
+
+        {/* Price */}
+        <div>
+          <span className="text-xl font-normal text-gray-900">
             {item.price && parseFloat(item.price) > 0 ? `$${parseFloat(item.price).toFixed(2)}` : ''}
           </span>
         </div>
