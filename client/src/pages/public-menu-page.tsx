@@ -37,18 +37,18 @@ const MenuCard = ({ item }: { item: MenuItem }) => {
   const courseTag = item.courseTags?.[0] || '';
 
   return (
-    <Card className="w-full bg-white rounded-xl shadow-sm border border-gray-100 h-full">
-      <CardContent className="p-6 space-y-4">
+    <Card className="w-full bg-white rounded-3xl shadow-sm border border-gray-100">
+      <CardContent className="p-8 flex flex-col gap-6">
         {/* Course Type */}
         {courseTag && (
-          <div className="text-gray-600 text-sm">
+          <div className="text-gray-600 text-base">
             {courseTag}
           </div>
         )}
 
         {/* Title */}
         <div>
-          <h3 className="text-4xl font-normal text-gray-900">
+          <h3 className="text-[40px] leading-tight font-normal text-gray-900">
             {item.name}
           </h3>
           {item.name_original && (
@@ -61,13 +61,13 @@ const MenuCard = ({ item }: { item: MenuItem }) => {
         {/* Allergens */}
         {activeAllergens.length > 0 && (
           <div>
-            <div className="text-sm mb-2">Contains</div>
+            <div className="text-base mb-3">Contains</div>
             <div className="flex flex-wrap gap-2">
               {activeAllergens.map((allergen) => (
                 <Badge
                   key={allergen}
                   variant="secondary"
-                  className="bg-[#4169E1]/10 text-[#4169E1] border-none rounded-full capitalize px-3 py-1"
+                  className="bg-[#4169E1]/10 text-[#4169E1] border-none rounded-full capitalize px-4 py-1.5 text-base"
                 >
                   {allergen}
                 </Badge>
@@ -79,13 +79,13 @@ const MenuCard = ({ item }: { item: MenuItem }) => {
         {/* Dietary Preferences */}
         {activeDietary.length > 0 && (
           <div>
-            <div className="text-sm mb-2">Is</div>
+            <div className="text-base mb-3">Is</div>
             <div className="flex flex-wrap gap-2">
               {activeDietary.map((pref) => (
                 <Badge
                   key={pref}
                   variant="default"
-                  className="bg-[#22C55E] border-none rounded-full capitalize px-3 py-1"
+                  className="bg-[#22C55E] text-white border-none rounded-full capitalize px-4 py-1.5 text-base"
                 >
                   {pref}
                 </Badge>
@@ -96,14 +96,14 @@ const MenuCard = ({ item }: { item: MenuItem }) => {
 
         {/* Description */}
         {item.description && (
-          <p className="text-gray-700 text-base">
+          <p className="text-gray-900 text-base leading-normal">
             {item.description}
           </p>
         )}
 
         {/* Price */}
-        <div className="pt-2">
-          <span className="text-3xl font-normal text-gray-900">
+        <div>
+          <span className="text-[32px] font-normal text-gray-900">
             {item.price && parseFloat(item.price) > 0 ? `${parseFloat(item.price).toFixed(2)}` : ''}
           </span>
         </div>
