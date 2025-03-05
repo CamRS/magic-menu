@@ -137,23 +137,15 @@ export default function PublicMenuPage() {
         throw new Error('Restaurant ID is required');
       }
 
-      const searchParams = new URLSearchParams({
+      console.log(`Fetching menu items for restaurant ${restaurantId}`);
+      const response = await fetch(`/api/menu-items?${new URLSearchParams({
         restaurantId: restaurantId.toString(),
         status: 'live'
-      });
-
-      // Add search params if present
-      if (searchTerm) {
-        searchParams.append('search', searchTerm);
-      }
-
-      if (selectedTags.length > 0) {
-        searchParams.append('tags', selectedTags.join(','));
-      }
-
-      console.log(`Fetching menu items for restaurant ${restaurantId}`);
-      const response = await fetch(`/api/menu-items?${searchParams.toString()}`, {
-        credentials: 'include'
+      })}`, {
+        credentials: 'include',
+        headers: {
+          'Accept': 'application/json'
+        }
       });
 
       if (!response.ok) {
