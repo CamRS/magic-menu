@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { User, CheckIcon } from "lucide-react";
+import { User, CheckIcon, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -138,34 +138,34 @@ export function SettingsMenu() {
         </div>
       </SheetTrigger>
       <SheetContent side="bottom" className="w-full p-0">
-        <div className="space-y-4 p-6">
-          <div className="space-y-6">
-            <div className="flex justify-between items-center py-4">
+        <div className="space-y-3 p-4">
+          <div className="space-y-4">
+            <div className="flex justify-between items-center py-2">
               <div>
-                <h3 className="text-base font-semibold">Refer a friend</h3>
-                <p className="text-sm text-gray-600">
+                <h3 className="text-sm font-medium text-gray-900">Refer a friend</h3>
+                <p className="text-xs text-gray-500">
                   Translate any menu, save your dietary preferences, and identify potential allergens on any menu.
                 </p>
               </div>
               <Button
-                className="bg-[#4F46E5] text-white hover:bg-[#4338CA]"
+                className="bg-[#4F46E5] text-white hover:bg-[#4338CA] text-sm px-4 py-2 h-8"
                 onClick={handleShare}
               >
                 Share
               </Button>
             </div>
 
-            <div className="border-t" />
+            <div className="border-t border-gray-100" />
             <Dialog open={isLanguageOpen} onOpenChange={setIsLanguageOpen}>
               <DialogTrigger asChild>
                 <div className="flex justify-between items-center py-2 cursor-pointer">
                   <div>
-                    <h3 className="text-base font-semibold">Preferred language</h3>
-                    <p className="text-base">
+                    <h3 className="text-sm font-medium text-gray-900">Preferred language</h3>
+                    <p className="text-xs text-gray-500">
                       {SUPPORTED_LANGUAGES.find(lang => lang.code === (user?.preferredLanguage ?? 'en'))?.name ?? 'English'}
                     </p>
                   </div>
-                  <CheckIcon className="h-5 w-5 text-[#4F46E5]" />
+                  <CheckIcon className="h-4 w-4 text-[#4F46E5]" />
                 </div>
               </DialogTrigger>
               <DialogContent>
@@ -192,19 +192,19 @@ export function SettingsMenu() {
               </DialogContent>
             </Dialog>
 
-            <div className="border-t" />
+            <div className="border-t border-gray-100" />
             <Dialog open={isAllergiesOpen} onOpenChange={setIsAllergiesOpen}>
               <DialogTrigger asChild>
                 <div className="flex justify-between items-center py-2 cursor-pointer">
                   <div>
-                    <h3 className="text-base font-semibold">Saved allergies</h3>
-                    <p className="text-base">
+                    <h3 className="text-sm font-medium text-gray-900">Saved allergies</h3>
+                    <p className="text-xs text-gray-500">
                       {(user?.savedAllergies ?? []).length > 0
                         ? (user?.savedAllergies ?? []).map(a => a.charAt(0).toUpperCase() + a.slice(1)).join(', ')
                         : 'None selected'}
                     </p>
                   </div>
-                  <CheckIcon className="h-5 w-5 text-[#4F46E5]" />
+                  <CheckIcon className="h-4 w-4 text-[#4F46E5]" />
                 </div>
               </DialogTrigger>
               <DialogContent>
@@ -241,20 +241,20 @@ export function SettingsMenu() {
               </DialogContent>
             </Dialog>
 
-            <div className="border-t" />
+            <div className="border-t border-gray-100" />
             <Dialog open={isUpdateLoginOpen} onOpenChange={setIsUpdateLoginOpen}>
               <DialogTrigger asChild>
-                <div className="space-y-4 py-2">
-                  <h3 className="text-base font-semibold">Account settings</h3>
-                  <div className="space-y-2">
-                    <p className="text-sm text-gray-600">Email address</p>
-                    <p className="text-base">{user?.email}</p>
+                <div className="space-y-2 py-2">
+                  <h3 className="text-sm font-medium text-gray-900">Account settings</h3>
+                  <div className="space-y-1">
+                    <p className="text-xs text-gray-500">Email address</p>
+                    <p className="text-sm text-gray-700">{user?.email}</p>
                   </div>
-                  <div className="space-y-2">
-                    <p className="text-sm text-gray-600">Password</p>
-                    <p className="text-base">****************</p>
+                  <div className="space-y-1">
+                    <p className="text-xs text-gray-500">Password</p>
+                    <p className="text-sm text-gray-700">****************</p>
                   </div>
-                  <Button variant="link" className="text-[#4F46E5] p-0 h-auto font-normal" onClick={() => setIsUpdateLoginOpen(true)}>
+                  <Button variant="link" className="text-[#4F46E5] p-0 h-auto text-xs" onClick={() => setIsUpdateLoginOpen(true)}>
                     Update login details
                   </Button>
                 </div>
@@ -298,6 +298,16 @@ export function SettingsMenu() {
                 </div>
               </DialogContent>
             </Dialog>
+
+            <div className="border-t border-gray-100" />
+            <Button 
+              variant="ghost" 
+              className="w-full text-red-500 hover:text-red-600 hover:bg-red-50 text-sm gap-2 justify-start"
+              onClick={() => logoutMutation.mutate()}
+            >
+              <LogOut className="h-4 w-4" />
+              Sign out
+            </Button>
           </div>
         </div>
       </SheetContent>
