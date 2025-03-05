@@ -58,6 +58,17 @@ export const menuItems = pgTable("menu_items", {
     soy: false,
     gluten: false,
   }),
+  dietary_preferences: jsonb("dietary_preferences").$type<{
+    vegan: boolean;
+    vegetarian: boolean;
+    kosher: boolean;
+    halal: boolean;
+  }>().notNull().default({
+    vegan: false,
+    vegetarian: false,
+    kosher: false,
+    halal: false,
+  }),
 });
 
 // New table for consumer-uploaded menus
@@ -132,6 +143,17 @@ export const insertMenuItemSchema = createInsertSchema(menuItems).extend({
     fish: false,
     soy: false,
     gluten: false,
+  }),
+  dietary_preferences: z.object({
+    vegan: z.boolean().default(false),
+    vegetarian: z.boolean().default(false),
+    kosher: z.boolean().default(false),
+    halal: z.boolean().default(false),
+  }).default({
+    vegan: false,
+    vegetarian: false,
+    kosher: false,
+    halal: false,
   }),
 });
 
