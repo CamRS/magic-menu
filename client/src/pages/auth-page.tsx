@@ -22,7 +22,9 @@ const loginSchema = z.object({
 const registerSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
+  userType: z.enum(["consumer", "restaurant"]),
   preferredLanguage: z.string().min(1, "Language selection is required"),
+  restaurantName: z.string().optional(),
 });
 
 type LoginData = z.infer<typeof loginSchema>;
@@ -50,7 +52,13 @@ export default function AuthPage() {
 
   const registerForm = useForm<RegisterData>({
     resolver: zodResolver(registerSchema),
-    defaultValues: { email: "", password: "", preferredLanguage: "en" },
+    defaultValues: { 
+      email: "", 
+      password: "", 
+      preferredLanguage: "en",
+      userType: "consumer",
+      restaurantName: "",
+    },
   });
 
   const handleRegister = async (data: RegisterData) => {
@@ -59,12 +67,16 @@ export default function AuthPage() {
       return;
     }
 
-    registerMutation.mutate({
+    const registrationData = {
       email: data.email,
       password: data.password,
+      userType: data.userType,
       preferredLanguage: data.preferredLanguage,
-      userType: "consumer",
-    });
+      restaurantName: data.userType === "restaurant" ? data.restaurantName : undefined,
+      savedAllergies: [],
+    };
+
+    registerMutation.mutate(registrationData);
   };
 
   if (user) {
@@ -121,7 +133,7 @@ export default function AuthPage() {
               <Card>
                 <CardHeader>
                   <CardTitle>
-                    {registrationStep === 1 ? "Create Account" : "Select Language"}
+                    {registrationStep === 1 ? "Create Account" : "Account Details"}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -147,26 +159,59 @@ export default function AuthPage() {
                               </p>
                             )}
                           </div>
+                          <div>
+                            <Label htmlFor="userType">Account Type</Label>
+                            <Select
+                              value={registerForm.watch("userType")}
+                              onValueChange={(value: "consumer" | "restaurant") => 
+                                registerForm.setValue("userType", value)
+                              }
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select account type" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="consumer">Consumer</SelectItem>
+                                <SelectItem value="restaurant">Restaurant</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </>
                       ) : (
-                        <div>
-                          <Label htmlFor="language">Preferred Language</Label>
-                          <Select
-                            value={registerForm.watch("preferredLanguage")}
-                            onValueChange={(value) => registerForm.setValue("preferredLanguage", value)}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select a language" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {SUPPORTED_LANGUAGES.map((lang) => (
-                                <SelectItem key={lang.code} value={lang.code}>
-                                  {lang.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
+                        <>
+                          <div>
+                            <Label htmlFor="language">Preferred Language</Label>
+                            <Select
+                              value={registerForm.watch("preferredLanguage")}
+                              onValueChange={(value) => registerForm.setValue("preferredLanguage", value)}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select a language" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {SUPPORTED_LANGUAGES.map((lang) => (
+                                  <SelectItem key={lang.code} value={lang.code}>
+                                    {lang.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          {registerForm.watch("userType") === "restaurant" && (
+                            <div>
+                              <Label htmlFor="restaurantName">Restaurant Name</Label>
+                              <Input
+                                id="restaurantName"
+                                {...registerForm.register("restaurantName")}
+                              />
+                              {registerForm.formState.errors.restaurantName && (
+                                <p className="text-sm text-destructive mt-1">
+                                  {registerForm.formState.errors.restaurantName.message}
+                                </p>
+                              )}
+                            </div>
+                          )}
+                        </>
                       )}
                       <Button type="submit" className="w-full" disabled={registerMutation.isPending}>
                         {registerMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
