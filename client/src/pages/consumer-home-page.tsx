@@ -54,7 +54,6 @@ const MenuCard = ({ item }: { item: ConsumerMenuItem }) => {
   return (
     <Card className="w-full bg-white rounded-xl shadow-sm border border-gray-100 h-full">
       <CardContent className="p-6">
-        {/* Title with original name */}
         <div className="mb-4">
           <h3 className="text-xl font-semibold text-gray-900">
             {item.name}
@@ -66,14 +65,12 @@ const MenuCard = ({ item }: { item: ConsumerMenuItem }) => {
           )}
         </div>
 
-        {/* Description */}
         {item.description && (
           <p className="text-gray-700 mb-4 line-clamp-3">
             {item.description}
           </p>
         )}
 
-        {/* Allergens */}
         {activeAllergens.length > 0 && (
           <div className="mb-4">
             <div className="flex flex-wrap gap-2">
@@ -90,7 +87,6 @@ const MenuCard = ({ item }: { item: ConsumerMenuItem }) => {
           </div>
         )}
 
-        {/* Price */}
         <div className="mt-auto pt-2">
           <span className="text-xl font-semibold text-gray-900">
             {item.price && parseFloat(item.price) > 0 ? `$${parseFloat(item.price).toFixed(2)}` : ''}
@@ -109,6 +105,7 @@ export default function ConsumerHomePage() {
   const [selectedAllergens, setSelectedAllergens] = useState<AllergenType[]>([]);
   const [selectedDietary, setSelectedDietary] = useState<typeof dietaryPreferences[number][]>([]);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [isCoursesOpen, setIsCoursesOpen] = useState(false);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [page, setPage] = useState(1);
 
@@ -179,11 +176,25 @@ export default function ConsumerHomePage() {
       const tags = value.split(",").filter(Boolean);
       setSelectedTags(tags);
     }
-    setPage(1); // Reset to first page when changing filters
+    setPage(1); 
+  };
+
+  const handleCoursesOpenChange = (open: boolean) => {
+    setIsCoursesOpen(open);
+    if (open) {
+      setIsFiltersOpen(false);
+    }
+  };
+
+  const handleFiltersOpenChange = (open: boolean) => {
+    setIsFiltersOpen(open);
+    if (open) {
+      setIsCoursesOpen(false);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
+    <div className="min-h-screen bg-gray-50">
       <header className="fixed top-0 left-0 right-0 bg-white border-b z-50">
         <div className="max-w-4xl mx-auto px-4 py-4">
           <div className="relative">
@@ -192,7 +203,7 @@ export default function ConsumerHomePage() {
               value={searchTerm}
               onChange={(e) => {
                 setSearchTerm(e.target.value);
-                setPage(1); // Reset to first page when searching
+                setPage(1);
               }}
               className="w-full pl-10 pr-4 h-11 rounded-full border-gray-200 bg-white"
             />
@@ -202,7 +213,7 @@ export default function ConsumerHomePage() {
           <div className="flex gap-2 mt-3">
             <Button
               variant="outline"
-              onClick={() => setIsFiltersOpen(!isFiltersOpen)}
+              onClick={() => handleFiltersOpenChange(!isFiltersOpen)}
               className="flex-1 justify-between gap-2 h-10 px-4 py-2"
             >
               Filters
@@ -216,6 +227,8 @@ export default function ConsumerHomePage() {
             <Select
               value={selectedTags.length === 0 ? "all" : selectedTags.join(",")}
               onValueChange={handleTagSelection}
+              open={isCoursesOpen}
+              onOpenChange={handleCoursesOpenChange}
             >
               <SelectTrigger className="flex-1 h-10 px-4 py-2">
                 <SelectValue placeholder="All Courses" />
@@ -231,7 +244,10 @@ export default function ConsumerHomePage() {
             </Select>
           </div>
 
-          <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
+          <Collapsible 
+            open={isFiltersOpen} 
+            onOpenChange={handleFiltersOpenChange}
+          >
             <CollapsibleContent className="py-4 space-y-4">
               <div>
                 <h3 className="font-medium mb-2">Allergens</h3>
@@ -251,7 +267,7 @@ export default function ConsumerHomePage() {
                             ? prev.filter((a) => a !== allergen)
                             : [...prev, allergen]
                         );
-                        setPage(1); // Reset to first page when changing filters
+                        setPage(1); 
                       }}
                     >
                       <span className="capitalize">{allergen}</span>
@@ -278,7 +294,7 @@ export default function ConsumerHomePage() {
                             ? prev.filter((p) => p !== pref)
                             : [...prev, pref]
                         );
-                        setPage(1); // Reset page to 1 when filtering
+                        setPage(1); 
                       }}
                     >
                       {pref}
@@ -310,7 +326,6 @@ export default function ConsumerHomePage() {
               ))}
             </div>
 
-            {/* Pagination */}
             {totalPages > 1 && (
               <div className="flex justify-center gap-2 mt-8">
                 <Button
