@@ -131,12 +131,29 @@ export default function PublicMenuPage() {
   });
 
   const { data: menuItems, isLoading: isLoadingMenu, error } = useQuery<MenuItem[]>({
-    queryKey: [`/api/menu-items/${restaurantId}`, searchTerm, selectedTags, selectedAllergens],
+    queryKey: [`/api/menu-items`, restaurantId],
     queryFn: async () => {
-      const response = await fetch(`/api/menu-items?restaurantId=${restaurantId}&status=live`, {
+      const searchParams = new URLSearchParams({
+        restaurantId: restaurantId!.toString(),
+        status: 'live',
+      });
+
+      if (searchTerm) {
+        searchParams.append('search', searchTerm);
+      }
+
+      if (selectedTags.length > 0) {
+        searchParams.append('tags', selectedTags.join(','));
+      }
+
+      const response = await fetch(`/api/menu-items?${searchParams.toString()}`, {
         credentials: 'include'
       });
-      if (!response.ok) throw new Error('Failed to fetch menu items');
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch menu items');
+      }
+
       return response.json();
     },
     enabled: !!restaurantId,
