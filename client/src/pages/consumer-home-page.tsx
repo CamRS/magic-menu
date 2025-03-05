@@ -35,15 +35,15 @@ const MenuCard = ({ item }: { item: ConsumerMenuItem }) => {
 
   return (
     <Card className="w-full bg-white rounded-xl shadow-sm border border-gray-100 h-full">
-      <div className="p-6 space-y-5">
+      <div className="p-8 space-y-6">
         {/* Course Type */}
-        {item.course_type && (
+        {item.courseTags && item.courseTags.length > 0 && (
           <div>
-            <div className="text-gray-600">
-              {item.course_type}
+            <div className="text-sm font-medium text-gray-900 capitalize">
+              {item.courseTags[0]}
             </div>
             {item.course_original && (
-              <div className="text-gray-400 text-sm">
+              <div className="text-xs text-gray-500 mt-0.5">
                 {item.course_original}
               </div>
             )}
@@ -52,39 +52,20 @@ const MenuCard = ({ item }: { item: ConsumerMenuItem }) => {
 
         {/* Name */}
         <div>
-          <h3 className="text-xl font-semibold text-gray-900">
+          <h3 className="text-lg font-semibold text-gray-900">
             {item.name}
           </h3>
           {item.name_original && (
-            <div className="text-gray-500 text-base mt-1">
+            <div className="text-sm text-gray-600 mt-1">
               {item.name_original}
             </div>
           )}
         </div>
 
-        {/* Allergens */}
-        {activeAllergens.length > 0 && (
-          <div>
-            <div className="text-gray-700 font-medium mb-2">Often Contains</div>
-            <div className="flex flex-wrap gap-2">
-              {activeAllergens.map((allergen) => (
-                <Badge
-                  key={allergen}
-                  variant="secondary"
-                  className="bg-[#4169E1] text-white border-none rounded-full capitalize px-3 py-1 text-xs select-none"
-                >
-                  {allergen}
-                </Badge>
-              ))}
-            </div>
-          </div>
-        )}
-
         {/* Description */}
         {item.description && (
           <div>
-            <div className="text-gray-700 font-medium mb-1">Common Description</div>
-            <p className="text-gray-600">
+            <p className="text-sm text-gray-700 leading-relaxed">
               {item.description}
             </p>
           </div>
@@ -92,8 +73,25 @@ const MenuCard = ({ item }: { item: ConsumerMenuItem }) => {
 
         {/* Price */}
         {item.price && parseFloat(item.price) > 0 && (
-          <div className="text-xl font-semibold text-gray-900">
+          <div className="text-lg font-semibold text-gray-900">
             ${parseFloat(item.price).toFixed(2)}
+          </div>
+        )}
+
+        {/* Allergens */}
+        {activeAllergens.length > 0 && (
+          <div>
+            <div className="flex flex-wrap gap-2">
+              {activeAllergens.map((allergen) => (
+                <Badge
+                  key={allergen}
+                  variant="secondary"
+                  className="bg-[#4169E1]/10 text-[#4169E1] border-none rounded-full capitalize px-3 py-1 text-xs"
+                >
+                  {allergen}
+                </Badge>
+              ))}
+            </div>
           </div>
         )}
       </div>
@@ -156,17 +154,17 @@ export default function ConsumerHomePage() {
   };
 
   const uniqueTags = menuItems?.reduce((tags, item) => {
-    if (item.course_type) tags.add(item.course_type);
+    if (item.courseTags && item.courseTags.length > 0) tags.add(item.courseTags[0]);
     return tags;
   }, new Set<string>()) || new Set<string>();
 
-  const filteredItems = menuItems?.filter(({ name, description, course_type, allergens }) => {
+  const filteredItems = menuItems?.filter(({ name, description, courseTags, allergens }) => {
     const matchesSearch = !searchTerm ||
       name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       description.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesTags = selectedTags.length === 0 ||
-      selectedTags.includes(course_type || '');
+      (courseTags && selectedTags.includes(courseTags[0] || ''));
 
     const matchesAllergens = selectedAllergens.every(allergen => !allergens[allergen]);
 
