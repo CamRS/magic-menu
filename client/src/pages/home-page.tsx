@@ -477,6 +477,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-4xl mx-auto p-4">
+        {/* Header */}
         <div className="flex justify-between items-center mb-8">
           <div className="flex items-center gap-4">
             {isLoadingRestaurants ? (
@@ -516,6 +517,17 @@ export default function HomePage() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+
+            <Button variant="outline" onClick={() => {
+              fetch('/api/auth/signout', {
+                method: 'POST',
+                credentials: 'include'
+              }).then(() => {
+                window.location.href = '/';
+              });
+            }}>
+              Sign Out
+            </Button>
           </div>
         </div>
 
