@@ -6,6 +6,7 @@ import { Search, Camera, Upload, ChevronDown, ChevronUp, Plus, Loader2 } from "l
 import { useState } from "react";
 import { SettingsMenu } from "@/components/settings-dialogs";
 import { Badge } from "@/components/ui/badge";
+import useEmblaCarousel from 'embla-carousel-react';
 import {
   Select,
   SelectContent,
@@ -32,7 +33,7 @@ const allergensList: AllergenType[] = ['milk', 'eggs', 'peanuts', 'nuts', 'shell
 const dietaryPreferences = ['Vegetarian', 'Vegan'] as const;
 
 const MenuItemSkeleton = () => (
-  <Card className="w-full bg-white rounded-xl shadow-sm border border-gray-100 h-full">
+  <Card className="flex-[0_0_90%] mx-2 bg-white rounded-xl shadow-sm border border-gray-100">
     <CardContent className="p-6 space-y-4">
       <Skeleton className="h-6 w-3/4" />
       <Skeleton className="h-4 w-full" />
@@ -58,7 +59,7 @@ const MenuCard = ({ item }: { item: ConsumerMenuItem }) => {
   const courseTag = item.courseTags?.[0] || '';
 
   return (
-    <Card className="w-full bg-white rounded-3xl shadow-sm border border-gray-100">
+    <Card className="flex-[0_0_90%] mx-2 bg-white rounded-3xl shadow-sm border border-gray-100">
       <CardContent className="p-8 flex flex-col gap-4">
         {/* Course Type */}
         {courseTag && (
@@ -148,6 +149,11 @@ export default function ConsumerHomePage() {
   const [isCoursesOpen, setIsCoursesOpen] = useState(false);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [page, setPage] = useState(1);
+  const [emblaRef] = useEmblaCarousel({
+    align: 'start',
+    containScroll: 'trimSnaps',
+    dragFree: true
+  });
 
   const { data: menuItemsResponse, isLoading } = useQuery<{ items: ConsumerMenuItem[], total: number }>({
     queryKey: ["/api/consumer-menu-items", page, searchTerm, selectedAllergens, selectedTags],
@@ -371,10 +377,12 @@ export default function ConsumerHomePage() {
 
       <main className={`pt-[180px] px-4 pb-20 max-w-4xl mx-auto`}>
         {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {Array.from({ length: ITEMS_PER_PAGE }).map((_, index) => (
-              <MenuItemSkeleton key={index} />
-            ))}
+          <div className="overflow-hidden" ref={emblaRef}>
+            <div className="flex">
+              {Array.from({ length: ITEMS_PER_PAGE }).map((_, index) => (
+                <MenuItemSkeleton key={index} />
+              ))}
+            </div>
           </div>
         ) : !menuItems || menuItems.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
@@ -382,10 +390,12 @@ export default function ConsumerHomePage() {
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {menuItems.map((item) => (
-                <MenuCard key={item.id} item={item} />
-              ))}
+            <div className="overflow-hidden" ref={emblaRef}>
+              <div className="flex">
+                {menuItems.map((item) => (
+                  <MenuCard key={item.id} item={item} />
+                ))}
+              </div>
             </div>
 
             {totalPages > 1 && (
