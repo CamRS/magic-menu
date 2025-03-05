@@ -30,12 +30,25 @@ const MenuCard = ({ item }: { item: MenuItem }) => {
     .filter(([_, value]) => value)
     .map(([key]) => key);
 
+  const activeDietary = Object.entries(item.dietary_preferences)
+    .filter(([_, value]) => value)
+    .map(([key]) => key);
+
+  const courseTag = item.courseTags?.[0] || '';
+
   return (
     <Card className="w-full bg-white rounded-xl shadow-sm border border-gray-100 h-full">
-      <CardContent className="p-6">
-        {/* Title with original name */}
-        <div className="mb-4">
-          <h3 className="text-xl font-semibold text-gray-900">
+      <CardContent className="p-6 space-y-4">
+        {/* Course Type */}
+        {courseTag && (
+          <div className="text-gray-600 text-sm">
+            {courseTag}
+          </div>
+        )}
+
+        {/* Title */}
+        <div>
+          <h3 className="text-4xl font-normal text-gray-900">
             {item.name}
           </h3>
           {item.name_original && (
@@ -45,22 +58,16 @@ const MenuCard = ({ item }: { item: MenuItem }) => {
           )}
         </div>
 
-        {/* Description */}
-        {item.description && (
-          <p className="text-gray-700 mb-4 line-clamp-3">
-            {item.description}
-          </p>
-        )}
-
         {/* Allergens */}
         {activeAllergens.length > 0 && (
-          <div className="mb-4">
+          <div>
+            <div className="text-sm mb-2">Contains</div>
             <div className="flex flex-wrap gap-2">
               {activeAllergens.map((allergen) => (
                 <Badge
                   key={allergen}
                   variant="secondary"
-                  className="bg-[#4169E1]/10 text-[#4169E1] border-none rounded-full capitalize px-3 py-1 text-xs"
+                  className="bg-[#4169E1]/10 text-[#4169E1] border-none rounded-full capitalize px-3 py-1"
                 >
                   {allergen}
                 </Badge>
@@ -69,10 +76,35 @@ const MenuCard = ({ item }: { item: MenuItem }) => {
           </div>
         )}
 
+        {/* Dietary Preferences */}
+        {activeDietary.length > 0 && (
+          <div>
+            <div className="text-sm mb-2">Is</div>
+            <div className="flex flex-wrap gap-2">
+              {activeDietary.map((pref) => (
+                <Badge
+                  key={pref}
+                  variant="default"
+                  className="bg-[#22C55E] border-none rounded-full capitalize px-3 py-1"
+                >
+                  {pref}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Description */}
+        {item.description && (
+          <p className="text-gray-700 text-base">
+            {item.description}
+          </p>
+        )}
+
         {/* Price */}
-        <div className="mt-auto pt-2">
-          <span className="text-xl font-semibold text-gray-900">
-            {item.price && parseFloat(item.price) > 0 ? `$${parseFloat(item.price).toFixed(2)}` : ''}
+        <div className="pt-2">
+          <span className="text-3xl font-normal text-gray-900">
+            {item.price && parseFloat(item.price) > 0 ? `${parseFloat(item.price).toFixed(2)}` : ''}
           </span>
         </div>
       </CardContent>
