@@ -38,10 +38,12 @@ const MenuCard = ({ item }: { item: ConsumerMenuItem }) => {
       <div className="p-6 space-y-4">
         {/* Course Type */}
         {item.course_type && (
-          <div className="text-gray-600">
-            {item.course_type}
+          <div>
+            <div className="text-gray-600">
+              {item.course_type}
+            </div>
             {item.course_original && (
-              <div className="text-gray-400 text-sm mt-0.5">
+              <div className="text-gray-400 text-sm">
                 {item.course_original}
               </div>
             )}
@@ -60,16 +62,6 @@ const MenuCard = ({ item }: { item: ConsumerMenuItem }) => {
           )}
         </div>
 
-        {/* Description */}
-        {item.description && (
-          <div>
-            <div className="text-gray-700 font-medium mb-1">Common Description</div>
-            <p className="text-gray-600">
-              {item.description}
-            </p>
-          </div>
-        )}
-
         {/* Allergens */}
         {activeAllergens.length > 0 && (
           <div>
@@ -85,6 +77,16 @@ const MenuCard = ({ item }: { item: ConsumerMenuItem }) => {
                 </Badge>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Description */}
+        {item.description && (
+          <div>
+            <div className="text-gray-700 font-medium mb-1">Common Description</div>
+            <p className="text-gray-600">
+              {item.description}
+            </p>
           </div>
         )}
 
