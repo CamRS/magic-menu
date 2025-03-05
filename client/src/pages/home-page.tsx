@@ -518,14 +518,37 @@ export default function HomePage() {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            <Button variant="outline" onClick={() => {
-              fetch('/api/auth/signout', {
-                method: 'POST',
-                credentials: 'include'
-              }).then(() => {
-                window.location.href = '/';
-              });
-            }}>
+            <Button 
+              variant="outline" 
+              onClick={async () => {
+                try {
+                  const response = await fetch('/api/auth/signout', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: {
+                      'Content-Type': 'application/json'
+                    }
+                  });
+
+                  if (response.ok) {
+                    // Clear any local state/storage if needed
+                    localStorage.clear();
+                    sessionStorage.clear();
+                    // Force reload to clear React Query cache and reset app state
+                    window.location.href = '/auth';
+                  } else {
+                    throw new Error('Failed to sign out');
+                  }
+                } catch (error) {
+                  console.error('Sign out error:', error);
+                  toast({
+                    title: "Error",
+                    description: "Failed to sign out. Please try again.",
+                    variant: "destructive",
+                  });
+                }
+              }}
+            >
               Sign Out
             </Button>
           </div>
