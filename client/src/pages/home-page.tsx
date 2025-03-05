@@ -23,7 +23,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Copy, Store, PlusCircle, ChevronDown, Loader2, Download, Upload, Trash2, MoreVertical, Pencil, Globe, Image as ImageIcon, QrCode } from "lucide-react";
+import { Copy, Store, PlusCircle, ChevronDown, Loader2, Download, Upload, Trash2, MoreVertical, Pencil, Globe, Image as ImageIcon, QrCode, Search } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { type Restaurant, type MenuItem, type InsertMenuItem, insertMenuItemSchema, insertRestaurantSchema } from "@shared/schema";
 import { useState, useEffect, useRef, useCallback } from "react";
@@ -42,6 +42,57 @@ import { QRCodeSVG } from 'qrcode.react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import { Menu } from "lucide-react";
+
+const MenuSheet = ({ restaurants, onRestaurantSelect, onCreateNew }: {
+  restaurants: Restaurant[] | undefined;
+  onRestaurantSelect: (restaurant: Restaurant) => void;
+  onCreateNew: () => void;
+}) => {
+  return (
+    <Sheet>
+      <SheetTrigger asChild>
+        <Button variant="ghost" size="icon" className="md:hidden">
+          <Menu className="h-6 w-6" />
+        </Button>
+      </SheetTrigger>
+      <SheetContent side="left">
+        <SheetHeader>
+          <SheetTitle>Restaurants</SheetTitle>
+        </SheetHeader>
+        <div className="py-4">
+          <div className="space-y-2">
+            {restaurants?.map((restaurant) => (
+              <Button
+                key={restaurant.id}
+                variant="ghost"
+                className="w-full justify-start"
+                onClick={() => onRestaurantSelect(restaurant)}
+              >
+                {restaurant.name}
+              </Button>
+            ))}
+            <Button
+              onClick={onCreateNew}
+              className="w-full justify-start"
+              variant="ghost"
+            >
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Add New Restaurant
+            </Button>
+          </div>
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+};
 
 // Remove the hardcoded token and use environment variables
 const DROPBOX_ACCESS_TOKEN = import.meta.env.VITE_DROPBOX_ACCESS_TOKEN || '';
@@ -102,6 +153,7 @@ export default function HomePage() {
   const imageUploadRef = useRef<HTMLInputElement>(null);
   const [showQrCode, setShowQrCode] = useState(false); // Added state for QR code dialog
   const qrCodeRef = useRef<HTMLDivElement>(null);
+  const [searchTerm, setSearchTerm] = useState(''); // Added search term state
 
   const form = useForm<InsertMenuItem>({
     resolver: zodResolver(insertMenuItemSchema),
@@ -756,91 +808,120 @@ export default function HomePage() {
     }
   };
 
+  const filteredItems = menuItems?.filter(item => 
+    item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.description.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="fixed top-0 left-0 right-0 z-50 bg-gray-50 p-4 md:p-8 border-b">
         <div className="max-w-4xl mx-auto">
           <div className="flex flex-col gap-4">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 w-full md:w-auto">
                 <Store className="h-8 w-8" />
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="font-bold text-xl flex items-center gap-2">
-                      {selectedRestaurant?.name || restaurants?.[0]?.name}
-                      <ChevronDown className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-[200px]">
-                    {restaurants?.map((restaurant) => (
-                      <DropdownMenuItem
-                        key={restaurant.id}
-                        onClick={() => setSelectedRestaurant(restaurant)}
-                      >
-                        <div className="flex items-center justify-between w-full">
-                          <span>{restaurant.name}</span>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              copyMenuUrl(restaurant.id);
-                            }}
-                          >
-                            <Globe className="h-4 w-4" />
-                          </Button>
-                        </div>
+
+                {/* Mobile Menu */}
+                <MenuSheet 
+                  restaurants={restaurants}
+                  onRestaurantSelect={setSelectedRestaurant}
+                  onCreateNew={() => setCreateRestaurantOpen(true)}
+                />
+
+                {/* Desktop Dropdown */}
+                <div className="hidden md:block flex-1">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="font-bold text-xl flex items-center gap-2">
+                        {selectedRestaurant?.name || restaurants?.[0]?.name}
+                        <ChevronDown className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-[200px]">
+                      {restaurants?.map((restaurant) => (
+                        <DropdownMenuItem
+                          key={restaurant.id}
+                          onClick={() => setSelectedRestaurant(restaurant)}
+                        >
+                          <div className="flex items-center justify-between w-full">
+                            <span>{restaurant.name}</span>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                copyMenuUrl(restaurant.id);
+                              }}
+                            >
+                              <Globe className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </DropdownMenuItem>
+                      ))}
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => setCreateRestaurantOpen(true)}>
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Add New Restaurant
                       </DropdownMenuItem>
-                    ))}
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => setCreateRestaurantOpen(true)}>
-                      <PlusCircle className="mr-2 h-4 w-4" />
-                      Add New Restaurant
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </div>
 
-              <Button variant="outline" onClick={() => logoutMutation.mutate()} className="md:ml-auto">
+              <Button variant="outline" onClick={() => logoutMutation.mutate()} className="w-full md:w-auto md:ml-auto">
                 Logout
               </Button>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-2 flex-wrap">
-              {selectedRestaurant && (
-                <>
-                  <Button
-                    variant="outline"
-                    className="flex items-center gap-2 w-full sm:w-auto"
-                    onClick={() => copyMenuUrl(selectedRestaurant.id)}
-                  >
-                    <Globe className="h-4 w-4" />
-                    Copy Menu URL
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="flex items-center gap-2 w-full sm:w-auto"
-                    onClick={() => setShowQrCode(true)}
-                  >
-                    <QrCode className="h-4 w-4" />
-                    QR Code
-                  </Button>
-                </>
-              )}
-              <Button
-                onClick={() => setCreateMenuItemOpen(true)}
-                className="w-full sm:w-auto"
-              >
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Add Menu Item
-              </Button>
+            {/* Improved Search and Actions */}
+            <div className="flex flex-col gap-3">
+              <div className="relative">
+                <Input
+                  placeholder="Search menu items..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4"
+                />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+              </div>
+
+              <div className="grid grid-cols-2 md:flex gap-2">
+                <Button
+                  onClick={() => setCreateMenuItemOpen(true)}
+                  className="w-full md:w-auto"
+                >
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Add Item
+                </Button>
+
+                <Button
+                  variant="outline"
+                  onClick={handleExportCSV}
+                  className="w-full md:w-auto"
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  Export
+                </Button>
+
+                <Button variant="outline" className="w-full md:w-auto" onClick={handleImportClick}>
+                  <Upload className="mr-2 h-4 w-4" />
+                  Import
+                </Button>
+
+                <Button variant="outline" className="w-full md:w-auto" onClick={handleImageUploadClick}>
+                  <ImageIcon className="mr-2 h-4 w-4" />
+                  Upload
+                </Button>
+              </div>
+
               {selectedItems.length > 0 && (
                 <Button
                   variant="destructive"
                   onClick={handleDeleteSelected}
                   disabled={deleteMutation.isPending}
-                  className="w-full sm:w-auto"
+                  className="w-full md:w-auto"
                 >
                   {deleteMutation.isPending && (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -848,42 +929,28 @@ export default function HomePage() {
                   Delete Selected ({selectedItems.length})
                 </Button>
               )}
-              <Button
-                variant="outline"
-                onClick={handleExportCSV}
-                className="w-full sm:w-auto"
-              >
-                <Download className="mr-2 h-4 w-4" />
-                Export CSV
-              </Button>
-              <Button variant="outline" className="w-full sm:w-auto" onClick={handleImportClick}>
-                <Upload className="mr-2 h-4 w-4" />
-                Import CSV
-              </Button>
-              <Button variant="outline" className="w-full sm:w-auto" onClick={handleImageUploadClick}>
-                <ImageIcon className="mr-2 h-4 w-4" />
-                Upload Menu Image
-              </Button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".csv"
-                onChange={handleImportCSV}
-                className="hidden"
-              />
-              <input
-                ref={imageUploadRef}
-                type="file"
-                accept="image/*"
-                onChange={handleImageUpload}
-                className="hidden"
-              />
             </div>
           </div>
         </div>
       </div>
 
-      <div className="p-4 md:p-8 mt-[160px] md:mt-[160px]">
+      {/* Hidden file inputs */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".csv"
+        onChange={handleImportCSV}
+        className="hidden"
+      />
+      <input
+        ref={imageUploadRef}
+        type="file"
+        accept="image/*"
+        onChange={handleImageUpload}
+        className="hidden"
+      />
+
+      <div className="p-4 md:p-8 mt-[240px] md:mt-[200px]">
         <div className="max-w-4xl mx-auto">
           <Dialog open={isCreateRestaurantOpen} onOpenChange={setCreateRestaurantOpen}>
             <DialogContent>
@@ -1212,89 +1279,43 @@ export default function HomePage() {
             </DialogContent>
           </Dialog>
 
-          <DragDropContext onDragEnd={handleDragEnd}>
-            {Object.entries(groupedMenuItems).map(([tag, items]) => (
-              <div key={tag} className="mb-8">
-                <h2 className="text-xl font-semibold mb-4">{tag}</h2>
-                <Droppable droppableId={tag}>
-                  {(provided) => (
-                    <div
-                      {...provided.droppableProps}
-                      ref={provided.innerRef}
-                      className="space-y-4"
-                    >
-                      {items
-                        .sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0))
-                        .map((item, index) => (
-                          <Draggable
-                            key={item.id}
-                            draggableId={item.id.toString()}
-                            index={index}
-                          >
-                            {(provided) => (
-                              <Card
-                                ref={provided.innerRef}
-                                {...provided.draggableProps}
-                                {...provided.dragHandleProps}
-                                className={`relative ${
-                                  selectedItems.includes(item.id) ? "ring-2 ring-primary" : ""
-                                }`}
-                                onClick={(e) => {
-                                  if (!(e.target as HTMLElement).closest('[data-dropdown-trigger="true"]')) {
-                                    toggleItemSelection(item.id);
-                                  }
-                                }}
-                              >
-                                <CardContent className="p-6">
-                                  <div className="absolute top-4 right-4 z-10">
-                                    <DropdownMenu>
-                                      <DropdownMenuTrigger asChild>
-                                        <Button
-                                          variant="ghost"
-                                          size="icon"
-                                          data-dropdown-trigger="true"
-                                          onClick={(e) => e.stopPropagation()}
-                                        >
-                                          <MoreVertical className="h-4 w-4" />
-                                          <span className="sr-only">Open menu</span>
-                                        </Button>
-                                      </DropdownMenuTrigger>
-                                      <DropdownMenuContent align="end">
-                                        <DropdownMenuItem
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setEditingItem(item);
-                                          }}
-                                        >
-                                          <Pencil className="mr-2 h-4 w-4" />
-                                          Edit
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem
-                                          className="text-destructive focus:text-destructive"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            deleteMutation.mutate([item.id]);
-                                          }}
-                                        >
-                                          <Trash2 className="mr-2 h-4 w-4" />
-                                          Delete
-                                        </DropdownMenuItem>
-                                      </DropdownMenuContent>
-                                    </DropdownMenu>
-                                  </div>
-                                  <MenuCard item={item} />
-                                </CardContent>
-                              </Card>
-                            )}
-                          </Draggable>
-                        ))}
-                      {provided.placeholder}
+          {/* Menu Items Display */}
+          <div className="space-y-4">
+            {filteredItems?.map((item) => (
+              <Card key={item.id} className="p-4">
+                <div className="flex items-start gap-4">
+                  {item.image && (
+                    <div className="w-48 flex-shrink-0">
+                      <img
+                        src={item.image}
+                        alt={item.name}
+                        className="w-full h-32 object-cover rounded-lg"
+                      />
                     </div>
                   )}
-                </Droppable>
-              </div>
+                  <div className="flex-grow">
+                    <h3 className="font-medium">{item.name}</h3>
+                    <p className="text-sm text-muted-foreground line-clamp-2">{item.description}</p>
+                    <span className="font-semibold">
+                      {item.price && parseFloat(item.price) > 0 ? `$${parseFloat(item.price).toFixed(2)}` : ''}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-1 min-w-[120px]">
+                    {Object.entries(item.allergens)
+                      .filter(([_, value]) => value)
+                      .map(([key]) => (
+                        <span
+                          key={key}
+                          className="px-2 py-1 bg-primary/10 text-primary text-xs rounded-full capitalize"
+                        >
+                          {key}
+                        </span>
+                      ))}
+                  </div>
+                </div>
+              </Card>
             ))}
-          </DragDropContext>
+          </div>
         </div>
       </div>
     </div>
