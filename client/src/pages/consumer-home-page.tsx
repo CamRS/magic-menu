@@ -35,15 +35,15 @@ const MenuCard = ({ item }: { item: ConsumerMenuItem }) => {
 
   return (
     <Card className="w-full bg-white rounded-xl shadow-sm border border-gray-100 h-full">
-      <div className="p-8 space-y-6">
+      <div className="p-8 space-y-6 antialiased">
         {/* Course Type */}
         {item.courseTags && item.courseTags.length > 0 && (
           <div>
-            <div className="text-sm font-medium text-gray-900 capitalize">
+            <div className="text-sm font-semibold text-gray-800 capitalize subpixel-antialiased">
               {item.courseTags[0]}
             </div>
             {item.course_original && (
-              <div className="text-xs text-gray-500 mt-0.5">
+              <div className="text-xs font-normal text-gray-500 mt-0.5">
                 {item.course_original}
               </div>
             )}
@@ -52,11 +52,11 @@ const MenuCard = ({ item }: { item: ConsumerMenuItem }) => {
 
         {/* Name */}
         <div>
-          <h3 className="text-lg font-semibold text-gray-900">
+          <h3 className="text-lg font-semibold text-gray-900 subpixel-antialiased tracking-tight">
             {item.name}
           </h3>
           {item.name_original && (
-            <div className="text-sm text-gray-600 mt-1">
+            <div className="text-sm font-normal text-gray-600 mt-1">
               {item.name_original}
             </div>
           )}
@@ -65,7 +65,7 @@ const MenuCard = ({ item }: { item: ConsumerMenuItem }) => {
         {/* Description */}
         {item.description && (
           <div>
-            <p className="text-sm text-gray-700 leading-relaxed">
+            <p className="text-sm font-normal text-gray-700 leading-relaxed subpixel-antialiased">
               {item.description}
             </p>
           </div>
@@ -73,7 +73,7 @@ const MenuCard = ({ item }: { item: ConsumerMenuItem }) => {
 
         {/* Price */}
         {item.price && parseFloat(item.price) > 0 && (
-          <div className="text-lg font-semibold text-gray-900">
+          <div className="text-lg font-semibold text-gray-900 subpixel-antialiased">
             ${parseFloat(item.price).toFixed(2)}
           </div>
         )}
@@ -86,7 +86,7 @@ const MenuCard = ({ item }: { item: ConsumerMenuItem }) => {
                 <Badge
                   key={allergen}
                   variant="secondary"
-                  className="bg-[#4169E1]/10 text-[#4169E1] border-none rounded-full capitalize px-3 py-1 text-xs"
+                  className="bg-[#4169E1]/10 text-[#4169E1] border-none rounded-full capitalize px-3 py-1 text-xs font-medium subpixel-antialiased"
                 >
                   {allergen}
                 </Badge>
