@@ -9,22 +9,13 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select";
-import { Camera, Upload, Search, LogOut, ChevronDown, ChevronUp, Settings } from "lucide-react";
+import { Camera, Upload, Search, ChevronDown, ChevronUp } from "lucide-react";
 import { useState } from "react";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import {
-  Menubar,
-  MenubarContent,
-  MenubarItem,
-  MenubarMenu,
-  MenubarSeparator,
-  MenubarShortcut,
-  MenubarTrigger,
-} from "@/components/ui/menubar";
 import { SettingsMenu } from "@/components/settings-dialogs";
 
 type AllergenType = 'milk' | 'eggs' | 'peanuts' | 'nuts' | 'shellfish' | 'fish' | 'soy' | 'gluten';
@@ -32,19 +23,8 @@ const allergensList: AllergenType[] = ['milk', 'eggs', 'peanuts', 'nuts', 'shell
 
 const dietaryPreferences = ['Vegetarian', 'Vegan'] as const;
 
-const SUPPORTED_LANGUAGES = [
-  { code: "en", name: "English" },
-  { code: "es", name: "Español" },
-  { code: "fr", name: "Français" },
-  { code: "de", name: "Deutsch" },
-  { code: "it", name: "Italiano" },
-  { code: "ja", name: "日本語" },
-  { code: "ko", name: "한국어" },
-  { code: "zh", name: "中文" },
-];
-
 export default function ConsumerHomePage() {
-  const { user, logoutMutation } = useAuth();
+  const { user } = useAuth();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedAllergens, setSelectedAllergens] = useState<AllergenType[]>([]);
@@ -59,24 +39,6 @@ export default function ConsumerHomePage() {
     }
   };
 
-  const handleLogout = () => {
-    logoutMutation.mutate();
-  };
-
-  const handleShare = async () => {
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: 'Menu Explorer',
-          text: 'Translate any menu, save your dietary preferences, and identify potential allergens on any menu.',
-          url: window.location.href
-        });
-      } catch (error) {
-        console.log('Error sharing:', error);
-      }
-    }
-  };
-
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -84,16 +46,6 @@ export default function ConsumerHomePage() {
         <div className="max-w-4xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between mb-4">
             <h1 className="text-xl font-bold text-gray-900">Menu Explorer</h1>
-            <Menubar>
-              <MenubarMenu>
-                <MenubarTrigger>
-                  <Settings className="h-5 w-5" />
-                </MenubarTrigger>
-                <MenubarContent className="w-[400px] p-0" align="end">
-                  <SettingsMenu />
-                </MenubarContent>
-              </MenubarMenu>
-            </Menubar>
           </div>
 
           {/* Search and Filters */}
@@ -209,17 +161,14 @@ export default function ConsumerHomePage() {
           </Card>
         </div>
 
+        {/* Settings Menu (moved to bottom right) */}
+        <div className="fixed bottom-4 right-4">
+          <SettingsMenu />
+        </div>
+
         {/* User Greeting and Logout */}
         <div className="absolute bottom-4 left-4 flex items-center space-x-4">
           <h2 className="text-lg font-medium">Hi {user?.email?.split('@')[0]}!</h2>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleLogout}
-            disabled={logoutMutation.isPending}
-          >
-            <LogOut className="h-5 w-5" />
-          </Button>
         </div>
       </main>
     </div>
