@@ -2,11 +2,11 @@ import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Camera, Upload, Search } from "lucide-react";
+import { Camera, Upload, Search, LogOut } from "lucide-react";
 import { useState } from "react";
 
 export default function ConsumerHomePage() {
-  const { user } = useAuth();
+  const { user, logoutMutation } = useAuth();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -15,6 +15,10 @@ export default function ConsumerHomePage() {
       setSelectedFile(file);
       // TODO: Handle file upload and processing
     }
+  };
+
+  const handleLogout = () => {
+    logoutMutation.mutate();
   };
 
   return (
@@ -61,9 +65,17 @@ export default function ConsumerHomePage() {
         </Card>
       </div>
 
-      {/* User Greeting */}
-      <div className="absolute bottom-4 left-4">
+      {/* User Greeting and Logout */}
+      <div className="absolute bottom-4 left-4 flex items-center space-x-4">
         <h2 className="text-lg font-medium">Hi {user?.email?.split('@')[0]}!</h2>
+        <Button 
+          variant="ghost" 
+          size="icon"
+          onClick={handleLogout}
+          disabled={logoutMutation.isPending}
+        >
+          <LogOut className="h-5 w-5" />
+        </Button>
       </div>
     </div>
   );
