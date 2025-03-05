@@ -44,6 +44,7 @@ export default function HomePage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<MenuItemStatus | null>(null);
   const [newTag, setNewTag] = useState('');
+  const [isImageUploadDialogOpen, setIsImageUploadDialogOpen] = useState(false); // Added state for image upload dialog
   const qrCodeRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -70,7 +71,6 @@ export default function HomePage() {
     },
   });
 
-  // Update form's restaurantId when selected restaurant changes
   useEffect(() => {
     if (selectedRestaurant) {
       form.setValue("restaurantId", selectedRestaurant.id);
@@ -118,7 +118,6 @@ export default function HomePage() {
     enabled: !!selectedRestaurant?.id && !!user?.id,
   });
 
-  // Group items by status
   const groupedItems = useMemo(() => {
     if (!menuItems) return { draft: [], live: [] };
     return menuItems.reduce(
@@ -130,7 +129,6 @@ export default function HomePage() {
     );
   }, [menuItems]);
 
-  // Filter items based on search and status
   const filteredItems = useMemo(() => {
     let items = menuItems || [];
 
@@ -181,7 +179,7 @@ export default function HomePage() {
 
       const response = await apiRequest("POST", "/api/menu-items", {
         ...data,
-        restaurantId: selectedRestaurant.id, // Ensure restaurantId is set here
+        restaurantId: selectedRestaurant.id,
       });
       if (!response.ok) {
         const error = await response.json();
@@ -193,8 +191,8 @@ export default function HomePage() {
       queryClient.invalidateQueries({ queryKey: ["/api/menu-items", selectedRestaurant?.id] });
       setCreateMenuItemOpen(false);
       form.reset({
-        ...form.getValues(), // Keep current values as base
-        restaurantId: selectedRestaurant?.id || 0, // Ensure restaurantId is kept
+        ...form.getValues(),
+        restaurantId: selectedRestaurant?.id || 0,
       });
       toast({
         title: "Success",
@@ -463,19 +461,16 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-4xl mx-auto p-4">
-        {/* Header with restaurant selection and actions */}
         <div className="flex justify-between items-center mb-8">
           <div className="flex items-center gap-4">
-            <h1 className="text-2xl font-bold">Menu Items</h1>
-            {selectedRestaurant && (
-              <Badge variant="outline" className="text-lg">
-                {selectedRestaurant.name}
-              </Badge>
+            {selectedRestaurant ? (
+              <h1 className="text-2xl font-bold">{selectedRestaurant.name}</h1>
+            ) : (
+              <h1 className="text-2xl font-bold text-gray-400">Select a Restaurant</h1>
             )}
           </div>
 
           <div className="flex items-center gap-4">
-            {/* Restaurant selector dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline">
@@ -500,8 +495,19 @@ export default function HomePage() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+          </div>
+        </div>
 
-            {/* Action buttons */}
+        <div className="mb-6">
+          <div className="flex gap-4 items-center mb-4">
+            <Input
+              type="search"
+              placeholder="Search menu items..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="max-w-sm"
+            />
+
             <Button 
               onClick={() => {
                 if (selectedRestaurant) {
@@ -527,6 +533,10 @@ export default function HomePage() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent>
+                <DropdownMenuItem onClick={() => setIsImageUploadDialogOpen(true)}>
+                  <ImageIcon className="mr-2 h-4 w-4" />
+                  Upload Menu Image
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleExportCSV}>
                   <Download className="mr-2 h-4 w-4" />
                   Export CSV
@@ -548,21 +558,7 @@ export default function HomePage() {
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-        </div>
 
-        {/* Search and filters */}
-        <div className="mb-6">
-          <div className="flex gap-4 mb-4">
-            <Input
-              type="search"
-              placeholder="Search menu items..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="max-w-sm"
-            />
-          </div>
-
-          {/* Status filters */}
           <div className="flex gap-2">
             <Button
               variant={statusFilter === null ? "default" : "outline"}
@@ -585,7 +581,6 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Bulk actions */}
         {selectedItems.length > 0 && (
           <Button
             variant="destructive"
@@ -598,14 +593,12 @@ export default function HomePage() {
           </Button>
         )}
 
-        {/* Menu items list */}
         <div className="space-y-4">
           {filteredItems.map((item) => (
             <MenuItemCard key={item.id} item={item} />
           ))}
         </div>
 
-        {/* Hidden file input for CSV import */}
         <input
           ref={fileInputRef}
           type="file"
@@ -614,7 +607,6 @@ export default function HomePage() {
           className="hidden"
         />
 
-        {/* Create/Edit Menu Item Dialog */}
         <Dialog
           open={isCreateMenuItemOpen}
           onOpenChange={(isOpen) => {
@@ -658,7 +650,6 @@ export default function HomePage() {
                 )}
               </div>
 
-              {/* Course Tags */}
               <div>
                 <Label>Course Tags</Label>
                 <div className="flex flex-wrap gap-2 mb-2">
@@ -707,7 +698,6 @@ export default function HomePage() {
                 </div>
               </div>
 
-              {/* Image Upload */}
               <div>
                 <Label htmlFor="image">Image</Label>
                 <div
@@ -738,7 +728,6 @@ export default function HomePage() {
                 </div>
               </div>
 
-              {/* Allergens */}
               <div>
                 <Label>Allergens</Label>
                 <div className="grid grid-cols-2 gap-4 mt-2">
@@ -759,7 +748,6 @@ export default function HomePage() {
                 </div>
               </div>
 
-              {/* Status */}
               <div>
                 <Label htmlFor="status">Status</Label>
                 <select {...form.register("status")} className="w-full p-2 border rounded-md">
@@ -775,7 +763,6 @@ export default function HomePage() {
           </DialogContent>
         </Dialog>
 
-        {/* QR Code Dialog */}
         {selectedRestaurant && (
           <Dialog open={showQrCode} onOpenChange={setShowQrCode}>
             <DialogContent>
@@ -798,6 +785,45 @@ export default function HomePage() {
             </DialogContent>
           </Dialog>
         )}
+
+        <Dialog open={isImageUploadDialogOpen} onOpenChange={setIsImageUploadDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Upload Menu Image</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div
+                className="border-2 border-dashed border-gray-300 rounded-lg p-6 cursor-pointer hover:border-primary transition-colors"
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+                onDrop={handleImageDrop}
+              >
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+                />
+                <p className="text-sm text-muted-foreground mt-2">
+                  Drag and drop an image here or click to select
+                </p>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsImageUploadDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={() => {
+                // Handle image upload,  This is a placeholder.  Needs actual upload logic.
+                setIsImageUploadDialogOpen(false);
+              }}>
+                Upload
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
