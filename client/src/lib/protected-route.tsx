@@ -5,9 +5,11 @@ import { Redirect, Route } from "wouter";
 export function ProtectedRoute({
   path,
   component: Component,
+  requiredUserType,
 }: {
   path: string;
   component: () => React.JSX.Element;
+  requiredUserType?: 'consumer' | 'restaurant';
 }) {
   const { user, isLoading } = useAuth();
 
@@ -29,5 +31,15 @@ export function ProtectedRoute({
     );
   }
 
-  return <Component />
+  // Redirect users to their appropriate home page based on their type
+  if (requiredUserType && user.userType !== requiredUserType) {
+    const redirectPath = user.userType === 'restaurant' ? '/' : '/consumer';
+    return (
+      <Route path={path}>
+        <Redirect to={redirectPath} />
+      </Route>
+    );
+  }
+
+  return <Component />;
 }

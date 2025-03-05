@@ -10,23 +10,30 @@ import MenuPage from "@/pages/menu-page";
 import PublicMenuPage from "@/pages/public-menu-page";
 import ConsumerHomePage from "@/pages/consumer-home-page";
 import { ProtectedRoute } from "./lib/protected-route";
-import { useAuth } from "./hooks/use-auth"; // Added import for useAuth
 
 function Router() {
-  const { user } = useAuth();
-
   return (
     <Switch>
       {/* Public routes */}
       <Route path="/menu/:restaurantId" component={PublicMenuPage} />
       <Route path="/auth" component={AuthPage} />
 
-      {/* Protected routes */}
+      {/* Protected routes with specific user type requirements */}
       <ProtectedRoute 
         path="/" 
-        component={user?.userType === "restaurant" ? HomePage : ConsumerHomePage} 
+        component={HomePage}
+        requiredUserType="restaurant"
       />
-      <ProtectedRoute path="/menu" component={MenuPage} />
+      <ProtectedRoute 
+        path="/consumer" 
+        component={ConsumerHomePage}
+        requiredUserType="consumer"
+      />
+      <ProtectedRoute 
+        path="/menu" 
+        component={MenuPage}
+        requiredUserType="restaurant"
+      />
 
       {/* 404 route */}
       <Route component={NotFound} />
