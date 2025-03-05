@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Search, Camera, Upload, ChevronDown, ChevronUp, Plus, Loader2 } from "lucide-react";
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { SettingsMenu } from "@/components/settings-dialogs";
 import { Badge } from "@/components/ui/badge";
 import useEmblaCarousel from 'embla-carousel-react';
@@ -120,7 +120,6 @@ export default function ConsumerHomePage() {
   const [isCoursesOpen, setIsCoursesOpen] = useState(false);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [page, setPage] = useState(1);
-  const [skipLoading, setSkipLoading] = useState(false);
 
   const [emblaRef, emblaApi] = useEmblaCarousel({
     align: 'start',
@@ -135,17 +134,11 @@ export default function ConsumerHomePage() {
     }
   }, [emblaApi]);
 
-  const { data: menuItemsResponse, isLoading, isFetching } = useQuery<{ items: ConsumerMenuItem[], total: number }>({
-    queryKey: ["/api/consumer-menu-items", page, searchTerm, selectedAllergens, selectedTags],
+  // Fetch all menu items for the user
+  const { data: allMenuItems, isLoading } = useQuery<ConsumerMenuItem[]>({
+    queryKey: ["/api/consumer-menu-items", user?.id],
     queryFn: async () => {
-      const searchParams = new URLSearchParams({
-        page: page.toString(),
-        searchTerm: searchTerm,
-        selectedAllergens: selectedAllergens.join(','),
-        selectedTags: selectedTags.join(',')
-      });
-
-      const response = await fetch(`/api/consumer-menu-items?${searchParams.toString()}`, {
+      const response = await fetch(`/api/consumer-menu-items`, {
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
@@ -156,17 +149,52 @@ export default function ConsumerHomePage() {
         throw new Error('Network response was not ok');
       }
 
-      return response.json();
+      const data = await response.json();
+      return data.items;
     },
     enabled: !!user?.id,
-    staleTime: 30000, 
-    cacheTime: 5 * 60 * 1000, 
-    keepPreviousData: true, 
+    staleTime: 30000,
+    cacheTime: 5 * 60 * 1000,
   });
 
-  const menuItems = menuItemsResponse?.items ?? [];
-  const totalItems = menuItemsResponse?.total ?? 0;
-  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+  // Client-side filtering
+  const filteredItems = useMemo(() => {
+    if (!allMenuItems) return [];
+
+    return allMenuItems.filter(item => {
+      // Search term filter
+      if (searchTerm && !item.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
+          !item.description.toLowerCase().includes(searchTerm.toLowerCase())) {
+        return false;
+      }
+
+      // Allergens filter
+      if (selectedAllergens.length > 0) {
+        const hasSelectedAllergen = selectedAllergens.some(
+          allergen => !item.allergens[allergen]
+        );
+        if (!hasSelectedAllergen) return false;
+      }
+
+      // Course tags filter
+      if (selectedTags.length > 0) {
+        if (!item.courseTags?.some(tag => selectedTags.includes(tag))) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [allMenuItems, searchTerm, selectedAllergens, selectedTags]);
+
+  // Pagination
+  const paginatedItems = useMemo(() => {
+    const start = (page - 1) * ITEMS_PER_PAGE;
+    const end = start + ITEMS_PER_PAGE;
+    return filteredItems.slice(start, end);
+  }, [filteredItems, page]);
+
+  const totalPages = Math.ceil(filteredItems.length / ITEMS_PER_PAGE);
 
   const uploadMutation = useMutation({
     mutationFn: async (file: File) => {
@@ -214,10 +242,15 @@ export default function ConsumerHomePage() {
     }
   };
 
-  const uniqueTags = menuItems?.reduce((tags, item) => {
-    if (item.courseTags && item.courseTags.length > 0) tags.add(item.courseTags[0]);
-    return tags;
-  }, new Set<string>()) || new Set<string>();
+  const uniqueTags = useMemo(() =>
+    allMenuItems?.reduce((tags, item) => {
+      if (item.courseTags && item.courseTags.length > 0) {
+        tags.add(item.courseTags[0]);
+      }
+      return tags;
+    }, new Set<string>()) || new Set<string>(),
+    [allMenuItems]
+  );
 
   const handleTagSelection = (value: string) => {
     if (value === "all") {
@@ -244,7 +277,6 @@ export default function ConsumerHomePage() {
   };
 
   const handleAllergenSelection = (allergen: AllergenType) => {
-    setSkipLoading(true);
     setSelectedAllergens((prev) =>
       prev.includes(allergen)
         ? prev.filter((a) => a !== allergen)
@@ -255,7 +287,6 @@ export default function ConsumerHomePage() {
   };
 
   const handleDietarySelection = (pref: typeof dietaryPreferences[number]) => {
-    setSkipLoading(true);
     setSelectedDietary((prev) =>
       prev.includes(pref)
         ? prev.filter((p) => p !== pref)
@@ -264,12 +295,6 @@ export default function ConsumerHomePage() {
     setPage(1);
     setIsFiltersOpen(false);
   };
-
-  useEffect(() => {
-    if (!isLoading) {
-      setSkipLoading(false);
-    }
-  }, [isLoading]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -372,28 +397,30 @@ export default function ConsumerHomePage() {
       </header>
 
       <main className={`pt-[180px] px-4 pb-20 max-w-4xl mx-auto`}>
-        {menuItems && menuItems.length > 0 ? (
+        {isLoading ? (
+          <div className="overflow-hidden" ref={emblaRef}>
+            <div className="flex">
+              {Array.from({ length: ITEMS_PER_PAGE }).map((_, index) => (
+                <MenuItemSkeleton key={index} />
+              ))}
+            </div>
+          </div>
+        ) : paginatedItems.length > 0 ? (
           <>
             <div className="overflow-hidden" ref={emblaRef}>
               <div className="flex">
-                {menuItems.map((item) => (
+                {paginatedItems.map((item) => (
                   <MenuCard key={item.id} item={item} />
                 ))}
               </div>
             </div>
-
-            {isFetching && !isLoading && (
-              <div className="fixed top-4 right-4">
-                <Loader2 className="h-6 w-6 text-primary animate-spin" />
-              </div>
-            )}
 
             {totalPages > 1 && (
               <div className="flex justify-center gap-2 mt-8">
                 <Button
                   variant="outline"
                   onClick={() => setPage(p => Math.max(1, p - 1))}
-                  disabled={page === 1 || isFetching}
+                  disabled={page === 1}
                 >
                   Previous
                 </Button>
@@ -403,21 +430,13 @@ export default function ConsumerHomePage() {
                 <Button
                   variant="outline"
                   onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                  disabled={page === totalPages || isFetching}
+                  disabled={page === totalPages}
                 >
                   Next
                 </Button>
               </div>
             )}
           </>
-        ) : isLoading ? (
-          <div className="overflow-hidden" ref={emblaRef}>
-            <div className="flex">
-              {Array.from({ length: ITEMS_PER_PAGE }).map((_, index) => (
-                <MenuItemSkeleton key={index} />
-              ))}
-            </div>
-          </div>
         ) : (
           <div className="text-center py-8 text-gray-500">
             No menu items found
