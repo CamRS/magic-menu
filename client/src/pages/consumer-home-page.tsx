@@ -135,7 +135,7 @@ export default function ConsumerHomePage() {
     }
   }, [emblaApi]);
 
-  const { data: menuItemsResponse, isLoading } = useQuery<{ items: ConsumerMenuItem[], total: number }>({
+  const { data: menuItemsResponse, isLoading, isFetching } = useQuery<{ items: ConsumerMenuItem[], total: number }>({
     queryKey: ["/api/consumer-menu-items", page, searchTerm, selectedAllergens, selectedTags],
     queryFn: async () => {
       const searchParams = new URLSearchParams({
@@ -159,6 +159,9 @@ export default function ConsumerHomePage() {
       return response.json();
     },
     enabled: !!user?.id,
+    staleTime: 30000, 
+    cacheTime: 5 * 60 * 1000, 
+    keepPreviousData: true, 
   });
 
   const menuItems = menuItemsResponse?.items ?? [];
@@ -369,19 +372,7 @@ export default function ConsumerHomePage() {
       </header>
 
       <main className={`pt-[180px] px-4 pb-20 max-w-4xl mx-auto`}>
-        {isLoading && !skipLoading ? (
-          <div className="overflow-hidden" ref={emblaRef}>
-            <div className="flex">
-              {Array.from({ length: ITEMS_PER_PAGE }).map((_, index) => (
-                <MenuItemSkeleton key={index} />
-              ))}
-            </div>
-          </div>
-        ) : !menuItems || menuItems.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
-            No menu items found
-          </div>
-        ) : (
+        {menuItems && menuItems.length > 0 ? (
           <>
             <div className="overflow-hidden" ref={emblaRef}>
               <div className="flex">
@@ -391,12 +382,18 @@ export default function ConsumerHomePage() {
               </div>
             </div>
 
+            {isFetching && !isLoading && (
+              <div className="fixed top-4 right-4">
+                <Loader2 className="h-6 w-6 text-primary animate-spin" />
+              </div>
+            )}
+
             {totalPages > 1 && (
               <div className="flex justify-center gap-2 mt-8">
                 <Button
                   variant="outline"
                   onClick={() => setPage(p => Math.max(1, p - 1))}
-                  disabled={page === 1}
+                  disabled={page === 1 || isFetching}
                 >
                   Previous
                 </Button>
@@ -406,13 +403,25 @@ export default function ConsumerHomePage() {
                 <Button
                   variant="outline"
                   onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                  disabled={page === totalPages}
+                  disabled={page === totalPages || isFetching}
                 >
                   Next
                 </Button>
               </div>
             )}
           </>
+        ) : isLoading ? (
+          <div className="overflow-hidden" ref={emblaRef}>
+            <div className="flex">
+              {Array.from({ length: ITEMS_PER_PAGE }).map((_, index) => (
+                <MenuItemSkeleton key={index} />
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="text-center py-8 text-gray-500">
+            No menu items found
+          </div>
         )}
       </main>
 
