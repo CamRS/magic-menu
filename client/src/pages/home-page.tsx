@@ -502,7 +502,20 @@ export default function HomePage() {
             </DropdownMenu>
 
             {/* Action buttons */}
-            <Button onClick={() => setCreateMenuItemOpen(true)} disabled={!selectedRestaurant}>
+            <Button 
+              onClick={() => {
+                if (selectedRestaurant) {
+                  setCreateMenuItemOpen(true);
+                  form.setValue("restaurantId", selectedRestaurant.id);
+                } else {
+                  toast({
+                    title: "Error",
+                    description: "Please select a restaurant first",
+                    variant: "destructive",
+                  });
+                }
+              }}
+            >
               <PlusCircle className="mr-2 h-4 w-4" />
               Add Item
             </Button>
