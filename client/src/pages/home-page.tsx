@@ -33,7 +33,7 @@ import { QRCodeSVG } from 'qrcode.react';
 type MenuItemStatus = "draft" | "live";
 
 export default function HomePage() {
-  const { user, logoutMutation } = useAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
   const [isCreateMenuItemOpen, setCreateMenuItemOpen] = useState(false);
@@ -44,7 +44,7 @@ export default function HomePage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<MenuItemStatus | null>(null);
   const [newTag, setNewTag] = useState('');
-  const [isImageUploadDialogOpen, setIsImageUploadDialogOpen] = useState(false); // Added state for image upload dialog
+  const [isImageUploadDialogOpen, setIsImageUploadDialogOpen] = useState(false);
   const qrCodeRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -71,41 +71,18 @@ export default function HomePage() {
     },
   });
 
-  useEffect(() => {
-    if (selectedRestaurant) {
-      form.setValue("restaurantId", selectedRestaurant.id);
-    }
-  }, [selectedRestaurant, form]);
-
-  const handleImageDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    const file = e.dataTransfer.files[0];
-    if (file && file.type.startsWith('image/')) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        form.setValue("image", reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        form.setValue("image", reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
   const { data: restaurants, isLoading: isLoadingRestaurants } = useQuery<Restaurant[]>({
     queryKey: ["/api/restaurants"],
     enabled: !!user?.id,
   });
+
+  // Auto-select first restaurant when data loads
+  useEffect(() => {
+    if (restaurants?.length && !selectedRestaurant) {
+      setSelectedRestaurant(restaurants[0]);
+      form.setValue("restaurantId", restaurants[0].id);
+    }
+  }, [restaurants, selectedRestaurant, form]);
 
   const { data: menuItems, isLoading: isLoadingMenuItems } = useQuery<MenuItem[]>({
     queryKey: ["/api/menu-items", selectedRestaurant?.id],
@@ -381,6 +358,31 @@ export default function HomePage() {
     }
   };
 
+  const handleImageDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        form.setValue("image", reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        form.setValue("image", reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const MenuItemCard = ({ item }: { item: MenuItem }) => {
     return (
       <Card className="bg-white shadow-sm">
@@ -463,10 +465,15 @@ export default function HomePage() {
       <div className="max-w-4xl mx-auto p-4">
         <div className="flex justify-between items-center mb-8">
           <div className="flex items-center gap-4">
-            {selectedRestaurant ? (
-              <h1 className="text-2xl font-bold">{selectedRestaurant.name}</h1>
+            {isLoadingRestaurants ? (
+              <div className="flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <h1 className="text-2xl font-bold text-gray-400">Loading...</h1>
+              </div>
             ) : (
-              <h1 className="text-2xl font-bold text-gray-400">Select a Restaurant</h1>
+              <h1 className="text-2xl font-bold">
+                {selectedRestaurant?.name || "No restaurants found"}
+              </h1>
             )}
           </div>
 
@@ -475,7 +482,7 @@ export default function HomePage() {
               <DropdownMenuTrigger asChild>
                 <Button variant="outline">
                   <Store className="mr-2 h-4 w-4" />
-                  Select Restaurant
+                  {selectedRestaurant?.name || "Select Restaurant"}
                   <ChevronDown className="ml-2 h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -508,18 +515,10 @@ export default function HomePage() {
               className="max-w-sm"
             />
 
-            <Button 
+            <Button
               onClick={() => {
-                if (selectedRestaurant) {
-                  setCreateMenuItemOpen(true);
-                  form.setValue("restaurantId", selectedRestaurant.id);
-                } else {
-                  toast({
-                    title: "Error",
-                    description: "Please select a restaurant first",
-                    variant: "destructive",
-                  });
-                }
+                setCreateMenuItemOpen(true);
+                form.setValue("restaurantId", selectedRestaurant?.id || 0);
               }}
             >
               <PlusCircle className="mr-2 h-4 w-4" />
