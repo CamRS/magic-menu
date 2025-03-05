@@ -949,6 +949,62 @@ export default function HomePage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
             </div>
 
+            {/* Desktop Actions - Hidden on Mobile */}
+            <div className="hidden md:flex flex-wrap gap-2">
+              <Button
+                onClick={() => setCreateMenuItemOpen(true)}
+                className="flex items-center gap-2"
+              >
+                <PlusCircle className="h-4 w-4" />
+                Add Item
+              </Button>
+
+              <Button
+                variant="outline"
+                onClick={handleExportCSV}
+                className="flex items-center gap-2"
+              >
+                <Download className="h-4 w-4" />
+                Export
+              </Button>
+
+              <Button
+                variant="outline"
+                onClick={handleImportClick}
+                className="flex items-center gap-2"
+              >
+                <Upload className="h-4 w-4" />
+                Import
+              </Button>
+
+              <Button
+                variant="outline"
+                onClick={handleImageUploadClick}
+                className="flex items-center gap-2"
+              >
+                <ImageIcon className="h-4 w-4" />
+                Upload
+              </Button>
+
+              <Button
+                variant="outline"
+                onClick={() => setShowQrCode(true)}
+                className="flex items-center gap-2"
+              >
+                <QrCode className="h-4 w-4" />
+                QR Code
+              </Button>
+
+              <Button
+                variant="outline"
+                onClick={() => copyMenuUrl(selectedRestaurant!.id)}
+                className="flex items-center gap-2"
+              >
+                <Globe className="h-4 w-4" />
+                Menu URL
+              </Button>
+            </div>
+
             {selectedItems.length > 0 && (
               <Button
                 variant="destructive"
