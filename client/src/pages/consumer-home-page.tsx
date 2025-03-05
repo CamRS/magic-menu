@@ -3,10 +3,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Search, Camera, Upload, ChevronDown, ChevronUp, Plus, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { SettingsMenu } from "@/components/settings-dialogs";
 import { Badge } from "@/components/ui/badge";
-import useEmblaCarousel from 'embla-carousel-react';
+import useEmblaCarousel, { EmblaCarouselType } from 'embla-carousel-react';
 import {
   Select,
   SelectContent,
@@ -33,7 +33,7 @@ const allergensList: AllergenType[] = ['milk', 'eggs', 'peanuts', 'nuts', 'shell
 const dietaryPreferences = ['Vegetarian', 'Vegan'] as const;
 
 const MenuItemSkeleton = () => (
-  <Card className="flex-[0_0_90%] mx-2 bg-white rounded-xl shadow-sm border border-gray-100">
+  <Card className="flex-[0_0_90%] sm:flex-[0_0_45%] lg:flex-[0_0_30%] mx-2 bg-white rounded-xl shadow-sm border border-gray-100">
     <CardContent className="p-6 space-y-4">
       <Skeleton className="h-6 w-3/4" />
       <Skeleton className="h-4 w-full" />
@@ -52,14 +52,10 @@ const MenuCard = ({ item }: { item: ConsumerMenuItem }) => {
     .filter(([_, value]) => value)
     .map(([key]) => key);
 
-  const activeDietary = Object.entries(item.dietary_preferences || {})
-    .filter(([_, value]) => value)
-    .map(([key]) => key);
-
   const courseTag = item.courseTags?.[0] || '';
 
   return (
-    <Card className="flex-[0_0_90%] mx-2 bg-white rounded-3xl shadow-sm border border-gray-100">
+    <Card className="flex-[0_0_90%] sm:flex-[0_0_45%] lg:flex-[0_0_30%] mx-2 bg-white rounded-3xl shadow-sm border border-gray-100">
       <CardContent className="p-8 flex flex-col gap-4">
         {/* Course Type */}
         {courseTag && (
@@ -100,26 +96,6 @@ const MenuCard = ({ item }: { item: ConsumerMenuItem }) => {
           </div>
         )}
 
-        {/* Dietary Preferences */}
-        {activeDietary && activeDietary.length > 0 && (
-          <div>
-            <div className="flex items-center gap-3">
-              <span className="text-sm">Is</span>
-              <div className="flex flex-wrap gap-2">
-                {activeDietary.map((pref) => (
-                  <Badge
-                    key={pref}
-                    variant="default"
-                    className="bg-[#22C55E] text-white border-none rounded-full capitalize px-3 py-0.5 text-sm"
-                  >
-                    {pref}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Description */}
         {item.description && (
           <p className="text-gray-900 text-sm leading-relaxed">
@@ -149,11 +125,19 @@ export default function ConsumerHomePage() {
   const [isCoursesOpen, setIsCoursesOpen] = useState(false);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [page, setPage] = useState(1);
-  const [emblaRef] = useEmblaCarousel({
+
+  const [emblaRef, emblaApi] = useEmblaCarousel({
     align: 'start',
     containScroll: 'trimSnaps',
-    dragFree: true
+    dragFree: true,
+    slidesToScroll: 1
   });
+
+  useEffect(() => {
+    if (emblaApi) {
+      emblaApi.reInit();
+    }
+  }, [emblaApi]);
 
   const { data: menuItemsResponse, isLoading } = useQuery<{ items: ConsumerMenuItem[], total: number }>({
     queryKey: ["/api/consumer-menu-items", page, searchTerm, selectedAllergens, selectedTags],
