@@ -2,12 +2,21 @@ import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
 import { Camera, Upload, Search, LogOut } from "lucide-react";
 import { useState } from "react";
 
 export default function ConsumerHomePage() {
   const { user, logoutMutation } = useAuth();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedAllergy, setSelectedAllergy] = useState<string>("none");
+  const [selectedCourse, setSelectedCourse] = useState<string>("all");
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -28,12 +37,35 @@ export default function ConsumerHomePage() {
         <Button variant="outline" size="icon" className="rounded-full">
           <Search className="h-4 w-4" />
         </Button>
-        <Button variant="outline" className="w-full justify-start">
-          Filter by allergy
-        </Button>
-        <Button variant="outline" className="w-full justify-start">
-          All items
-        </Button>
+        <Select
+          value={selectedAllergy}
+          onValueChange={setSelectedAllergy}
+        >
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Filter by allergy" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">No filter</SelectItem>
+            <SelectItem value="dairy">Dairy</SelectItem>
+            <SelectItem value="gluten">Gluten</SelectItem>
+            <SelectItem value="soy">Soy</SelectItem>
+            <SelectItem value="nuts">Nuts</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select
+          value={selectedCourse}
+          onValueChange={setSelectedCourse}
+        >
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="All items" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All items</SelectItem>
+            <SelectItem value="appetizer">Appetizer</SelectItem>
+            <SelectItem value="main">Main Course</SelectItem>
+            <SelectItem value="dessert">Dessert</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="text-center text-sm text-muted-foreground">
