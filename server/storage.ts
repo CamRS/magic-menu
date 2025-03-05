@@ -13,6 +13,7 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   createUserWithRestaurant(user: InsertUser, restaurantName: string): Promise<{ user: User; restaurant: Restaurant }>;
+  updateUser(id: number, updates: Partial<User>): Promise<User>;
 
   getRestaurants(userId: number): Promise<Restaurant[]>;
   getRestaurant(id: number): Promise<Restaurant | undefined>;
@@ -25,7 +26,6 @@ export interface IStorage {
   updateMenuItemsForRestaurants(restaurantIds: number[], updates: Partial<InsertMenuItem>): Promise<void>;
   deleteMenuItem(id: number): Promise<void>;
 
-  // New image-related methods
   getImage(id: number): Promise<Image | undefined>;
   createImage(image: InsertImage): Promise<Image>;
   deleteImage(id: number): Promise<void>;
@@ -68,17 +68,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createUserWithRestaurant(user: InsertUser, restaurantName: string): Promise<{ user: User; restaurant: Restaurant }> {
-    // Start a transaction to ensure both user and restaurant are created or neither is
     const result = await db.transaction(async (tx) => {
-      // Create the user first
       const [newUser] = await tx.insert(users).values(user).returning();
-
-      // Create the restaurant for the new user
       const [newRestaurant] = await tx.insert(restaurants).values({
         name: restaurantName,
         userId: newUser.id,
       }).returning();
-
       return { user: newUser, restaurant: newRestaurant };
     });
 
@@ -117,7 +112,6 @@ export class DatabaseStorage implements IStorage {
 
   async getMenuItems(restaurantId: number): Promise<MenuItem[]> {
     console.log("Getting menu items for restaurant:", restaurantId);
-    // Get the restaurant first to verify it exists
     const restaurant = await this.getRestaurant(restaurantId);
     if (!restaurant) {
       throw new Error("Restaurant not found");
@@ -155,11 +149,9 @@ export class DatabaseStorage implements IStorage {
       price: item.price === undefined || item.price === null ? 'undefined/null' : `'${item.price}'`
     });
 
-    // Ensure price is empty string if undefined/null/empty
     const itemToCreate = {
       ...item,
       price: item.price === undefined || item.price === null || item.price === '' ? '' : item.price,
-      // Ensure courseTags is properly handled as a string array
       courseTags: Array.isArray(item.courseTags)
         ? item.courseTags
             .map(tag => tag.trim())
@@ -167,7 +159,6 @@ export class DatabaseStorage implements IStorage {
         : []
     };
 
-    // Verify restaurant ownership before creating menu item
     const restaurant = await this.getRestaurant(itemToCreate.restaurantId);
     if (!restaurant) {
       throw new Error("Restaurant not found");
@@ -183,13 +174,11 @@ export class DatabaseStorage implements IStorage {
     id: number,
     updates: Partial<InsertMenuItem>,
   ): Promise<MenuItem> {
-    // Verify menu item exists and belongs to the restaurant
     const existingItem = await this.getMenuItem(id);
     if (!existingItem) {
       throw new Error("Menu item not found");
     }
 
-    // Process course tags if they are being updated
     const processedUpdates = {
       ...updates,
       courseTags: Array.isArray(updates.courseTags)
@@ -212,7 +201,6 @@ export class DatabaseStorage implements IStorage {
     updates: Partial<InsertMenuItem>,
   ): Promise<void> {
     for (const restaurantId of restaurantIds) {
-      // Verify restaurant exists before updating its menu items
       const restaurant = await this.getRestaurant(restaurantId);
       if (!restaurant) {
         throw new Error(`Restaurant ${restaurantId} not found`);
@@ -226,7 +214,6 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteMenuItem(id: number): Promise<void> {
-    // Verify menu item exists before deletion
     const menuItem = await this.getMenuItem(id);
     if (!menuItem) {
       throw new Error("Menu item not found");
@@ -235,7 +222,6 @@ export class DatabaseStorage implements IStorage {
     await db.delete(menuItems).where(eq(menuItems.id, id));
   }
 
-  // New image-related method implementations
   async getImage(id: number): Promise<Image | undefined> {
     console.log("Getting image by ID:", id);
     const [image] = await db
@@ -262,6 +248,26 @@ export class DatabaseStorage implements IStorage {
       .delete(images)
       .where(eq(images.id, id));
     console.log("Deleted image:", id);
+  }
+
+  async updateUser(id: number, updates: Partial<User>): Promise<User> {
+    console.log("Updating user:", id, "with data:", {
+      ...updates,
+      password: updates.password ? '[REDACTED]' : undefined
+    });
+
+    const [updatedUser] = await db
+      .update(users)
+      .set(updates)
+      .where(eq(users.id, id))
+      .returning();
+
+    console.log("Updated user:", {
+      ...updatedUser,
+      password: '[REDACTED]'
+    });
+
+    return updatedUser;
   }
 }
 
