@@ -6,6 +6,9 @@ export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   email: text("email").notNull().unique(),
   password: text("password").notNull(),
+  userType: text("user_type").notNull().default("consumer"),
+  preferredLanguage: text("preferred_language").default("en"),
+  savedAllergies: jsonb("saved_allergies").$type<string[]>().default([]),
 });
 
 export const restaurants = pgTable("restaurants", {
@@ -32,7 +35,6 @@ export const menuItems = pgTable("menu_items", {
   price: text("price").default(""),
   image: text("image").default(''),
   imageId: integer("image_id").references(() => images.id),
-  // Change the column definition to properly handle array type
   courseTags: text("course_type").array().default([]).notNull(),
   course_original: text("course_original").default(""),
   displayOrder: integer("display_order").default(0),
@@ -57,7 +59,11 @@ export const menuItems = pgTable("menu_items", {
   }),
 });
 
-export const insertUserSchema = createInsertSchema(users);
+export const insertUserSchema = createInsertSchema(users).extend({
+  userType: z.enum(["consumer", "restaurant"]).default("consumer"),
+  preferredLanguage: z.string().default("en"),
+  savedAllergies: z.array(z.string()).default([]),
+});
 export const insertRestaurantSchema = createInsertSchema(restaurants);
 export const insertImageSchema = createInsertSchema(images);
 
