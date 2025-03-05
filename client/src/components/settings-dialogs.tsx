@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { User } from "lucide-react";
+import { User, CheckIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -144,7 +144,7 @@ export function SettingsMenu() {
               <div>
                 <h3 className="text-base font-semibold">Refer a friend</h3>
                 <p className="text-sm text-gray-600">
-                  Translate any many, save your dietary preferences, and identify potential allergens on any menu.
+                  Translate any menu, save your dietary preferences, and identify potential allergens on any menu.
                 </p>
               </div>
               <Button
@@ -165,7 +165,7 @@ export function SettingsMenu() {
                       {SUPPORTED_LANGUAGES.find(lang => lang.code === (user?.preferredLanguage ?? 'en'))?.name ?? 'English'}
                     </p>
                   </div>
-                  <Check className="h-5 w-5 text-[#4F46E5]" />
+                  <CheckIcon className="h-5 w-5 text-[#4F46E5]" />
                 </div>
               </DialogTrigger>
               <DialogContent>
@@ -204,7 +204,7 @@ export function SettingsMenu() {
                         : 'None selected'}
                     </p>
                   </div>
-                  <Check className="h-5 w-5 text-[#4F46E5]" />
+                  <CheckIcon className="h-5 w-5 text-[#4F46E5]" />
                 </div>
               </DialogTrigger>
               <DialogContent>
