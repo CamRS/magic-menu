@@ -111,6 +111,16 @@ export default function ConsumerHomePage() {
 
   const { data: menuItemsResponse, isLoading } = useQuery<{ items: ConsumerMenuItem[], total: number }>({
     queryKey: ["/api/consumer-menu-items", page, searchTerm, selectedAllergens, selectedTags],
+    queryFn: async () => {
+      const searchParams = new URLSearchParams({
+        page: page.toString(),
+        searchTerm: searchTerm,
+        selectedAllergens: selectedAllergens.join(','),
+        selectedTags: selectedTags.join(',')
+      });
+
+      return apiRequest(`/api/consumer-menu-items?${searchParams.toString()}`);
+    },
     enabled: !!user?.id,
   });
 

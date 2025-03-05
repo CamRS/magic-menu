@@ -290,11 +290,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Add new routes for consumer menu items
+  // Update the consumer menu items endpoint to handle pagination and filtering
   app.get("/api/consumer-menu-items", requireAuth, async (req, res) => {
     try {
       if (!req.user) return res.sendStatus(401);
+
+      const page = parseInt(req.query.page as string) || 1;
+      const searchTerm = (req.query.searchTerm as string) || '';
+      const selectedAllergens = (req.query.selectedAllergens as string || '').split(',').filter(Boolean);
+      const selectedTags = (req.query.selectedTags as string || '').split(',').filter(Boolean);
+      const ITEMS_PER_PAGE = 9;
+
       const items = await storage.getConsumerMenuItems(req.user.id);
-      res.json(items);
+
+      // Filter items based on search term
+      let filteredItems = items;
+      if (searchTerm) {
+        filteredItems = items.filter(item =>
+          item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          item.description.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+      }
+
+      // Filter by allergens
+      if (selectedAllergens.length > 0) {
+        filteredItems = filteredItems.filter(item =>
+          selectedAllergens.some(allergen => !item.allergens[allergen as keyof typeof item.allergens])
+        );
+      }
+
+      // Filter by tags
+      if (selectedTags.length > 0) {
+        filteredItems = filteredItems.filter(item =>
+          selectedTags.some(tag => item.courseTags.includes(tag))
+        );
+      }
+
+      // Calculate pagination
+      const total = filteredItems.length;
+      const start = (page - 1) * ITEMS_PER_PAGE;
+      const end = start + ITEMS_PER_PAGE;
+      const paginatedItems = filteredItems.slice(start, end);
+
+      res.json({
+        items: paginatedItems,
+        total: total
+      });
     } catch (error) {
       console.error('Error fetching consumer menu items:', error);
       res.status(500).json({ message: "Internal server error" });
