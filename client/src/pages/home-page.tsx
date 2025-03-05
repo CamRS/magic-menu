@@ -122,7 +122,7 @@ export default function HomePage() {
     return menuItems.reduce(
       (acc, item) => {
         const status = item.status || 'draft'; // Default to draft if no status
-        acc[status].push(item);
+        acc[status as MenuItemStatus].push(item);
         return acc;
       },
       { draft: [], live: [] } as Record<MenuItemStatus, MenuItem[]>
