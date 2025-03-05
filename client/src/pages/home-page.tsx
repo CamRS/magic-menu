@@ -90,8 +90,9 @@ export default function HomePage() {
     }
   }, [restaurants, selectedRestaurant, form]);
 
+  // Update the menu items query to properly handle status
   const { data: menuItems, isLoading: isLoadingMenuItems } = useQuery<MenuItem[]>({
-    queryKey: ["/api/menu-items", selectedRestaurant?.id],
+    queryKey: ["/api/menu-items", selectedRestaurant?.id, statusFilter],
     queryFn: async () => {
       if (!selectedRestaurant?.id) return [];
       console.log("Fetching menu items for restaurant:", selectedRestaurant.id);
@@ -104,7 +105,6 @@ export default function HomePage() {
       }
 
       const response = await apiRequest("GET", `/api/menu-items?${params}`);
-
       if (!response.ok) {
         console.error("Failed to fetch menu items:", await response.text());
         throw new Error("Failed to fetch menu items");
@@ -116,13 +116,13 @@ export default function HomePage() {
     enabled: !!selectedRestaurant?.id && !!user?.id,
   });
 
-  // Update groupedItems to handle items that might not have a status
+  // Update groupedItems to properly handle menu items with no status
   const groupedItems = useMemo(() => {
     if (!menuItems) return { draft: [], live: [] };
     return menuItems.reduce(
       (acc, item) => {
         const status = item.status || 'draft'; // Default to draft if no status
-        acc[status as MenuItemStatus].push(item);
+        acc[status].push(item);
         return acc;
       },
       { draft: [], live: [] } as Record<MenuItemStatus, MenuItem[]>
