@@ -128,11 +128,11 @@ export default function PublicMenuPage() {
     if (!menuItems) return [];
     return menuItems
       .filter(({ name, description, courseTags, allergens }) => {
-        const matchesSearch = !searchTerm || 
-          name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        const matchesSearch = !searchTerm ||
+          name.toLowerCase().includes(searchTerm.toLowerCase()) ||
           description.toLowerCase().includes(searchTerm.toLowerCase());
 
-        const matchesTags = selectedTags.length === 0 || 
+        const matchesTags = selectedTags.length === 0 ||
           selectedTags.every(tag => courseTags?.includes(tag));
 
         const matchesAllergens = selectedAllergens.every(allergen => !allergens[allergen]);
@@ -141,6 +141,15 @@ export default function PublicMenuPage() {
       })
       .sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
   }, [menuItems, searchTerm, selectedTags, selectedAllergens]);
+
+  const handleTagSelection = (value: string) => {
+    if (value === "all") {
+      setSelectedTags([]);
+    } else {
+      const tags = value.split(",").filter(Boolean);
+      setSelectedTags(tags);
+    }
+  };
 
   if (!matches || !restaurantId) {
     return <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -196,17 +205,14 @@ export default function PublicMenuPage() {
               </Button>
 
               <Select
-                value={selectedTags.join(",")}
-                onValueChange={(value) => {
-                  const tags = value.split(",").filter(Boolean);
-                  setSelectedTags(tags);
-                }}
+                value={selectedTags.length === 0 ? "all" : selectedTags.join(",")}
+                onValueChange={handleTagSelection}
               >
                 <SelectTrigger className="flex-1">
                   <SelectValue placeholder="All Courses" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Courses</SelectItem>
+                  <SelectItem value="all">All Courses</SelectItem>
                   {uniqueTags.map((tag) => (
                     <SelectItem key={tag} value={tag}>
                       {tag}
