@@ -119,7 +119,19 @@ export default function ConsumerHomePage() {
         selectedTags: selectedTags.join(',')
       });
 
-      return apiRequest(`/api/consumer-menu-items?${searchParams.toString()}`);
+      const response = await fetch(`/api/consumer-menu-items?${searchParams.toString()}`, {
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+
+      const data = await response.json();
+      return data;
     },
     enabled: !!user?.id,
   });
