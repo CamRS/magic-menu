@@ -2,12 +2,12 @@ import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
 } from "@/components/ui/select";
 import { Camera, Upload, Search, LogOut, ChevronDown, ChevronUp, Settings } from "lucide-react";
 import { useState } from "react";
@@ -25,6 +25,7 @@ import {
   MenubarShortcut,
   MenubarTrigger,
 } from "@/components/ui/menubar";
+import { SettingsMenu } from "@/components/settings-dialogs";
 
 type AllergenType = 'milk' | 'eggs' | 'peanuts' | 'nuts' | 'shellfish' | 'fish' | 'soy' | 'gluten';
 const allergensList: AllergenType[] = ['milk', 'eggs', 'peanuts', 'nuts', 'shellfish', 'fish', 'soy', 'gluten'];
@@ -88,27 +89,8 @@ export default function ConsumerHomePage() {
                 <MenubarTrigger>
                   <Settings className="h-5 w-5" />
                 </MenubarTrigger>
-                <MenubarContent align="end">
-                  <MenubarItem onClick={handleShare}>
-                    Refer a friend
-                  </MenubarItem>
-                  <MenubarSeparator />
-                  <MenubarItem>
-                    Language: {SUPPORTED_LANGUAGES.find(lang => lang.code === user?.preferredLanguage)?.name || 'English'}
-                    <MenubarShortcut>
-                      <ChevronDown className="h-4 w-4" />
-                    </MenubarShortcut>
-                  </MenubarItem>
-                  <MenubarItem>
-                    Saved allergies
-                    <MenubarShortcut>
-                      <ChevronDown className="h-4 w-4" />
-                    </MenubarShortcut>
-                  </MenubarItem>
-                  <MenubarSeparator />
-                  <MenubarItem>
-                    Update login details
-                  </MenubarItem>
+                <MenubarContent className="w-[400px] p-0" align="end">
+                  <SettingsMenu />
                 </MenubarContent>
               </MenubarMenu>
             </Menubar>
@@ -230,8 +212,8 @@ export default function ConsumerHomePage() {
         {/* User Greeting and Logout */}
         <div className="absolute bottom-4 left-4 flex items-center space-x-4">
           <h2 className="text-lg font-medium">Hi {user?.email?.split('@')[0]}!</h2>
-          <Button 
-            variant="ghost" 
+          <Button
+            variant="ghost"
             size="icon"
             onClick={handleLogout}
             disabled={logoutMutation.isPending}

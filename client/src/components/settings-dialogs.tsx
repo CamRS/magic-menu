@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,102 +17,64 @@ const SUPPORTED_LANGUAGES = [
   { code: "zh", name: "中文" },
 ];
 
-type SettingDialogProps = {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  type: 'language' | 'allergies' | 'account';
-  currentLanguage?: string;
-  currentEmail?: string;
-};
-
-export function SettingDialog({ open, onOpenChange, type, currentLanguage, currentEmail }: SettingDialogProps) {
-  const { toast } = useToast();
-  const [email, setEmail] = useState(currentEmail || '');
-  const [password, setPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [language, setLanguage] = useState(currentLanguage || 'en');
-
-  const handleSave = async () => {
-    try {
-      // TODO: Implement actual API calls to update settings
-      toast({
-        title: "Settings updated",
-        description: "Your changes have been saved successfully.",
-      });
-      onOpenChange(false);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update settings. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
+export function SettingsMenu() {
+  const [showLanguageDialog, setShowLanguageDialog] = useState(false);
+  const [showAllergyDialog, setShowAllergyDialog] = useState(false);
+  const [showAccountDialog, setShowAccountDialog] = useState(false);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>
-            {type === 'language' && 'Language Settings'}
-            {type === 'allergies' && 'Allergy Settings'}
-            {type === 'account' && 'Account Settings'}
-          </DialogTitle>
-        </DialogHeader>
-
-        <div className="space-y-4 pt-4">
-          {type === 'language' && (
-            <div className="space-y-2">
-              <Label>Preferred Language</Label>
-              <Select value={language} onValueChange={setLanguage}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a language" />
-                </SelectTrigger>
-                <SelectContent>
-                  {SUPPORTED_LANGUAGES.map((lang) => (
-                    <SelectItem key={lang.code} value={lang.code}>
-                      {lang.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          {type === 'account' && (
-            <>
-              <div className="space-y-2">
-                <Label>Email Address</Label>
-                <Input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Current Password</Label>
-                <Input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>New Password (optional)</Label>
-                <Input
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                />
-              </div>
-            </>
-          )}
-
-          <Button onClick={handleSave} className="w-full">
-            Save Changes
+    <div className="space-y-4 p-2">
+      <div className="space-y-6">
+        {/* Refer a friend */}
+        <div className="flex justify-between items-center py-4">
+          <div>
+            <h3 className="text-base font-semibold">Refer a friend</h3>
+            <p className="text-sm text-gray-600">
+              Translate any many, save your dietary preferences, and identify potential allergens on any menu.
+            </p>
+          </div>
+          <Button className="bg-[#4F46E5] text-white hover:bg-[#4338CA]">
+            Share
           </Button>
         </div>
-      </DialogContent>
-    </Dialog>
+
+        {/* Preferred language */}
+        <div className="border-t" />
+        <div className="flex justify-between items-center py-2">
+          <div>
+            <h3 className="text-base font-semibold">Preferred language</h3>
+            <p className="text-base">English</p>
+          </div>
+          <Check className="h-5 w-5 text-[#4F46E5]" />
+        </div>
+
+        {/* Saved allergies */}
+        <div className="border-t" />
+        <div className="flex justify-between items-center py-2">
+          <div>
+            <h3 className="text-base font-semibold">Saved allergies</h3>
+            <p className="text-base">Dairy</p>
+          </div>
+          <Check className="h-5 w-5 text-[#4F46E5]" />
+        </div>
+
+        {/* Account settings */}
+        <div className="border-t" />
+        <div className="space-y-4 py-2">
+          <h3 className="text-base font-semibold">Account settings</h3>
+          <div className="space-y-2">
+            <p className="text-sm text-gray-600">Email address</p>
+            <p className="text-base">stevelucasroberts@gmail.com</p>
+          </div>
+          <div className="space-y-2">
+            <p className="text-sm text-gray-600">Password</p>
+            <p className="text-base">****************</p>
+          </div>
+          <Button variant="link" className="text-[#4F46E5] p-0 h-auto font-normal">
+            Update login details
+          </Button>
+        </div>
+      </div>
+    </div>
   );
 }
