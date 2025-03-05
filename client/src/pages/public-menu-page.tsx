@@ -139,9 +139,10 @@ export default function PublicMenuPage() {
 
       const searchParams = new URLSearchParams({
         restaurantId: restaurantId.toString(),
-        status: 'live',
+        status: 'live'
       });
 
+      // Add search params if present
       if (searchTerm) {
         searchParams.append('search', searchTerm);
       }
@@ -150,6 +151,7 @@ export default function PublicMenuPage() {
         searchParams.append('tags', selectedTags.join(','));
       }
 
+      console.log(`Fetching menu items for restaurant ${restaurantId}`);
       const response = await fetch(`/api/menu-items?${searchParams.toString()}`, {
         credentials: 'include'
       });
@@ -158,7 +160,9 @@ export default function PublicMenuPage() {
         throw new Error('Failed to fetch menu items');
       }
 
-      return response.json();
+      const items = await response.json();
+      console.log(`Retrieved ${items.length} menu items for restaurant ${restaurantId}`);
+      return items;
     },
     enabled: !!restaurantId,
     retry: 2,

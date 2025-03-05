@@ -103,7 +103,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid restaurant ID" });
       }
 
+      console.log(`Fetching menu items for restaurant ${restaurantId} with status ${status || 'all'}`);
       const items = await storage.getMenuItems(restaurantId, status);
+      console.log(`Found ${items.length} menu items`);
+
       res.json(items);
     } catch (error) {
       console.error('Error fetching menu items:', error);
