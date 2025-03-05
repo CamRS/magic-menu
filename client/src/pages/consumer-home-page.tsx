@@ -1,6 +1,6 @@
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -42,10 +42,12 @@ export default function ConsumerHomePage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 bg-white border-b z-50">
+      <header className="fixed top-0 left-0 right-0 bg-white shadow-sm z-50">
         <div className="max-w-4xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between mb-4">
-            <h1 className="text-xl font-bold text-gray-900">Menu Explorer</h1>
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] bg-clip-text text-transparent">
+              Menu Explorer
+            </h1>
           </div>
 
           {/* Search and Filters */}
@@ -55,7 +57,7 @@ export default function ConsumerHomePage() {
                 placeholder="Search menu..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 h-11 rounded-full"
+                className="w-full pl-10 pr-4 h-12 rounded-xl border-gray-200 focus:border-[#4F46E5] focus:ring-[#4F46E5] transition-all duration-200"
               />
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
             </div>
@@ -64,7 +66,7 @@ export default function ConsumerHomePage() {
               <Button
                 variant="outline"
                 onClick={() => setIsFiltersOpen(!isFiltersOpen)}
-                className="flex-1 justify-between gap-2"
+                className="flex-1 justify-between gap-2 h-12 rounded-xl border-gray-200 hover:bg-gray-50 transition-all duration-200"
               >
                 Filters
                 {isFiltersOpen ? (
@@ -80,16 +82,16 @@ export default function ConsumerHomePage() {
           <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
             <CollapsibleContent className="py-4 space-y-4">
               <div>
-                <h3 className="font-medium mb-2">Allergens</h3>
+                <h3 className="font-medium mb-2 text-gray-700">Allergens</h3>
                 <div className="grid grid-cols-2 gap-2">
                   {allergensList.map((allergen) => (
                     <Button
                       key={allergen}
                       variant="outline"
-                      className={`justify-start gap-2 ${
+                      className={`justify-start gap-2 rounded-xl ${
                         selectedAllergens.includes(allergen)
-                          ? "bg-blue-50 text-blue-700 border-blue-200"
-                          : ""
+                          ? "bg-[#4F46E5]/10 text-[#4F46E5] border-[#4F46E5]/20"
+                          : "hover:bg-gray-50"
                       }`}
                       onClick={() => {
                         setSelectedAllergens((prev) =>
@@ -106,16 +108,16 @@ export default function ConsumerHomePage() {
               </div>
 
               <div>
-                <h3 className="font-medium mb-2">Dietary Preferences</h3>
+                <h3 className="font-medium mb-2 text-gray-700">Dietary Preferences</h3>
                 <div className="grid grid-cols-2 gap-2">
                   {dietaryPreferences.map((pref) => (
                     <Button
                       key={pref}
                       variant="outline"
-                      className={`justify-start gap-2 ${
+                      className={`justify-start gap-2 rounded-xl ${
                         selectedDietary.includes(pref)
-                          ? "bg-green-50 text-green-700 border-green-200"
-                          : ""
+                          ? "bg-[#4F46E5]/10 text-[#4F46E5] border-[#4F46E5]/20"
+                          : "hover:bg-gray-50"
                       }`}
                       onClick={() => {
                         setSelectedDietary((prev) =>
@@ -138,18 +140,28 @@ export default function ConsumerHomePage() {
       {/* Menu Actions */}
       <main className="pt-[180px] px-4 pb-20 max-w-4xl mx-auto">
         <div className="space-y-4">
-          <Card className="p-8 text-center cursor-pointer hover:bg-accent/50 transition-colors">
+          <Card className="p-8 hover:shadow-lg transition-all duration-300 rounded-2xl cursor-pointer border-gray-200 bg-gradient-to-br from-white to-gray-50">
             <div className="flex flex-col items-center space-y-4">
-              <Camera className="h-12 w-12 text-primary" />
-              <div className="text-lg font-medium">Snap a photo of a menu</div>
+              <div className="w-16 h-16 rounded-2xl bg-[#4F46E5]/10 flex items-center justify-center">
+                <Camera className="h-8 w-8 text-[#4F46E5]" />
+              </div>
+              <div className="text-center">
+                <h3 className="text-lg font-semibold text-gray-900 mb-1">Snap a photo of a menu</h3>
+                <p className="text-sm text-gray-500">Take a photo of any menu to instantly digitize it</p>
+              </div>
             </div>
           </Card>
 
-          <Card className="p-8 text-center cursor-pointer hover:bg-accent/50 transition-colors">
+          <Card className="p-8 hover:shadow-lg transition-all duration-300 rounded-2xl cursor-pointer border-gray-200 bg-gradient-to-br from-white to-gray-50">
             <label className="cursor-pointer">
               <div className="flex flex-col items-center space-y-4">
-                <Upload className="h-12 w-12 text-primary" />
-                <div className="text-lg font-medium">Upload a menu image</div>
+                <div className="w-16 h-16 rounded-2xl bg-[#4F46E5]/10 flex items-center justify-center">
+                  <Upload className="h-8 w-8 text-[#4F46E5]" />
+                </div>
+                <div className="text-center">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-1">Upload a menu image</h3>
+                  <p className="text-sm text-gray-500">Select a menu photo from your device</p>
+                </div>
               </div>
               <Input
                 type="file"
@@ -161,14 +173,18 @@ export default function ConsumerHomePage() {
           </Card>
         </div>
 
-        {/* Settings Menu (moved to bottom right) */}
+        {/* Settings Menu */}
         <div className="fixed bottom-4 right-4">
           <SettingsMenu />
         </div>
 
-        {/* User Greeting and Logout */}
-        <div className="absolute bottom-4 left-4 flex items-center space-x-4">
-          <h2 className="text-lg font-medium">Hi {user?.email?.split('@')[0]}!</h2>
+        {/* User Greeting */}
+        <div className="fixed bottom-4 left-4">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 px-4 py-2">
+            <h2 className="text-sm font-medium text-gray-700">
+              Welcome, {user?.email?.split('@')[0]}!
+            </h2>
+          </div>
         </div>
       </main>
     </div>
