@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, User } from "lucide-react";
+import { User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -130,18 +130,16 @@ export function SettingsMenu() {
   return (
     <Sheet>
       <SheetTrigger asChild>
-        <Button 
-          variant="outline" 
-          size="icon"
-          className="rounded-full bg-white shadow-lg border-gray-200 hover:bg-gray-50 transition-all duration-200 w-10 h-10"
-        >
-          <User className="h-5 w-5" />
-        </Button>
+        <div className="flex flex-col items-center gap-1 text-gray-600 hover:text-[#4F46E5] transition-colors">
+          <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center">
+            <User className="h-5 w-5" />
+          </div>
+          <span className="text-xs font-medium">Settings</span>
+        </div>
       </SheetTrigger>
       <SheetContent side="bottom" className="w-full p-0">
         <div className="space-y-4 p-6">
           <div className="space-y-6">
-            {/* Refer a friend */}
             <div className="flex justify-between items-center py-4">
               <div>
                 <h3 className="text-base font-semibold">Refer a friend</h3>
@@ -149,7 +147,7 @@ export function SettingsMenu() {
                   Translate any many, save your dietary preferences, and identify potential allergens on any menu.
                 </p>
               </div>
-              <Button 
+              <Button
                 className="bg-[#4F46E5] text-white hover:bg-[#4338CA]"
                 onClick={handleShare}
               >
@@ -157,7 +155,6 @@ export function SettingsMenu() {
               </Button>
             </div>
 
-            {/* Preferred language */}
             <div className="border-t" />
             <Dialog open={isLanguageOpen} onOpenChange={setIsLanguageOpen}>
               <DialogTrigger asChild>
@@ -195,7 +192,6 @@ export function SettingsMenu() {
               </DialogContent>
             </Dialog>
 
-            {/* Saved allergies */}
             <div className="border-t" />
             <Dialog open={isAllergiesOpen} onOpenChange={setIsAllergiesOpen}>
               <DialogTrigger asChild>
@@ -203,7 +199,7 @@ export function SettingsMenu() {
                   <div>
                     <h3 className="text-base font-semibold">Saved allergies</h3>
                     <p className="text-base">
-                      {(user?.savedAllergies ?? []).length > 0 
+                      {(user?.savedAllergies ?? []).length > 0
                         ? (user?.savedAllergies ?? []).map(a => a.charAt(0).toUpperCase() + a.slice(1)).join(', ')
                         : 'None selected'}
                     </p>
@@ -245,7 +241,6 @@ export function SettingsMenu() {
               </DialogContent>
             </Dialog>
 
-            {/* Account settings */}
             <div className="border-t" />
             <Dialog open={isUpdateLoginOpen} onOpenChange={setIsUpdateLoginOpen}>
               <DialogTrigger asChild>

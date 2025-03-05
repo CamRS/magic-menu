@@ -2,7 +2,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Search, Camera, Upload, ChevronDown, ChevronUp, Plus, Settings } from "lucide-react";
+import { Search, Camera, Upload, ChevronDown, ChevronUp, Plus } from "lucide-react";
 import { useState } from "react";
 import { SettingsMenu } from "@/components/settings-dialogs";
 import { Badge } from "@/components/ui/badge";
@@ -164,23 +164,14 @@ export default function ConsumerHomePage() {
     <div className="min-h-screen bg-gradient-to-b from-gray-50/50 to-white pb-20">
       <header className="fixed top-0 left-0 right-0 bg-white/80 backdrop-blur-sm border-b border-gray-100 z-50">
         <div className="max-w-3xl mx-auto px-4 py-3">
-          <div className="flex items-center justify-between mb-3">
-            <h1 className="text-xl font-semibold bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] bg-clip-text text-transparent">
-              Menu Explorer
-            </h1>
-            <SettingsMenu />
-          </div>
-
-          <div>
-            <div className="relative">
-              <Input
-                placeholder="Search menu..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 pr-4 h-10 rounded-lg border-gray-200 focus:border-[#4F46E5]/30 focus:ring-[#4F46E5]/20 transition-all duration-200 bg-white/80"
-              />
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            </div>
+          <div className="relative">
+            <Input
+              placeholder="Search menu..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-9 pr-4 h-10 rounded-lg border-gray-200 focus:border-[#4F46E5]/30 focus:ring-[#4F46E5]/20 transition-all duration-200 bg-white/80"
+            />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           </div>
 
           {menuItems && menuItems.length > 0 && (
@@ -337,7 +328,7 @@ export default function ConsumerHomePage() {
             </button>
 
             <label className="flex flex-col items-center gap-1 text-gray-600 hover:text-[#4F46E5] transition-colors cursor-pointer">
-              <div className="w-12 h-12 rounded-full bg-[#4F46E5] flex items-center justify-center -mt-4 shadow-lg">
+              <div className="w-12 h-12 rounded-full bg-[#4F46E5] flex items-center justify-center -mt-4">
                 <Plus className="h-6 w-6 text-white" />
               </div>
               <span className="text-xs font-medium mt-1">Upload Menu</span>
@@ -349,15 +340,7 @@ export default function ConsumerHomePage() {
               />
             </label>
 
-            <button
-              className="flex flex-col items-center gap-1 text-gray-600 hover:text-[#4F46E5] transition-colors"
-              onClick={() => document.querySelector<HTMLButtonElement>('[role="combobox"]')?.click()}
-            >
-              <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center">
-                <Settings className="h-5 w-5" />
-              </div>
-              <span className="text-xs font-medium">Settings</span>
-            </button>
+            <SettingsMenu />
           </div>
         </div>
       </nav>
