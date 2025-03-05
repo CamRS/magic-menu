@@ -25,13 +25,24 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Loader2, PlusCircle, Download, Upload, Trash2, Pencil, MoreVertical, Eye, EyeOff } from "lucide-react";
+import { Loader2, PlusCircle, Download, Upload, Trash2, Pencil, Eye, EyeOff } from "lucide-react";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 
 type AllergenType = keyof MenuItem['allergens'];
 type MenuItemStatus = "draft" | "live";
+
+interface AllergenInfo {
+  milk: boolean;
+  eggs: boolean;
+  peanuts: boolean;
+  nuts: boolean;
+  shellfish: boolean;
+  fish: boolean;
+  soy: boolean;
+  gluten: boolean;
+}
 
 export default function MenuPage() {
   const [open, setOpen] = useState(false);
@@ -411,7 +422,6 @@ export default function MenuPage() {
     );
   }, [menuItems]);
 
-
   if (!restaurantId) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -431,6 +441,188 @@ export default function MenuPage() {
   return (
     <div className="min-h-screen bg-[#121212] p-4">
       <div className="max-w-3xl mx-auto">
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl font-bold text-white">Menu Items</h1>
+          <div className="flex items-center gap-4">
+            <Dialog open={open} onOpenChange={(isOpen) => {
+              setOpen(isOpen);
+              if (!isOpen) {
+                setEditItem(null);
+                form.reset();
+              }
+            }}>
+              <DialogTrigger asChild>
+                <Button>
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Add Item
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl bg-gray-700 text-white">
+                <DialogHeader>
+                  <DialogTitle>{editItem ? "Edit Menu Item" : "Add Menu Item"}</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+                  <div className="grid grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="name">Name</Label>
+                        <Input id="name" {...form.register("name")} />
+                        {form.formState.errors.name && (
+                          <p className="text-sm text-red-500 mt-1">
+                            {form.formState.errors.name.message}
+                          </p>
+                        )}
+                      </div>
+                      <div>
+                        <Label htmlFor="description">Description</Label>
+                        <Textarea id="description" {...form.register("description")} />
+                        {form.formState.errors.description && (
+                          <p className="text-sm text-red-500 mt-1">
+                            {form.formState.errors.description.message}
+                          </p>
+                        )}
+                      </div>
+                      <div>
+                        <Label htmlFor="price">Price</Label>
+                        <Input id="price" {...form.register("price")} />
+                        {form.formState.errors.price && (
+                          <p className="text-sm text-red-500 mt-1">
+                            {form.formState.errors.price.message}
+                          </p>
+                        )}
+                      </div>
+                      <div>
+                        <Label>Course Tags</Label>
+                        <div className="flex flex-wrap gap-2 mb-2">
+                          {form.watch("courseTags").map((tag, index) => (
+                            <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                              {tag}
+                              <X
+                                className="h-3 w-3 cursor-pointer text-white"
+                                onClick={() => {
+                                  const newTags = [...form.getValues("courseTags")];
+                                  newTags.splice(index, 1);
+                                  form.setValue("courseTags", newTags);
+                                }}
+                              />
+                            </Badge>
+                          ))}
+                        </div>
+                        <div className="flex gap-2">
+                          <Input
+                            value={newTag}
+                            onChange={(e) => setNewTag(e.target.value)}
+                            placeholder="Add a new tag"
+                            onKeyPress={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                const value = newTag.trim();
+                                if (value && !form.getValues("courseTags").includes(value)) {
+                                  form.setValue("courseTags", [...form.getValues("courseTags"), value]);
+                                  setNewTag("");
+                                }
+                              }
+                            }}
+                          />
+                          <Button
+                            type="button"
+                            onClick={() => {
+                              const value = newTag.trim();
+                              if (value && !form.getValues("courseTags").includes(value)) {
+                                form.setValue("courseTags", [...form.getValues("courseTags"), value]);
+                                setNewTag("");
+                              }
+                            }}
+                          >
+                            Add
+                          </Button>
+                        </div>
+                      </div>
+                      <div>
+                        <Label htmlFor="image">Image</Label>
+                        <div
+                          className="border-2 border-dashed border-gray-300 rounded-lg p-6 cursor-pointer hover:border-primary transition-colors"
+                          onDragOver={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                          }}
+                          onDrop={handleImageDrop}
+                        >
+                          <Input
+                            id="image"
+                            type="file"
+                            accept="image/*"
+                            onChange={handleImageUpload}
+                            className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+                          />
+                          <p className="text-sm text-muted-foreground mt-2">
+                            Drag and drop an image here or click to select
+                          </p>
+                          {form.watch("image") && (
+                            <img
+                              src={form.watch("image")}
+                              alt="Preview"
+                              className="mt-4 max-h-40 rounded-lg"
+                            />
+                          )}
+                        </div>
+                        {form.formState.errors.image && (
+                          <p className="text-sm text-destructive mt-1">
+                            {form.formState.errors.image.message}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <Label>Allergens</Label>
+                      <div className="grid grid-cols-2 gap-4 mt-2">
+                        {(Object.keys(form.getValues().allergens) as Array<keyof AllergenInfo>).map((key) => (
+                          <div key={key} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={key}
+                              checked={form.getValues().allergens[key]}
+                              onCheckedChange={(checked) => handleAllergenChange(key, checked as boolean)}
+                            />
+                            <Label htmlFor={key} className="capitalize">
+                              {key}
+                            </Label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <Button
+                    type="submit"
+                    className="w-full"
+                    disabled={createMutation.isPending || updateMutation.isPending}
+                  >
+                    {(createMutation.isPending || updateMutation.isPending) && (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin text-white" />
+                    )}
+                    {editItem ? "Update Item" : "Add Item"}
+                  </Button>
+                </form>
+              </DialogContent>
+            </Dialog>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={handleExportCSV}>
+                <Download className="mr-2 h-4 w-4" />
+                Export CSV
+              </Button>
+              <Button variant="outline" className="relative">
+                <input
+                  type="file"
+                  accept=".csv"
+                  onChange={handleImportCSV}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                />
+                <Upload className="mr-2 h-4 w-4" />
+                Import CSV
+              </Button>
+            </div>
+          </div>
+        </div>
+
         <div className="mb-8">
           <div className="flex flex-col gap-6">
             <Input
@@ -464,7 +656,6 @@ export default function MenuPage() {
                 ))}
               </div>
             </div>
-
           </div>
         </div>
 
@@ -489,6 +680,20 @@ export default function MenuPage() {
           </Button>
         </div>
 
+        {selectedItems.length > 0 && (
+          <Button
+            variant="destructive"
+            onClick={handleDeleteSelected}
+            disabled={deleteMutation.isPending}
+            className="mb-4"
+          >
+            {deleteMutation.isPending && (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            )}
+            Delete Selected ({selectedItems.length})
+          </Button>
+        )}
+
         {Object.entries(groupedItems).map(([status, items]) => (
           <div key={status} className="mb-8">
             <h2 className="text-xl font-bold text-white mb-4 capitalize">
@@ -501,35 +706,62 @@ export default function MenuPage() {
                   className="bg-[#1E1E1E]/80 border-none text-white overflow-hidden"
                 >
                   <CardContent className="p-4">
-                    {item.image ? (
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          checked={selectedItems.includes(item.id)}
+                          onCheckedChange={() => toggleItemSelection(item.id)}
+                        />
+                        <h3 className="text-xl font-bold">{item.name}</h3>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={item.status === "live" ? "default" : "secondary"}>
+                          {item.status}
+                        </Badge>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => toggleItemStatus(item)}
+                          disabled={updateStatusMutation.isPending}
+                        >
+                          {item.status === "draft" ? (
+                            <Eye className="h-4 w-4" />
+                          ) : (
+                            <EyeOff className="h-4 w-4" />
+                          )}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setEditItem(item);
+                            setOpen(true);
+                          }}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => deleteMutation.mutate([item.id])}
+                          disabled={deleteMutation.isPending}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    {item.image && (
                       <img
                         src={item.image}
                         alt={item.name}
                         className="w-full h-48 object-cover rounded-lg mb-4"
                       />
-                    ) : null}
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-start">
-                        <h3 className="text-xl font-bold">{item.name}</h3>
-                        <div className="flex items-center gap-2">
-                          <Badge variant={item.status === "live" ? "default" : "secondary"}>
-                            {item.status}
-                          </Badge>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => toggleItemStatus(item)}
-                            disabled={updateStatusMutation.isPending}
-                          >
-                            {item.status === "draft" ? (
-                              <Eye className="h-4 w-4" />
-                            ) : (
-                              <EyeOff className="h-4 w-4" />
-                            )}
-                          </Button>
-                        </div>
-                      </div>
-                      <p className="text-gray-300">{item.description}</p>
+                    )}
+
+                    <p className="text-gray-300 mb-4">{item.description}</p>
+
+                    <div className="flex justify-between items-center">
                       <div className="flex flex-wrap gap-2">
                         {Object.entries(item.allergens)
                           .filter(([_, value]) => value)
@@ -543,6 +775,9 @@ export default function MenuPage() {
                             </Badge>
                           ))}
                       </div>
+                      <span className="text-lg font-semibold">
+                        {item.price ? `$${parseFloat(item.price).toFixed(2)}` : ''}
+                      </span>
                     </div>
                   </CardContent>
                 </Card>
@@ -550,213 +785,7 @@ export default function MenuPage() {
             </div>
           </div>
         ))}
-        <div className="flex justify-between items-center mb-8">
-          <div className="flex items-center gap-4">
-            <h1 className="text-3xl font-bold text-white">Menu Items</h1>
-            <div className="flex gap-2">
-              <Dialog open={open} onOpenChange={(isOpen) => {
-                setOpen(isOpen);
-                if (!isOpen) {
-                  setEditItem(null);
-                  form.reset();
-                }
-              }}>
-                <DialogTrigger asChild>
-                  <Button>
-                    <PlusCircle className="mr-2 h-4 w-4 text-white" />
-                    Add Item
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-2xl bg-gray-700 text-white">
-                  <DialogHeader>
-                    <DialogTitle>{editItem ? "Edit Menu Item" : "Add Menu Item"}</DialogTitle>
-                  </DialogHeader>
-                  <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-                    <div className="grid grid-cols-2 gap-6">
-                      <div className="space-y-4">
-                        <div>
-                          <Label htmlFor="name">Name</Label>
-                          <Input id="name" {...form.register("name")} />
-                          {form.formState.errors.name && (
-                            <p className="text-sm text-red-500 mt-1">
-                              {form.formState.errors.name.message}
-                            </p>
-                          )}
-                        </div>
-                        <div>
-                          <Label htmlFor="description">Description</Label>
-                          <Textarea id="description" {...form.register("description")} />
-                          {form.formState.errors.description && (
-                            <p className="text-sm text-red-500 mt-1">
-                              {form.formState.errors.description.message}
-                            </p>
-                          )}
-                        </div>
-                        <div>
-                          <Label htmlFor="price">Price</Label>
-                          <Input id="price" {...form.register("price")} />
-                          {form.formState.errors.price && (
-                            <p className="text-sm text-red-500 mt-1">
-                              {form.formState.errors.price.message}
-                            </p>
-                          )}
-                        </div>
-                        <div>
-                          <Label>Course Tags</Label>
-                          <div className="flex flex-wrap gap-2 mb-2">
-                            {form.watch("courseTags").map((tag, index) => (
-                              <Badge key={index} variant="secondary" className="flex items-center gap-1">
-                                {tag}
-                                <X
-                                  className="h-3 w-3 cursor-pointer text-white"
-                                  onClick={() => {
-                                    const newTags = [...form.getValues("courseTags")];
-                                    newTags.splice(index, 1);
-                                    form.setValue("courseTags", newTags);
-                                  }}
-                                />
-                              </Badge>
-                            ))}
-                          </div>
-                          <div className="flex gap-2">
-                            <Input
-                              value={newTag}
-                              onChange={(e) => setNewTag(e.target.value)}
-                              placeholder="Add a new tag"
-                              onKeyPress={(e) => {
-                                if (e.key === "Enter") {
-                                  e.preventDefault();
-                                  const value = newTag.trim();
-                                  if (value && !form.getValues("courseTags").includes(value)) {
-                                    form.setValue("courseTags", [...form.getValues("courseTags"), value]);
-                                    setNewTag("");
-                                  }
-                                }
-                              }}
-                            />
-                            <Button
-                              type="button"
-                              onClick={() => {
-                                const value = newTag.trim();
-                                if (value && !form.getValues("courseTags").includes(value)) {
-                                  form.setValue("courseTags", [...form.getValues("courseTags"), value]);
-                                  setNewTag("");
-                                }
-                              }}
-                            >
-                              Add
-                            </Button>
-                          </div>
-                        </div>
-                        <div>
-                          <Label htmlFor="image">Image</Label>
-                          <div
-                            className="border-2 border-dashed border-gray-300 rounded-lg p-6 cursor-pointer hover:border-primary transition-colors"
-                            onDragOver={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                            }}
-                            onDrop={handleImageDrop}
-                          >
-                            <Input
-                              id="image"
-                              type="file"
-                              accept="image/*"
-                              onChange={handleImageUpload}
-                              className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
-                            />
-                            <p className="text-sm text-muted-foreground mt-2">
-                              Drag and drop an image here or click to select
-                            </p>
-                            {form.watch("image") && (
-                              <img
-                                src={form.watch("image")}
-                                alt="Preview"
-                                className="mt-4 max-h-40 rounded-lg"
-                              />
-                            )}
-                          </div>
-                          {form.formState.errors.image && (
-                            <p className="text-sm text-destructive mt-1">
-                              {form.formState.errors.image.message}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                      <div>
-                        <Label>Allergens</Label>
-                        <div className="grid grid-cols-2 gap-4 mt-2">
-                          {(Object.keys(form.getValues().allergens) as Array<keyof AllergenInfo>).map((key) => (
-                            <div key={key} className="flex items-center space-x-2">
-                              <Checkbox
-                                id={key}
-                                checked={form.getValues().allergens[key]}
-                                onCheckedChange={(checked) => handleAllergenChange(key, checked as boolean)}
-                              />
-                              <Label htmlFor={key} className="capitalize">
-                                {key}
-                              </Label>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                    <Button
-                      type="submit"
-                      className="w-full"
-                      disabled={createMutation.isPending || updateMutation.isPending}
-                    >
-                      {(createMutation.isPending || updateMutation.isPending) && (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin text-white" />
-                      )}
-                      {editItem ? "Update Item" : "Add Item"}
-                    </Button>
-                  </form>
-                </DialogContent>
-              </Dialog>
-              {selectedItems.length > 0 && (
-                <Button
-                  variant="destructive"
-                  onClick={handleDeleteSelected}
-                  disabled={deleteMutation.isPending}
-                >
-                  {deleteMutation.isPending && (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  )}
-                  Delete Selected ({selectedItems.length})
-                </Button>
-              )}
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={handleExportCSV}>
-                  <Download className="mr-2 h-4 w-4 text-white" />
-                  Export CSV
-                </Button>
-                <Button variant="outline" className="relative">
-                  <input
-                    type="file"
-                    accept=".csv"
-                    onChange={handleImportCSV}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                  />
-                  <Upload className="mr-2 h-4 w-4 text-white" />
-                  Import CSV
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );
-}
-
-interface AllergenInfo {
-  milk: boolean;
-  eggs: boolean;
-  peanuts: boolean;
-  nuts: boolean;
-  shellfish: boolean;
-  fish: boolean;
-  soy: boolean;
-  gluten: boolean;
 }
