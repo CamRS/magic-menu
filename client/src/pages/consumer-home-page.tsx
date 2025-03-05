@@ -203,7 +203,7 @@ export default function ConsumerHomePage() {
             <Button
               variant="outline"
               onClick={() => setIsFiltersOpen(!isFiltersOpen)}
-              className="flex-1 justify-between gap-2"
+              className="flex-1 justify-between gap-2 h-10 px-4 py-2"
             >
               Filters
               {isFiltersOpen ? (
@@ -217,10 +217,10 @@ export default function ConsumerHomePage() {
               value={selectedTags.length === 0 ? "all" : selectedTags.join(",")}
               onValueChange={handleTagSelection}
             >
-              <SelectTrigger className="flex-1">
+              <SelectTrigger className="flex-1 h-10 px-4 py-2">
                 <SelectValue placeholder="All Courses" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="w-full min-w-[200px]">
                 <SelectItem value="all">All Courses</SelectItem>
                 {Array.from(uniqueTags).map((tag) => (
                   <SelectItem key={tag} value={tag}>
