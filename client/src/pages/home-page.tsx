@@ -8,7 +8,6 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,7 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Copy, Store, PlusCircle, ChevronDown, Loader2, Download, Upload, Trash2, MoreVertical, Pencil, Globe, Image as ImageIcon, QrCode, Search, Eye, EyeOff } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { type Restaurant, type MenuItem, type InsertMenuItem, insertMenuItemSchema, insertRestaurantSchema } from "@shared/schema";
+import { type Restaurant, type MenuItem, type InsertMenuItem, insertMenuItemSchema } from "@shared/schema";
 import { useState, useRef, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -30,7 +29,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { QRCodeSVG } from 'qrcode.react';
-import { useDropbox } from "@/hooks/use-dropbox";
 
 type MenuItemStatus = "draft" | "live";
 
@@ -47,7 +45,29 @@ export default function HomePage() {
   const [statusFilter, setStatusFilter] = useState<MenuItemStatus | null>(null);
   const qrCodeRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const imageUploadRef = useRef<HTMLInputElement>(null);
+
+  const form = useForm<InsertMenuItem>({
+    resolver: zodResolver(insertMenuItemSchema),
+    defaultValues: {
+      name: "",
+      description: "",
+      price: "",
+      courseTags: [],
+      restaurantId: 0,
+      image: "",
+      status: "draft",
+      allergens: {
+        milk: false,
+        eggs: false,
+        peanuts: false,
+        nuts: false,
+        shellfish: false,
+        fish: false,
+        soy: false,
+        gluten: false,
+      },
+    },
+  });
 
   const { data: restaurants, isLoading: isLoadingRestaurants } = useQuery<Restaurant[]>({
     queryKey: ["/api/restaurants"],
@@ -81,7 +101,6 @@ export default function HomePage() {
   const filteredItems = useMemo(() => {
     let items = menuItems || [];
 
-    // Apply search filter
     if (searchTerm) {
       items = items.filter(item =>
         item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -89,7 +108,6 @@ export default function HomePage() {
       );
     }
 
-    // Apply status filter
     if (statusFilter) {
       items = items.filter(item => item.status === statusFilter);
     }
@@ -122,6 +140,68 @@ export default function HomePage() {
     },
   });
 
+  const createMutation = useMutation({
+    mutationFn: async (data: InsertMenuItem) => {
+      const response = await apiRequest("POST", "/api/menu-items", {
+        ...data,
+        restaurantId: selectedRestaurant?.id,
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to create menu item");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/menu-items", selectedRestaurant?.id] });
+      setCreateMenuItemOpen(false);
+      form.reset();
+      toast({
+        title: "Success",
+        description: "Menu item created successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSubmit = async (data: InsertMenuItem) => {
+    if (!selectedRestaurant?.id) {
+      toast({
+        title: "Error",
+        description: "Please select a restaurant first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (editingItem) {
+      const response = await apiRequest("PATCH", `/api/menu-items/${editingItem.id}`, {
+        ...data,
+        restaurantId: selectedRestaurant.id,
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to update menu item");
+      }
+      queryClient.invalidateQueries({ queryKey: ["/api/menu-items", selectedRestaurant.id] });
+      setCreateMenuItemOpen(false);
+      setEditingItem(null);
+      form.reset();
+      toast({
+        title: "Success",
+        description: "Menu item updated successfully",
+      });
+    } else {
+      createMutation.mutate({ ...data, restaurantId: selectedRestaurant.id });
+    }
+  };
+
   const handleStatusChange = async (item: MenuItem) => {
     const newStatus: MenuItemStatus = item.status === "draft" ? "live" : "draft";
     await updateStatusMutation.mutateAsync({ id: item.id, status: newStatus });
@@ -129,6 +209,15 @@ export default function HomePage() {
 
   const handleEdit = (item: MenuItem) => {
     setEditingItem(item);
+    form.reset({
+      name: item.name,
+      description: item.description,
+      price: item.price,
+      courseTags: item.courseTags,
+      image: item.image,
+      status: item.status as MenuItemStatus,
+      allergens: item.allergens,
+    });
     setCreateMenuItemOpen(true);
   };
 
@@ -172,6 +261,85 @@ export default function HomePage() {
   const handleDeleteSelected = () => {
     if (selectedItems.length === 0) return;
     deleteMutation.mutate(selectedItems);
+  };
+
+  const getPublicMenuUrl = (restaurantId: number) => {
+    const baseUrl = window.location.origin;
+    return `${baseUrl}/menu/${restaurantId}`;
+  };
+
+  const copyMenuUrl = async (restaurantId: number) => {
+    const url = getPublicMenuUrl(restaurantId);
+    try {
+      await navigator.clipboard.writeText(url);
+      toast({
+        title: "Success",
+        description: "Menu URL copied to clipboard",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to copy URL",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleExportCSV = async () => {
+    if (!selectedRestaurant?.id) return;
+
+    try {
+      const response = await fetch(`/api/restaurants/${selectedRestaurant.id}/menu/export`);
+      if (!response.ok) throw new Error('Failed to export menu');
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${selectedRestaurant.name.toLowerCase().replace(/[^a-z0-9]/gi, '_')}_menu.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to export menu",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleImportCSV = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!selectedRestaurant?.id) return;
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch(`/api/restaurants/${selectedRestaurant.id}/menu/import`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to import menu items');
+      }
+
+      queryClient.invalidateQueries({ queryKey: ["/api/menu-items", selectedRestaurant.id] });
+      toast({
+        title: "Success",
+        description: "Menu items imported successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to import menu items",
+        variant: "destructive",
+      });
+    }
   };
 
   const MenuItemCard = ({ item }: { item: MenuItem }) => {
@@ -265,31 +433,67 @@ export default function HomePage() {
             )}
           </div>
 
-          {/* Restaurant selector dropdown */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline">
-                <Store className="mr-2 h-4 w-4" />
-                Select Restaurant
-                <ChevronDown className="ml-2 h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              {restaurants?.map((restaurant) => (
-                <DropdownMenuItem
-                  key={restaurant.id}
-                  onClick={() => setSelectedRestaurant(restaurant)}
-                >
-                  {restaurant.name}
+          <div className="flex items-center gap-4">
+            {/* Restaurant selector dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">
+                  <Store className="mr-2 h-4 w-4" />
+                  Select Restaurant
+                  <ChevronDown className="ml-2 h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                {restaurants?.map((restaurant) => (
+                  <DropdownMenuItem
+                    key={restaurant.id}
+                    onClick={() => setSelectedRestaurant(restaurant)}
+                  >
+                    {restaurant.name}
+                  </DropdownMenuItem>
+                ))}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => setCreateRestaurantOpen(true)}>
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Add New Restaurant
                 </DropdownMenuItem>
-              ))}
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => setCreateRestaurantOpen(true)}>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Add New Restaurant
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Action buttons */}
+            <Button onClick={() => setCreateMenuItemOpen(true)}>
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Add Item
+            </Button>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onClick={handleExportCSV}>
+                  <Download className="mr-2 h-4 w-4" />
+                  Export CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
+                  <Upload className="mr-2 h-4 w-4" />
+                  Import CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setShowQrCode(true)}>
+                  <QrCode className="mr-2 h-4 w-4" />
+                  Show QR Code
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => selectedRestaurant && copyMenuUrl(selectedRestaurant.id)}
+                >
+                  <Globe className="mr-2 h-4 w-4" />
+                  Copy Menu URL
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
 
         {/* Search and filters */}
@@ -302,10 +506,6 @@ export default function HomePage() {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="max-w-sm"
             />
-            <Button onClick={() => setCreateMenuItemOpen(true)}>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Add Item
-            </Button>
           </div>
 
           {/* Status filters */}
@@ -331,20 +531,17 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Selected items actions */}
+        {/* Bulk actions */}
         {selectedItems.length > 0 && (
-          <div className="mb-4">
-            <Button
-              variant="destructive"
-              onClick={handleDeleteSelected}
-              disabled={deleteMutation.isPending}
-            >
-              {deleteMutation.isPending && (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              )}
-              Delete Selected ({selectedItems.length})
-            </Button>
-          </div>
+          <Button
+            variant="destructive"
+            onClick={handleDeleteSelected}
+            disabled={deleteMutation.isPending}
+            className="mb-4"
+          >
+            {deleteMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Delete Selected ({selectedItems.length})
+          </Button>
         )}
 
         {/* Menu items list */}
@@ -353,6 +550,100 @@ export default function HomePage() {
             <MenuItemCard key={item.id} item={item} />
           ))}
         </div>
+
+        {/* Hidden file input for CSV import */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".csv"
+          onChange={handleImportCSV}
+          className="hidden"
+        />
+
+        {/* Create/Edit Menu Item Dialog */}
+        <Dialog 
+          open={isCreateMenuItemOpen} 
+          onOpenChange={(isOpen) => {
+            setCreateMenuItemOpen(isOpen);
+            if (!isOpen) {
+              setEditingItem(null);
+              form.reset();
+            }
+          }}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{editingItem ? 'Edit Menu Item' : 'Add Menu Item'}</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+              <div>
+                <Label htmlFor="name">Name</Label>
+                <Input {...form.register("name")} />
+              </div>
+              <div>
+                <Label htmlFor="description">Description</Label>
+                <Textarea {...form.register("description")} />
+              </div>
+              <div>
+                <Label htmlFor="price">Price</Label>
+                <Input {...form.register("price")} />
+              </div>
+              <div>
+                <Label>Allergens</Label>
+                <div className="grid grid-cols-2 gap-4 mt-2">
+                  {(Object.keys(form.getValues().allergens) as Array<keyof InsertMenuItem['allergens']>).map((key) => (
+                    <div key={key} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={key}
+                        checked={form.getValues().allergens[key]}
+                        onCheckedChange={(checked) => {
+                          form.setValue(`allergens.${key}`, checked as boolean);
+                        }}
+                      />
+                      <Label htmlFor={key} className="capitalize">
+                        {key}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="status">Status</Label>
+                <select {...form.register("status")} className="w-full p-2 border rounded-md">
+                  <option value="draft">Draft</option>
+                  <option value="live">Live</option>
+                </select>
+              </div>
+              <Button type="submit" className="w-full">
+                {editingItem ? "Update Item" : "Add Item"}
+              </Button>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        {/* QR Code Dialog */}
+        {selectedRestaurant && (
+          <Dialog open={showQrCode} onOpenChange={setShowQrCode}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Menu QR Code</DialogTitle>
+              </DialogHeader>
+              <div ref={qrCodeRef} className="flex flex-col items-center justify-center p-4">
+                <QRCodeSVG
+                  value={getPublicMenuUrl(selectedRestaurant.id)}
+                  size={200}
+                  className="mb-4"
+                />
+                <p className="text-sm text-gray-500 break-all">
+                  {getPublicMenuUrl(selectedRestaurant.id)}
+                </p>
+              </div>
+              <DialogFooter>
+                <Button onClick={() => setShowQrCode(false)}>Close</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
     </div>
   );
