@@ -2,20 +2,8 @@ import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from "@/components/ui/select";
-import { Camera, Upload, Search, ChevronDown, ChevronUp } from "lucide-react";
+import { Search, Camera, Upload } from "lucide-react";
 import { useState } from "react";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import { SettingsMenu } from "@/components/settings-dialogs";
 
 type AllergenType = 'milk' | 'eggs' | 'peanuts' | 'nuts' | 'shellfish' | 'fish' | 'soy' | 'gluten';
@@ -29,7 +17,6 @@ export default function ConsumerHomePage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedAllergens, setSelectedAllergens] = useState<AllergenType[]>([]);
   const [selectedDietary, setSelectedDietary] = useState<typeof dietaryPreferences[number][]>([]);
-  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -51,7 +38,7 @@ export default function ConsumerHomePage() {
             <SettingsMenu />
           </div>
 
-          {/* Search and Filters */}
+          {/* Search Bar Only */}
           <div className="space-y-3">
             <div className="relative">
               <Input
@@ -62,84 +49,12 @@ export default function ConsumerHomePage() {
               />
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
             </div>
-
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setIsFiltersOpen(!isFiltersOpen)}
-                className="flex-1 justify-between gap-2 h-12 rounded-xl border-gray-200 hover:bg-gray-50 transition-all duration-200"
-              >
-                Filters
-                {isFiltersOpen ? (
-                  <ChevronUp className="h-4 w-4" />
-                ) : (
-                  <ChevronDown className="h-4 w-4" />
-                )}
-              </Button>
-            </div>
           </div>
-
-          {/* Collapsible Filters */}
-          <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
-            <CollapsibleContent className="py-4 space-y-4">
-              <div>
-                <h3 className="font-medium mb-2 text-gray-700">Allergens</h3>
-                <div className="grid grid-cols-2 gap-2">
-                  {allergensList.map((allergen) => (
-                    <Button
-                      key={allergen}
-                      variant="outline"
-                      className={`justify-start gap-2 rounded-xl ${
-                        selectedAllergens.includes(allergen)
-                          ? "bg-[#4F46E5]/10 text-[#4F46E5] border-[#4F46E5]/20"
-                          : "hover:bg-gray-50"
-                      }`}
-                      onClick={() => {
-                        setSelectedAllergens((prev) =>
-                          prev.includes(allergen)
-                            ? prev.filter((a) => a !== allergen)
-                            : [...prev, allergen]
-                        );
-                      }}
-                    >
-                      <span className="capitalize">{allergen}</span>
-                    </Button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <h3 className="font-medium mb-2 text-gray-700">Dietary Preferences</h3>
-                <div className="grid grid-cols-2 gap-2">
-                  {dietaryPreferences.map((pref) => (
-                    <Button
-                      key={pref}
-                      variant="outline"
-                      className={`justify-start gap-2 rounded-xl ${
-                        selectedDietary.includes(pref)
-                          ? "bg-[#4F46E5]/10 text-[#4F46E5] border-[#4F46E5]/20"
-                          : "hover:bg-gray-50"
-                      }`}
-                      onClick={() => {
-                        setSelectedDietary((prev) =>
-                          prev.includes(pref)
-                            ? prev.filter((p) => p !== pref)
-                            : [...prev, pref]
-                        );
-                      }}
-                    >
-                      {pref}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
         </div>
       </header>
 
       {/* Menu Actions */}
-      <main className="pt-[180px] px-4 pb-20 max-w-4xl mx-auto">
+      <main className="pt-[140px] px-4 pb-20 max-w-4xl mx-auto">
         <div className="space-y-4">
           <Card className="p-8 hover:shadow-lg transition-all duration-300 rounded-2xl cursor-pointer border-gray-200 bg-gradient-to-br from-white to-gray-50">
             <div className="flex flex-col items-center space-y-4">
