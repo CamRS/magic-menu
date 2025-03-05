@@ -5,6 +5,7 @@ import { setupAuth, requireAuth, requireApiKey } from "./auth.js";
 import { storage } from "./storage";
 import { insertMenuItemSchema, insertRestaurantSchema } from "@shared/schema";
 import { comparePasswords, hashPassword } from "./utils"; // Assuming these functions exist in utils.ts
+import { insertConsumerMenuItemSchema } from "@shared/schema"; // Assuming this schema exists
 
 
 // Helper function to parse CSV data
@@ -228,6 +229,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.sendStatus(204);
     } catch (error) {
       console.error('Error deleting menu item:', error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Add new routes for consumer menu items
+  app.get("/api/consumer-menu-items", requireAuth, async (req, res) => {
+    try {
+      if (!req.user) return res.sendStatus(401);
+      const items = await storage.getConsumerMenuItems(req.user.id);
+      res.json(items);
+    } catch (error) {
+      console.error('Error fetching consumer menu items:', error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.post("/api/consumer-menu-items", requireAuth, async (req, res) => {
+    try {
+      if (!req.user) return res.sendStatus(401);
+
+      const itemData = {
+        ...req.body,
+        userId: req.user.id,
+      };
+
+      const parsed = insertConsumerMenuItemSchema.safeParse(itemData);
+      if (!parsed.success) {
+        return res.status(400).json({
+          message: "Invalid menu item data",
+          errors: parsed.error.errors
+        });
+      }
+
+      const item = await storage.createConsumerMenuItem(parsed.data);
+      res.status(201).json(item);
+    } catch (error) {
+      console.error('Error creating consumer menu item:', error);
       res.status(500).json({ message: "Internal server error" });
     }
   });

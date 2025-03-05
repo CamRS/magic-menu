@@ -1,4 +1,4 @@
-import { User, InsertUser, MenuItem, InsertMenuItem, Restaurant, InsertRestaurant, Image, InsertImage } from "@shared/schema";
+import { User, InsertUser, MenuItem, InsertMenuItem, Restaurant, InsertRestaurant, Image, InsertImage, ConsumerMenuItem, InsertConsumerMenuItem, consumerMenuItems } from "@shared/schema";
 import session from "express-session";
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";
@@ -29,6 +29,13 @@ export interface IStorage {
   getImage(id: number): Promise<Image | undefined>;
   createImage(image: InsertImage): Promise<Image>;
   deleteImage(id: number): Promise<void>;
+
+  // New methods for consumer menu items
+  getConsumerMenuItems(userId: number): Promise<ConsumerMenuItem[]>;
+  getConsumerMenuItem(id: number): Promise<ConsumerMenuItem | undefined>;
+  createConsumerMenuItem(item: InsertConsumerMenuItem): Promise<ConsumerMenuItem>;
+  updateConsumerMenuItem(id: number, item: Partial<InsertConsumerMenuItem>): Promise<ConsumerMenuItem>;
+  deleteConsumerMenuItem(id: number): Promise<void>;
 
   sessionStore: session.Store;
 }
@@ -268,6 +275,64 @@ export class DatabaseStorage implements IStorage {
     });
 
     return updatedUser;
+  }
+
+  // New consumer menu items methods
+  async getConsumerMenuItems(userId: number): Promise<ConsumerMenuItem[]> {
+    console.log("Getting consumer menu items for user:", userId);
+    const items = await db
+      .select()
+      .from(consumerMenuItems)
+      .where(eq(consumerMenuItems.userId, userId));
+    console.log("Found consumer menu items:", items);
+    return items;
+  }
+
+  async getConsumerMenuItem(id: number): Promise<ConsumerMenuItem | undefined> {
+    console.log("Getting consumer menu item:", id);
+    const [item] = await db
+      .select()
+      .from(consumerMenuItems)
+      .where(eq(consumerMenuItems.id, id));
+    console.log("Found consumer menu item:", item);
+    return item;
+  }
+
+  async createConsumerMenuItem(item: InsertConsumerMenuItem): Promise<ConsumerMenuItem> {
+    console.log("Creating consumer menu item with data:", {
+      ...item,
+      image: item.image ? '[IMAGE DATA]' : undefined
+    });
+
+    const [menuItem] = await db
+      .insert(consumerMenuItems)
+      .values(item)
+      .returning();
+
+    console.log("Created consumer menu item:", menuItem);
+    return menuItem;
+  }
+
+  async updateConsumerMenuItem(
+    id: number,
+    updates: Partial<InsertConsumerMenuItem>,
+  ): Promise<ConsumerMenuItem> {
+    console.log("Updating consumer menu item:", id);
+    const [updated] = await db
+      .update(consumerMenuItems)
+      .set(updates)
+      .where(eq(consumerMenuItems.id, id))
+      .returning();
+    console.log("Updated consumer menu item:", updated);
+    return updated;
+  }
+
+  async deleteConsumerMenuItem(id: number): Promise<void> {
+    console.log("Deleting consumer menu item:", id);
+    await db
+      .delete(consumerMenuItems)
+      .where(eq(consumerMenuItems.id, id));
+    console.log("Deleted consumer menu item:", id);
   }
 }
 

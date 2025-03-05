@@ -59,6 +59,42 @@ export const menuItems = pgTable("menu_items", {
   }),
 });
 
+// New table for consumer-uploaded menus
+export const consumerMenuItems = pgTable("consumer_menu_items", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  name: text("name").notNull(),
+  name_original: text("name_original").default(""),
+  description: text("description").notNull(),
+  price: text("price").default(""),
+  image: text("image").default(''),
+  imageId: integer("image_id").references(() => images.id),
+  courseTags: text("course_type").array().default([]).notNull(),
+  course_original: text("course_original").default(""),
+  displayOrder: integer("display_order").default(0),
+  allergens: jsonb("allergens").$type<{
+    milk: boolean;
+    eggs: boolean;
+    peanuts: boolean;
+    nuts: boolean;
+    shellfish: boolean;
+    fish: boolean;
+    soy: boolean;
+    gluten: boolean;
+  }>().notNull().default({
+    milk: false,
+    eggs: false,
+    peanuts: false,
+    nuts: false,
+    shellfish: false,
+    fish: false,
+    soy: false,
+    gluten: false,
+  }),
+  createdAt: text("created_at").notNull().default(new Date().toISOString()),
+  source: text("source").notNull().default("upload"), // To track if it's from image upload, manual entry, etc.
+});
+
 export const insertUserSchema = createInsertSchema(users).extend({
   userType: z.enum(["consumer", "restaurant"]).default("consumer"),
   preferredLanguage: z.string().default("en"),
@@ -97,6 +133,38 @@ export const insertMenuItemSchema = createInsertSchema(menuItems).extend({
   }),
 });
 
+// Schema for consumer menu items
+export const insertConsumerMenuItemSchema = createInsertSchema(consumerMenuItems).extend({
+  price: z.string().optional().default(""),
+  description: z.string().min(1, "Description is required"),
+  image: z.string().optional().default(''),
+  imageId: z.number().optional(),
+  name_original: z.string().optional().default(""),
+  course_original: z.string().optional().default(""),
+  courseTags: z.array(z.string()).default([]),
+  displayOrder: z.number().optional().default(0),
+  source: z.string().default("upload"),
+  allergens: z.object({
+    milk: z.boolean().default(false),
+    eggs: z.boolean().default(false),
+    peanuts: z.boolean().default(false),
+    nuts: z.boolean().default(false),
+    shellfish: z.boolean().default(false),
+    fish: z.boolean().default(false),
+    soy: z.boolean().default(false),
+    gluten: z.boolean().default(false),
+  }).default({
+    milk: false,
+    eggs: false,
+    peanuts: false,
+    nuts: false,
+    shellfish: false,
+    fish: false,
+    soy: false,
+    gluten: false,
+  }),
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type Restaurant = typeof restaurants.$inferSelect;
@@ -105,3 +173,5 @@ export type InsertMenuItem = z.infer<typeof insertMenuItemSchema>;
 export type InsertRestaurant = z.infer<typeof insertRestaurantSchema>;
 export type Image = typeof images.$inferSelect;
 export type InsertImage = z.infer<typeof insertImageSchema>;
+export type ConsumerMenuItem = typeof consumerMenuItems.$inferSelect;
+export type InsertConsumerMenuItem = z.infer<typeof insertConsumerMenuItemSchema>;
