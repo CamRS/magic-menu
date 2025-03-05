@@ -4,9 +4,26 @@ import { createServer, type Server } from "http";
 import { setupAuth, requireAuth, requireApiKey } from "./auth.js";
 import { storage } from "./storage";
 import { insertMenuItemSchema, insertRestaurantSchema } from "@shared/schema";
-import { comparePasswords, hashPassword } from "./utils"; // Assuming these functions exist in utils.ts
-import { insertConsumerMenuItemSchema } from "@shared/schema"; // Assuming this schema exists
+import { comparePasswords, hashPassword } from "./utils";
+import { insertConsumerMenuItemSchema } from "@shared/schema";
+import multer from "multer";
+import path from "path";
 
+// Configure multer for handling file uploads
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+  },
+  fileFilter: (_req, file, cb) => {
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only JPEG, PNG and GIF are allowed.'));
+    }
+  }
+});
 
 // Helper function to parse CSV data
 function parseCSV(csvText: string): string[][] {
@@ -241,6 +258,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(items);
     } catch (error) {
       console.error('Error fetching consumer menu items:', error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.post("/api/consumer-menu-items/upload", requireAuth, upload.single('file'), async (req, res) => {
+    try {
+      if (!req.user) return res.sendStatus(401);
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      // For now, create a simple menu item from the upload
+      // In a real implementation, you would process the image to extract menu items
+      const menuItem = {
+        userId: req.user.id,
+        name: req.file.originalname.split('.')[0],
+        description: "Uploaded menu item",
+        image: req.file.buffer.toString('base64'),
+        source: "upload",
+        courseTags: [],
+        allergens: {
+          milk: false,
+          eggs: false,
+          peanuts: false,
+          nuts: false,
+          shellfish: false,
+          fish: false,
+          soy: false,
+          gluten: false,
+        }
+      };
+
+      const parsed = insertConsumerMenuItemSchema.safeParse(menuItem);
+      if (!parsed.success) {
+        return res.status(400).json({
+          message: "Invalid menu item data",
+          errors: parsed.error.errors
+        });
+      }
+
+      const item = await storage.createConsumerMenuItem(parsed.data);
+      res.status(201).json(item);
+    } catch (error) {
+      console.error('Error uploading menu item:', error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
