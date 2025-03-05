@@ -194,10 +194,10 @@ export default function ConsumerHomePage() {
                   value={selectedTags.length === 0 ? "all" : selectedTags.join(",")}
                   onValueChange={handleTagSelection}
                 >
-                  <SelectTrigger className="flex-1 justify-between">
+                  <SelectTrigger className="flex-1">
                     <SelectValue placeholder="All Courses" />
                   </SelectTrigger>
-                  <SelectContent className="w-[100vw] left-0 right-0 translate-x-[-50%]">
+                  <SelectContent align="end" className="w-[200px]">
                     <SelectItem value="all">All Courses</SelectItem>
                     {Array.from(uniqueTags).map((tag) => (
                       <SelectItem key={tag} value={tag}>
