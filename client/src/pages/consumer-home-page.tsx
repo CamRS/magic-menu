@@ -185,7 +185,7 @@ export default function ConsumerHomePage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50/50 to-white pb-20">
       <header className="fixed top-0 left-0 right-0 bg-white/80 backdrop-blur-sm border-b border-gray-100 z-50">
-        <div className="max-w-3xl mx-auto px-4 py-3">
+        <div className="max-w-3xl mx-auto px-4 py-6">
           <div className="relative">
             <Input
               placeholder="Search menu..."
@@ -197,100 +197,102 @@ export default function ConsumerHomePage() {
           </div>
 
           {menuItems && menuItems.length > 0 && (
-            <>
-              <div className="flex gap-2 mt-3">
-                <Button
-                  variant="outline"
-                  onClick={() => setIsFiltersOpen(!isFiltersOpen)}
-                  className="flex-1 justify-between gap-2"
-                >
-                  Filters
-                  {isFiltersOpen ? (
-                    <ChevronUp className="h-4 w-4" />
-                  ) : (
-                    <ChevronDown className="h-4 w-4" />
-                  )}
-                </Button>
+            <div className="flex gap-2 mt-3">
+              <Button
+                variant="outline"
+                onClick={() => setIsFiltersOpen(!isFiltersOpen)}
+                className="flex-1 justify-between gap-2"
+              >
+                Filters
+                {isFiltersOpen ? (
+                  <ChevronUp className="h-4 w-4" />
+                ) : (
+                  <ChevronDown className="h-4 w-4" />
+                )}
+              </Button>
 
-                <Select
-                  value={selectedTags.length === 0 ? "all" : selectedTags.join(",")}
-                  onValueChange={handleTagSelection}
-                >
-                  <SelectTrigger className="flex-1">
-                    <SelectValue placeholder="All Courses" />
-                  </SelectTrigger>
-                  <SelectContent align="end" className="w-[200px]">
-                    <SelectItem value="all">All Courses</SelectItem>
-                    {Array.from(uniqueTags).map((tag) => (
-                      <SelectItem key={tag} value={tag}>
-                        {tag}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <Select
+                value={selectedTags.length === 0 ? "all" : selectedTags.join(",")}
+                onValueChange={handleTagSelection}
+              >
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder="All Courses" />
+                </SelectTrigger>
+                <SelectContent align="end" className="w-[200px]">
+                  <SelectItem value="all">All Courses</SelectItem>
+                  {Array.from(uniqueTags).map((tag) => (
+                    <SelectItem key={tag} value={tag}>
+                      {tag}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
+            <CollapsibleContent className="py-4 space-y-4">
+              <div>
+                <h3 className="font-medium mb-2">Allergens</h3>
+                <div className="grid grid-cols-2 gap-2">
+                  {allergensList.map((allergen) => (
+                    <Button
+                      key={allergen}
+                      variant="outline"
+                      className={`justify-start gap-2 ${
+                        selectedAllergens.includes(allergen)
+                          ? "bg-blue-50 text-blue-700 border-blue-200"
+                          : ""
+                      }`}
+                      onClick={() => {
+                        setSelectedAllergens((prev) =>
+                          prev.includes(allergen)
+                            ? prev.filter((a) => a !== allergen)
+                            : [...prev, allergen]
+                        );
+                      }}
+                    >
+                      <span className="capitalize">{allergen}</span>
+                    </Button>
+                  ))}
+                </div>
               </div>
 
-              <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
-                <CollapsibleContent className="py-4 space-y-4">
-                  <div>
-                    <h3 className="font-medium mb-2">Allergens</h3>
-                    <div className="grid grid-cols-2 gap-2">
-                      {allergensList.map((allergen) => (
-                        <Button
-                          key={allergen}
-                          variant="outline"
-                          className={`justify-start gap-2 ${
-                            selectedAllergens.includes(allergen)
-                              ? "bg-blue-50 text-blue-700 border-blue-200"
-                              : ""
-                          }`}
-                          onClick={() => {
-                            setSelectedAllergens((prev) =>
-                              prev.includes(allergen)
-                                ? prev.filter((a) => a !== allergen)
-                                : [...prev, allergen]
-                            );
-                          }}
-                        >
-                          <span className="capitalize">{allergen}</span>
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <h3 className="font-medium mb-2">Dietary Preferences</h3>
-                    <div className="grid grid-cols-2 gap-2">
-                      {dietaryPreferences.map((pref) => (
-                        <Button
-                          key={pref}
-                          variant="outline"
-                          className={`justify-start gap-2 ${
-                            selectedDietary.includes(pref)
-                              ? "bg-green-50 text-green-700 border-green-200"
-                              : ""
-                          }`}
-                          onClick={() => {
-                            setSelectedDietary((prev) =>
-                              prev.includes(pref)
-                                ? prev.filter((p) => p !== pref)
-                                : [...prev, pref]
-                            );
-                          }}
-                        >
-                          {pref}
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-                </CollapsibleContent>
-              </Collapsible>
-            </>
-          )}
+              <div>
+                <h3 className="font-medium mb-2">Dietary Preferences</h3>
+                <div className="grid grid-cols-2 gap-2">
+                  {dietaryPreferences.map((pref) => (
+                    <Button
+                      key={pref}
+                      variant="outline"
+                      className={`justify-start gap-2 ${
+                        selectedDietary.includes(pref)
+                          ? "bg-green-50 text-green-700 border-green-200"
+                          : ""
+                      }`}
+                      onClick={() => {
+                        setSelectedDietary((prev) =>
+                          prev.includes(pref)
+                            ? prev.filter((p) => p !== pref)
+                            : [...prev, pref]
+                        );
+                      }}
+                    >
+                      {pref}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
         </div>
       </header>
 
-      <main className="pt-[110px] px-4 pb-24 max-w-3xl mx-auto">
+      <main 
+        className={`px-4 pb-24 max-w-3xl mx-auto ${
+          isFiltersOpen ? 'pt-[300px]' : 'pt-[180px]'
+        }`}
+      >
         {(!menuItems || menuItems.length === 0) && (
           <div className="grid gap-3">
             <Card className="p-6 hover:shadow-md transition-all duration-300 rounded-xl cursor-pointer border-gray-100 bg-gradient-to-br from-white to-gray-50/50 group">
