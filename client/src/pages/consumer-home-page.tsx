@@ -2,7 +2,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Search, Camera, Upload, ChevronDown, ChevronUp, Plus } from "lucide-react";
+import { Search, Camera, Upload, ChevronDown, ChevronUp, Plus, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { SettingsMenu } from "@/components/settings-dialogs";
 import { Badge } from "@/components/ui/badge";
@@ -308,15 +308,22 @@ export default function ConsumerHomePage() {
             <label className="cursor-pointer">
               <div className="flex flex-col items-center gap-1 text-gray-600 hover:text-[#4F46E5] transition-colors">
                 <div className="w-12 h-12 rounded-full bg-[#4F46E5] flex items-center justify-center -mt-4">
-                  <Plus className="h-6 w-6 text-white" />
+                  {uploadMutation.isPending ? (
+                    <Loader2 className="h-6 w-6 text-white animate-spin" />
+                  ) : (
+                    <Camera className="h-6 w-6 text-white" />
+                  )}
                 </div>
-                <span className="text-xs font-medium mt-1">Take Photo</span>
+                <span className="text-xs font-medium mt-1">
+                  {uploadMutation.isPending ? 'Uploading...' : 'Take Photo'}
+                </span>
                 <Input
                   type="file"
                   accept="image/*"
-                  capture="environment"
+                  capture="user"
                   className="hidden"
                   onChange={handleCameraCapture}
+                  disabled={uploadMutation.isPending}
                 />
               </div>
             </label>
