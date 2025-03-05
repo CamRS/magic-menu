@@ -38,6 +38,7 @@ export const menuItems = pgTable("menu_items", {
   courseTags: text("course_type").array().default([]).notNull(),
   course_original: text("course_original").default(""),
   displayOrder: integer("display_order").default(0),
+  status: text("status").notNull().default("draft"),
   allergens: jsonb("allergens").$type<{
     milk: boolean;
     eggs: boolean;
@@ -112,6 +113,7 @@ export const insertMenuItemSchema = createInsertSchema(menuItems).extend({
   course_original: z.string().optional().default(""),
   courseTags: z.array(z.string()).default([]),
   displayOrder: z.number().optional().default(0),
+  status: z.enum(["draft", "live"]).default("draft"),
   allergens: z.object({
     milk: z.boolean().default(false),
     eggs: z.boolean().default(false),
@@ -133,7 +135,6 @@ export const insertMenuItemSchema = createInsertSchema(menuItems).extend({
   }),
 });
 
-// Schema for consumer menu items
 export const insertConsumerMenuItemSchema = createInsertSchema(consumerMenuItems).extend({
   price: z.string().optional().default(""),
   description: z.string().min(1, "Description is required"),

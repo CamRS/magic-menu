@@ -25,12 +25,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Loader2, PlusCircle, Download, Upload, Trash2, Pencil, MoreVertical } from "lucide-react";
-import { useState, useEffect, useCallback } from "react";
+import { Loader2, PlusCircle, Download, Upload, Trash2, Pencil, MoreVertical, Eye, EyeOff } from "lucide-react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 
 type AllergenType = keyof MenuItem['allergens'];
+type MenuItemStatus = "draft" | "live";
 
 export default function MenuPage() {
   const [open, setOpen] = useState(false);
@@ -41,6 +42,7 @@ export default function MenuPage() {
   const [location] = useLocation();
   const { toast } = useToast();
   const restaurantId = new URLSearchParams(location.split('?')[1]).get('restaurantId');
+  const [statusFilter, setStatusFilter] = useState<MenuItemStatus | null>(null);
 
   const form = useForm<InsertMenuItem>({
     resolver: zodResolver(insertMenuItemSchema),
@@ -90,7 +92,13 @@ export default function MenuPage() {
   });
 
   const { data: menuItems, isLoading } = useQuery<MenuItem[]>({
-    queryKey: ["/api/menu-items", restaurantId],
+    queryKey: ["/api/menu-items", restaurantId, statusFilter],
+    queryFn: async () => {
+      const url = `/api/menu-items?restaurantId=${restaurantId}${statusFilter ? `&status=${statusFilter}` : ''}`;
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('Failed to fetch menu items');
+      return response.json();
+    },
     enabled: !!restaurantId
   });
 
@@ -362,6 +370,48 @@ export default function MenuPage() {
     return matchesAllergens;
   });
 
+  const updateStatusMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: number; status: MenuItemStatus }) => {
+      const res = await apiRequest("PATCH", `/api/menu-items/${id}/status`, { status });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to update menu item status");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/menu-items", restaurantId] });
+      toast({
+        title: "Success",
+        description: "Menu item status updated successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const toggleItemStatus = async (item: MenuItem) => {
+    const newStatus: MenuItemStatus = item.status === "draft" ? "live" : "draft";
+    await updateStatusMutation.mutateAsync({ id: item.id, status: newStatus });
+  };
+
+  const groupedItems = useMemo(() => {
+    if (!menuItems) return { draft: [], live: [] };
+    return menuItems.reduce(
+      (acc, item) => {
+        acc[item.status as MenuItemStatus].push(item);
+        return acc;
+      },
+      { draft: [], live: [] } as Record<MenuItemStatus, MenuItem[]>
+    );
+  }, [menuItems]);
+
+
   if (!restaurantId) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -418,46 +468,88 @@ export default function MenuPage() {
           </div>
         </div>
 
-        <div className="space-y-4">
-          {filteredMenuItems?.map((item) => (
-            <Card
-              key={item.id}
-              className="bg-[#1E1E1E]/80 border-none text-white overflow-hidden"
-            >
-              <CardContent className="p-4">
-                {item.image ? (
-                  <img
-                    src={item.image}
-                    alt={item.name}
-                    className="w-full h-48 object-cover rounded-lg mb-4"
-                  />
-                ) : null}
-                <div className="space-y-2">
-                  <div className="flex justify-between items-start">
-                    <h3 className="text-xl font-bold">{item.name}</h3>
-                    <span className="text-lg font-semibold text-white min-w-[80px] text-right">
-                      <span className="font-semibold">{item.price ? `$${parseFloat(item.price).toFixed(2)}` : ''}</span>
-                    </span>
-                  </div>
-                  <p className="text-gray-300">{item.description}</p>
-                  <div className="flex flex-wrap gap-2">
-                    {Object.entries(item.allergens)
-                      .filter(([_, value]) => value)
-                      .map(([key]) => (
-                        <Badge
-                          key={key}
-                          variant="outline"
-                          className="bg-transparent border-gray-600 text-gray-300"
-                        >
-                          Contains {key}
-                        </Badge>
-                      ))}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+        <div className="flex gap-2 mb-4">
+          <Button
+            variant={statusFilter === null ? "default" : "outline"}
+            onClick={() => setStatusFilter(null)}
+          >
+            All Items
+          </Button>
+          <Button
+            variant={statusFilter === "draft" ? "default" : "outline"}
+            onClick={() => setStatusFilter("draft")}
+          >
+            Drafts
+          </Button>
+          <Button
+            variant={statusFilter === "live" ? "default" : "outline"}
+            onClick={() => setStatusFilter("live")}
+          >
+            Live
+          </Button>
         </div>
+
+        {Object.entries(groupedItems).map(([status, items]) => (
+          <div key={status} className="mb-8">
+            <h2 className="text-xl font-bold text-white mb-4 capitalize">
+              {status} Items ({items.length})
+            </h2>
+            <div className="space-y-4">
+              {items.map((item) => (
+                <Card
+                  key={item.id}
+                  className="bg-[#1E1E1E]/80 border-none text-white overflow-hidden"
+                >
+                  <CardContent className="p-4">
+                    {item.image ? (
+                      <img
+                        src={item.image}
+                        alt={item.name}
+                        className="w-full h-48 object-cover rounded-lg mb-4"
+                      />
+                    ) : null}
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-start">
+                        <h3 className="text-xl font-bold">{item.name}</h3>
+                        <div className="flex items-center gap-2">
+                          <Badge variant={item.status === "live" ? "default" : "secondary"}>
+                            {item.status}
+                          </Badge>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => toggleItemStatus(item)}
+                            disabled={updateStatusMutation.isPending}
+                          >
+                            {item.status === "draft" ? (
+                              <Eye className="h-4 w-4" />
+                            ) : (
+                              <EyeOff className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                      <p className="text-gray-300">{item.description}</p>
+                      <div className="flex flex-wrap gap-2">
+                        {Object.entries(item.allergens)
+                          .filter(([_, value]) => value)
+                          .map(([key]) => (
+                            <Badge
+                              key={key}
+                              variant="outline"
+                              className="bg-transparent border-gray-600 text-gray-300"
+                            >
+                              Contains {key}
+                            </Badge>
+                          ))}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        ))}
         <div className="flex justify-between items-center mb-8">
           <div className="flex items-center gap-4">
             <h1 className="text-3xl font-bold text-white">Menu Items</h1>
@@ -656,4 +748,15 @@ export default function MenuPage() {
       </div>
     </div>
   );
+}
+
+interface AllergenInfo {
+  milk: boolean;
+  eggs: boolean;
+  peanuts: boolean;
+  nuts: boolean;
+  shellfish: boolean;
+  fish: boolean;
+  soy: boolean;
+  gluten: boolean;
 }

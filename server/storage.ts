@@ -19,7 +19,7 @@ export interface IStorage {
   getRestaurant(id: number): Promise<Restaurant | undefined>;
   createRestaurant(restaurant: InsertRestaurant): Promise<Restaurant>;
 
-  getMenuItems(restaurantId: number): Promise<MenuItem[]>;
+  getMenuItems(restaurantId: number, status?: string): Promise<MenuItem[]>;
   getMenuItem(id: number): Promise<MenuItem | undefined>;
   createMenuItem(item: InsertMenuItem): Promise<MenuItem>;
   updateMenuItem(id: number, item: Partial<InsertMenuItem>): Promise<MenuItem>;
@@ -37,6 +37,8 @@ export interface IStorage {
   updateConsumerMenuItem(id: number, item: Partial<InsertConsumerMenuItem>): Promise<ConsumerMenuItem>;
   deleteConsumerMenuItem(id: number): Promise<void>;
 
+  getMenuItemsByStatus(restaurantId: number, status: string): Promise<MenuItem[]>;
+  updateMenuItemStatus(id: number, status: string): Promise<MenuItem>;
   sessionStore: session.Store;
 }
 
@@ -117,17 +119,23 @@ export class DatabaseStorage implements IStorage {
     return restaurant?.userId === userId;
   }
 
-  async getMenuItems(restaurantId: number): Promise<MenuItem[]> {
-    console.log("Getting menu items for restaurant:", restaurantId);
+  async getMenuItems(restaurantId: number, status?: string): Promise<MenuItem[]> {
+    console.log("Getting menu items for restaurant:", restaurantId, status ? `with status: ${status}` : '');
     const restaurant = await this.getRestaurant(restaurantId);
     if (!restaurant) {
       throw new Error("Restaurant not found");
     }
 
-    const items = await db
+    const query = db
       .select()
       .from(menuItems)
       .where(eq(menuItems.restaurantId, restaurantId));
+
+    if (status) {
+      query.where(eq(menuItems.status, status));
+    }
+
+    const items = await query;
     console.log("Found menu items:", items);
     return items;
   }
@@ -333,6 +341,40 @@ export class DatabaseStorage implements IStorage {
       .delete(consumerMenuItems)
       .where(eq(consumerMenuItems.id, id));
     console.log("Deleted consumer menu item:", id);
+  }
+
+  async getMenuItemsByStatus(restaurantId: number, status: string): Promise<MenuItem[]> {
+    console.log(`Getting ${status} menu items for restaurant:`, restaurantId);
+    const restaurant = await this.getRestaurant(restaurantId);
+    if (!restaurant) {
+      throw new Error("Restaurant not found");
+    }
+
+    const items = await db
+      .select()
+      .from(menuItems)
+      .where(and(
+        eq(menuItems.restaurantId, restaurantId),
+        eq(menuItems.status, status)
+      ));
+    console.log(`Found ${status} menu items:`, items);
+    return items;
+  }
+
+  async updateMenuItemStatus(id: number, status: string): Promise<MenuItem> {
+    console.log("Updating menu item status:", id, status);
+    const menuItem = await this.getMenuItem(id);
+    if (!menuItem) {
+      throw new Error("Menu item not found");
+    }
+
+    const [updated] = await db
+      .update(menuItems)
+      .set({ status })
+      .where(eq(menuItems.id, id))
+      .returning();
+    console.log("Updated menu item:", updated);
+    return updated;
   }
 }
 

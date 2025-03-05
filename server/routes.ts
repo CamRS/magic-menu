@@ -97,17 +97,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/menu-items", async (req, res) => {
     try {
       const restaurantId = parseInt(req.query.restaurantId as string);
+      const status = req.query.status as string | undefined;
+
       if (isNaN(restaurantId) || restaurantId <= 0) {
         return res.status(400).json({ message: "Invalid restaurant ID" });
       }
 
-      const items = await storage.getMenuItems(restaurantId);
+      const items = await storage.getMenuItems(restaurantId, status);
       res.json(items);
     } catch (error) {
       console.error('Error fetching menu items:', error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
+
+  app.patch("/api/menu-items/:id/status", requireAuth, async (req, res) => {
+    try {
+      if (!req.user) return res.sendStatus(401);
+
+      const itemId = parseInt(req.params.id);
+      const { status } = req.body;
+
+      if (isNaN(itemId)) {
+        return res.status(400).json({ message: "Invalid menu item ID" });
+      }
+
+      if (!status || !["draft", "live"].includes(status)) {
+        return res.status(400).json({ message: "Invalid status" });
+      }
+
+      const item = await storage.getMenuItem(itemId);
+      if (!item) {
+        return res.status(404).json({ message: "Menu item not found" });
+      }
+
+      const restaurant = await storage.getRestaurant(item.restaurantId);
+      if (!restaurant || restaurant.userId !== req.user.id) {
+        return res.status(403).json({ message: "Unauthorized access to menu item" });
+      }
+
+      const updated = await storage.updateMenuItemStatus(itemId, status);
+      res.json(updated);
+    } catch (error) {
+      console.error('Error updating menu item status:', error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
 
   // Protected routes (authentication required)
   app.get("/api/restaurants", requireAuth, async (req, res) => {

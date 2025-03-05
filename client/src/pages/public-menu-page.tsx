@@ -104,7 +104,7 @@ export default function PublicMenuPage() {
   const { data: menuItems, isLoading: isLoadingMenu, error } = useQuery<MenuItem[]>({
     queryKey: ["/api/menu-items"],
     queryFn: async () => {
-      const response = await fetch(`/api/menu-items?restaurantId=${restaurantId}`, {
+      const response = await fetch(`/api/menu-items?restaurantId=${restaurantId}&status=live`, {
         credentials: 'omit'
       });
       if (!response.ok) throw new Error('Failed to fetch menu items');
