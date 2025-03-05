@@ -50,11 +50,15 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Menu } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
 
-const MenuSheet = ({ restaurants, onRestaurantSelect, onCreateNew }: {
+
+const MenuSheet = ({ restaurants, onRestaurantSelect, onCreateNew, selectedRestaurant, onAction }: {
   restaurants: Restaurant[] | undefined;
   onRestaurantSelect: (restaurant: Restaurant) => void;
   onCreateNew: () => void;
+  selectedRestaurant: Restaurant | null;
+  onAction: (action: 'add' | 'export' | 'import' | 'upload' | 'qr') => void;
 }) => {
   return (
     <Sheet>
@@ -65,28 +69,80 @@ const MenuSheet = ({ restaurants, onRestaurantSelect, onCreateNew }: {
       </SheetTrigger>
       <SheetContent side="left">
         <SheetHeader>
-          <SheetTitle>Restaurants</SheetTitle>
+          <SheetTitle>Menu Management</SheetTitle>
         </SheetHeader>
         <div className="py-4">
-          <div className="space-y-2">
-            {restaurants?.map((restaurant) => (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <h3 className="text-sm font-medium">Restaurants</h3>
+              {restaurants?.map((restaurant) => (
+                <Button
+                  key={restaurant.id}
+                  variant="ghost"
+                  className={`w-full justify-start ${selectedRestaurant?.id === restaurant.id ? 'bg-accent' : ''}`}
+                  onClick={() => onRestaurantSelect(restaurant)}
+                >
+                  {restaurant.name}
+                </Button>
+              ))}
               <Button
-                key={restaurant.id}
-                variant="ghost"
+                onClick={onCreateNew}
                 className="w-full justify-start"
-                onClick={() => onRestaurantSelect(restaurant)}
+                variant="ghost"
               >
-                {restaurant.name}
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Add New Restaurant
               </Button>
-            ))}
-            <Button
-              onClick={onCreateNew}
-              className="w-full justify-start"
-              variant="ghost"
-            >
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Add New Restaurant
-            </Button>
+            </div>
+
+            {selectedRestaurant && (
+              <>
+                <Separator />
+                <div className="space-y-2">
+                  <h3 className="text-sm font-medium">Menu Actions</h3>
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start"
+                    onClick={() => onAction('add')}
+                  >
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Add Item
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start"
+                    onClick={() => onAction('export')}
+                  >
+                    <Download className="mr-2 h-4 w-4" />
+                    Export Menu
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start"
+                    onClick={() => onAction('import')}
+                  >
+                    <Upload className="mr-2 h-4 w-4" />
+                    Import Menu
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start"
+                    onClick={() => onAction('upload')}
+                  >
+                    <ImageIcon className="mr-2 h-4 w-4" />
+                    Upload Image
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start"
+                    onClick={() => onAction('qr')}
+                  >
+                    <QrCode className="mr-2 h-4 w-4" />
+                    Show QR Code
+                  </Button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </SheetContent>
@@ -808,7 +864,7 @@ export default function HomePage() {
     }
   };
 
-  const filteredItems = menuItems?.filter(item => 
+  const filteredItems = menuItems?.filter(item =>
     item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     item.description.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -818,19 +874,39 @@ export default function HomePage() {
       <div className="fixed top-0 left-0 right-0 z-50 bg-gray-50 p-4 md:p-8 border-b">
         <div className="max-w-4xl mx-auto">
           <div className="flex flex-col gap-4">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-              <div className="flex items-center gap-2 w-full md:w-auto">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-2">
                 <Store className="h-8 w-8" />
 
                 {/* Mobile Menu */}
-                <MenuSheet 
+                <MenuSheet
                   restaurants={restaurants}
+                  selectedRestaurant={selectedRestaurant}
                   onRestaurantSelect={setSelectedRestaurant}
                   onCreateNew={() => setCreateRestaurantOpen(true)}
+                  onAction={(action) => {
+                    switch (action) {
+                      case 'add':
+                        setCreateMenuItemOpen(true);
+                        break;
+                      case 'export':
+                        handleExportCSV();
+                        break;
+                      case 'import':
+                        handleImportClick();
+                        break;
+                      case 'upload':
+                        handleImageUploadClick();
+                        break;
+                      case 'qr':
+                        setShowQrCode(true);
+                        break;
+                    }
+                  }}
                 />
 
                 {/* Desktop Dropdown */}
-                <div className="hidden md:block flex-1">
+                <div className="hidden md:block">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" className="font-bold text-xl flex items-center gap-2">
@@ -844,20 +920,7 @@ export default function HomePage() {
                           key={restaurant.id}
                           onClick={() => setSelectedRestaurant(restaurant)}
                         >
-                          <div className="flex items-center justify-between w-full">
-                            <span>{restaurant.name}</span>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                copyMenuUrl(restaurant.id);
-                              }}
-                            >
-                              <Globe className="h-4 w-4" />
-                            </Button>
-                          </div>
+                          {restaurant.name}
                         </DropdownMenuItem>
                       ))}
                       <DropdownMenuSeparator />
@@ -870,66 +933,35 @@ export default function HomePage() {
                 </div>
               </div>
 
-              <Button variant="outline" onClick={() => logoutMutation.mutate()} className="w-full md:w-auto md:ml-auto">
+              <Button variant="outline" onClick={() => logoutMutation.mutate()} className="w-full md:w-auto">
                 Logout
               </Button>
             </div>
 
-            {/* Improved Search and Actions */}
-            <div className="flex flex-col gap-3">
-              <div className="relative">
-                <Input
-                  placeholder="Search menu items..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4"
-                />
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-              </div>
-
-              <div className="grid grid-cols-2 md:flex gap-2">
-                <Button
-                  onClick={() => setCreateMenuItemOpen(true)}
-                  className="w-full md:w-auto"
-                >
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Add Item
-                </Button>
-
-                <Button
-                  variant="outline"
-                  onClick={handleExportCSV}
-                  className="w-full md:w-auto"
-                >
-                  <Download className="mr-2 h-4 w-4" />
-                  Export
-                </Button>
-
-                <Button variant="outline" className="w-full md:w-auto" onClick={handleImportClick}>
-                  <Upload className="mr-2 h-4 w-4" />
-                  Import
-                </Button>
-
-                <Button variant="outline" className="w-full md:w-auto" onClick={handleImageUploadClick}>
-                  <ImageIcon className="mr-2 h-4 w-4" />
-                  Upload
-                </Button>
-              </div>
-
-              {selectedItems.length > 0 && (
-                <Button
-                  variant="destructive"
-                  onClick={handleDeleteSelected}
-                  disabled={deleteMutation.isPending}
-                  className="w-full md:w-auto"
-                >
-                  {deleteMutation.isPending && (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  )}
-                  Delete Selected ({selectedItems.length})
-                </Button>
-              )}
+            {/* Search Bar */}
+            <div className="relative">
+              <Input
+                placeholder="Search menu items..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4"
+              />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
             </div>
+
+            {selectedItems.length > 0 && (
+              <Button
+                variant="destructive"
+                onClick={handleDeleteSelected}
+                disabled={deleteMutation.isPending}
+                className="w-full md:w-auto"
+              >
+                {deleteMutation.isPending && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                Delete Selected ({selectedItems.length})
+              </Button>
+            )}
           </div>
         </div>
       </div>
