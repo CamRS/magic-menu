@@ -126,13 +126,13 @@ export class DatabaseStorage implements IStorage {
       throw new Error("Restaurant not found");
     }
 
-    const query = db
+    let query = db
       .select()
       .from(menuItems)
       .where(eq(menuItems.restaurantId, restaurantId));
 
     if (status) {
-      query.where(eq(menuItems.status, status));
+      query = query.where(eq(menuItems.status, status));
     }
 
     const items = await query;
@@ -164,6 +164,11 @@ export class DatabaseStorage implements IStorage {
       price: item.price === undefined || item.price === null ? 'undefined/null' : `'${item.price}'`
     });
 
+    const restaurant = await this.getRestaurant(item.restaurantId);
+    if (!restaurant) {
+      throw new Error("Restaurant not found");
+    }
+
     const itemToCreate = {
       ...item,
       price: item.price === undefined || item.price === null || item.price === '' ? '' : item.price,
@@ -174,14 +179,12 @@ export class DatabaseStorage implements IStorage {
         : []
     };
 
-    const restaurant = await this.getRestaurant(itemToCreate.restaurantId);
-    if (!restaurant) {
-      throw new Error("Restaurant not found");
-    }
+    const [menuItem] = await db
+      .insert(menuItems)
+      .values(itemToCreate)
+      .returning();
 
-    const [menuItem] = await db.insert(menuItems).values(itemToCreate).returning();
     console.log("Created menu item in database:", menuItem);
-
     return menuItem;
   }
 

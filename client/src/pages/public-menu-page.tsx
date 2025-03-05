@@ -133,8 +133,12 @@ export default function PublicMenuPage() {
   const { data: menuItems, isLoading: isLoadingMenu, error } = useQuery<MenuItem[]>({
     queryKey: [`/api/menu-items`, restaurantId],
     queryFn: async () => {
+      if (!restaurantId) {
+        throw new Error('Restaurant ID is required');
+      }
+
       const searchParams = new URLSearchParams({
-        restaurantId: restaurantId!.toString(),
+        restaurantId: restaurantId.toString(),
         status: 'live',
       });
 
