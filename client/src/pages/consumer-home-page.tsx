@@ -305,16 +305,16 @@ export default function ConsumerHomePage() {
               />
             </label>
 
-            <label className="cursor-pointer">
+            <label className="cursor-pointer flex flex-col items-center">
               <div className="flex flex-col items-center gap-1 text-gray-600 hover:text-[#4F46E5] transition-colors">
-                <div className="w-12 h-12 rounded-full bg-[#4F46E5] flex items-center justify-center -mt-4">
+                <div className="w-12 h-12 rounded-full bg-[#4F46E5] flex items-center justify-center">
                   {uploadMutation.isPending ? (
                     <Loader2 className="h-6 w-6 text-white animate-spin" />
                   ) : (
                     <Camera className="h-6 w-6 text-white" />
                   )}
                 </div>
-                <span className="text-xs font-medium mt-1">
+                <span className="text-xs font-medium">
                   {uploadMutation.isPending ? 'Uploading...' : 'Take Photo'}
                 </span>
                 <Input
@@ -328,7 +328,7 @@ export default function ConsumerHomePage() {
               </div>
             </label>
 
-            <SettingsMenu />
+            <SettingsMenu className="flex flex-col items-center gap-1" />
           </div>
         </div>
       </nav>
