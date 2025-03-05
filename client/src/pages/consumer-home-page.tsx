@@ -137,6 +137,13 @@ export default function ConsumerHomePage() {
     }
   };
 
+  const handleCameraCapture = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      await uploadMutation.mutate(file);
+    }
+  };
+
   const uniqueTags = menuItems?.reduce((tags, item) => {
     if (item.courseTags && item.courseTags.length > 0) tags.add(item.courseTags[0]);
     return tags;
@@ -298,15 +305,21 @@ export default function ConsumerHomePage() {
               />
             </label>
 
-            <button
-              className="flex flex-col items-center gap-1 text-gray-600 hover:text-[#4F46E5] transition-colors"
-              onClick={() => {/* TODO: Implement camera capture */}}
-            >
-              <div className="w-12 h-12 rounded-full bg-[#4F46E5] flex items-center justify-center -mt-4">
-                <Plus className="h-6 w-6 text-white" />
+            <label className="cursor-pointer">
+              <div className="flex flex-col items-center gap-1 text-gray-600 hover:text-[#4F46E5] transition-colors">
+                <div className="w-12 h-12 rounded-full bg-[#4F46E5] flex items-center justify-center -mt-4">
+                  <Plus className="h-6 w-6 text-white" />
+                </div>
+                <span className="text-xs font-medium mt-1">Take Photo</span>
+                <Input
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                  onChange={handleCameraCapture}
+                />
               </div>
-              <span className="text-xs font-medium mt-1">Take Photo</span>
-            </button>
+            </label>
 
             <SettingsMenu />
           </div>
