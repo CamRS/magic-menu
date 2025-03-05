@@ -518,8 +518,8 @@ export default function HomePage() {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={async () => {
                 try {
                   const response = await fetch('/api/auth/signout', {
@@ -534,7 +534,9 @@ export default function HomePage() {
                     // Clear any local state/storage if needed
                     localStorage.clear();
                     sessionStorage.clear();
-                    // Force reload to clear React Query cache and reset app state
+                    // Clear React Query cache
+                    queryClient.clear();
+                    // Force reload to clear app state and redirect to auth
                     window.location.href = '/auth';
                   } else {
                     throw new Error('Failed to sign out');
