@@ -37,9 +37,9 @@ const MenuCard = ({ item }: { item: ConsumerMenuItem }) => {
     <Card className="w-full bg-white rounded-xl shadow-sm border border-gray-100 h-full">
       <div className="p-6 space-y-4">
         {/* Course Type */}
-        {item.courseTags && item.courseTags.length > 0 && (
+        {item.course_type && (
           <div className="text-gray-600">
-            {item.courseTags[0]}
+            {item.course_type}
             {item.course_original && (
               <div className="text-gray-400 text-sm mt-0.5">
                 {item.course_original}
@@ -154,17 +154,17 @@ export default function ConsumerHomePage() {
   };
 
   const uniqueTags = menuItems?.reduce((tags, item) => {
-    item.courseTags?.forEach(tag => tags.add(tag));
+    if (item.course_type) tags.add(item.course_type);
     return tags;
   }, new Set<string>()) || new Set<string>();
 
-  const filteredItems = menuItems?.filter(({ name, description, courseTags, allergens }) => {
+  const filteredItems = menuItems?.filter(({ name, description, course_type, allergens }) => {
     const matchesSearch = !searchTerm ||
       name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       description.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesTags = selectedTags.length === 0 ||
-      selectedTags.every(tag => courseTags?.includes(tag));
+      selectedTags.includes(course_type || '');
 
     const matchesAllergens = selectedAllergens.every(allergen => !allergens[allergen]);
 
