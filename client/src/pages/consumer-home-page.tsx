@@ -35,7 +35,7 @@ const MenuCard = ({ item }: { item: ConsumerMenuItem }) => {
 
   return (
     <Card className="w-full bg-white rounded-xl shadow-sm border border-gray-100 h-full">
-      <div className="p-6 space-y-4">
+      <div className="p-6 space-y-5">
         {/* Course Type */}
         {item.course_type && (
           <div>
@@ -71,7 +71,7 @@ const MenuCard = ({ item }: { item: ConsumerMenuItem }) => {
                 <Badge
                   key={allergen}
                   variant="secondary"
-                  className="bg-[#4169E1] text-white border-none rounded-full capitalize px-3 py-1 text-xs"
+                  className="bg-[#4169E1] text-white border-none rounded-full capitalize px-3 py-1 text-xs select-none"
                 >
                   {allergen}
                 </Badge>
