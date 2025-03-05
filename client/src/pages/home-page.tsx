@@ -94,18 +94,35 @@ export default function HomePage() {
     queryKey: ["/api/menu-items", selectedRestaurant?.id],
     queryFn: async () => {
       if (!selectedRestaurant?.id) return [];
-      const response = await apiRequest("GET", `/api/menu-items?restaurantId=${selectedRestaurant.id}`);
-      if (!response.ok) throw new Error("Failed to fetch menu items");
-      return response.json();
+      console.log("Fetching menu items for restaurant:", selectedRestaurant.id);
+      const params = new URLSearchParams({
+        restaurantId: selectedRestaurant.id.toString()
+      });
+      // Only add status if filtering is active
+      if (statusFilter) {
+        params.append('status', statusFilter);
+      }
+
+      const response = await apiRequest("GET", `/api/menu-items?${params}`);
+
+      if (!response.ok) {
+        console.error("Failed to fetch menu items:", await response.text());
+        throw new Error("Failed to fetch menu items");
+      }
+      const items = await response.json();
+      console.log("Fetched menu items:", items);
+      return items;
     },
     enabled: !!selectedRestaurant?.id && !!user?.id,
   });
 
+  // Update groupedItems to handle items that might not have a status
   const groupedItems = useMemo(() => {
     if (!menuItems) return { draft: [], live: [] };
     return menuItems.reduce(
       (acc, item) => {
-        acc[item.status as MenuItemStatus].push(item);
+        const status = item.status || 'draft'; // Default to draft if no status
+        acc[status as MenuItemStatus].push(item);
         return acc;
       },
       { draft: [], live: [] } as Record<MenuItemStatus, MenuItem[]>
