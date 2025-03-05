@@ -33,7 +33,7 @@ import { QRCodeSVG } from 'qrcode.react';
 type MenuItemStatus = "draft" | "live";
 
 export default function HomePage() {
-  const { user } = useAuth();
+  const { user, logoutMutation } = useAuth();
   const { toast } = useToast();
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
   const [isCreateMenuItemOpen, setCreateMenuItemOpen] = useState(false);
@@ -520,36 +520,7 @@ export default function HomePage() {
 
             <Button
               variant="outline"
-              onClick={async () => {
-                try {
-                  const response = await fetch('/api/auth/signout', {
-                    method: 'POST',
-                    credentials: 'include',
-                    headers: {
-                      'Content-Type': 'application/json'
-                    }
-                  });
-
-                  if (response.ok) {
-                    // Clear any local state/storage if needed
-                    localStorage.clear();
-                    sessionStorage.clear();
-                    // Clear React Query cache
-                    queryClient.clear();
-                    // Force reload to clear app state and redirect to auth
-                    window.location.href = '/auth';
-                  } else {
-                    throw new Error('Failed to sign out');
-                  }
-                } catch (error) {
-                  console.error('Sign out error:', error);
-                  toast({
-                    title: "Error",
-                    description: "Failed to sign out. Please try again.",
-                    variant: "destructive",
-                  });
-                }
-              }}
+              onClick={() => logoutMutation.mutate()}
             >
               Sign Out
             </Button>
