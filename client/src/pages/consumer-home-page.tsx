@@ -6,7 +6,7 @@ import { Search, Camera, Upload, ChevronDown, ChevronUp, Plus, Loader2 } from "l
 import { useState, useCallback, useEffect } from "react";
 import { SettingsMenu } from "@/components/settings-dialogs";
 import { Badge } from "@/components/ui/badge";
-import useEmblaCarousel, { EmblaCarouselType } from 'embla-carousel-react';
+import useEmblaCarousel from 'embla-carousel-react';
 import {
   Select,
   SelectContent,
@@ -57,14 +57,12 @@ const MenuCard = ({ item }: { item: ConsumerMenuItem }) => {
   return (
     <Card className="flex-[0_0_90%] sm:flex-[0_0_45%] lg:flex-[0_0_30%] mx-2 bg-white rounded-3xl shadow-sm border border-gray-100">
       <CardContent className="p-8 flex flex-col gap-4">
-        {/* Course Type */}
         {courseTag && (
           <div className="text-gray-600 text-sm">
             {courseTag}
           </div>
         )}
 
-        {/* Title */}
         <div>
           <h3 className="text-2xl leading-tight font-normal text-gray-900">
             {item.name}
@@ -76,7 +74,6 @@ const MenuCard = ({ item }: { item: ConsumerMenuItem }) => {
           )}
         </div>
 
-        {/* Allergens */}
         {activeAllergens.length > 0 && (
           <div>
             <div className="flex items-center gap-3">
@@ -96,14 +93,12 @@ const MenuCard = ({ item }: { item: ConsumerMenuItem }) => {
           </div>
         )}
 
-        {/* Description */}
         {item.description && (
           <p className="text-gray-900 text-sm leading-relaxed">
             {item.description}
           </p>
         )}
 
-        {/* Price */}
         <div>
           <span className="text-xl font-normal text-gray-900">
             {item.price && parseFloat(item.price) > 0 ? `$${parseFloat(item.price).toFixed(2)}` : ''}
@@ -125,6 +120,7 @@ export default function ConsumerHomePage() {
   const [isCoursesOpen, setIsCoursesOpen] = useState(false);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [page, setPage] = useState(1);
+  const [skipLoading, setSkipLoading] = useState(false);
 
   const [emblaRef, emblaApi] = useEmblaCarousel({
     align: 'start',
@@ -160,8 +156,7 @@ export default function ConsumerHomePage() {
         throw new Error('Network response was not ok');
       }
 
-      const data = await response.json();
-      return data;
+      return response.json();
     },
     enabled: !!user?.id,
   });
@@ -228,7 +223,7 @@ export default function ConsumerHomePage() {
       const tags = value.split(",").filter(Boolean);
       setSelectedTags(tags);
     }
-    setPage(1); 
+    setPage(1);
   };
 
   const handleCoursesOpenChange = (open: boolean) => {
@@ -244,6 +239,34 @@ export default function ConsumerHomePage() {
       setIsCoursesOpen(false);
     }
   };
+
+  const handleAllergenSelection = (allergen: AllergenType) => {
+    setSkipLoading(true);
+    setSelectedAllergens((prev) =>
+      prev.includes(allergen)
+        ? prev.filter((a) => a !== allergen)
+        : [...prev, allergen]
+    );
+    setPage(1);
+    setIsFiltersOpen(false);
+  };
+
+  const handleDietarySelection = (pref: typeof dietaryPreferences[number]) => {
+    setSkipLoading(true);
+    setSelectedDietary((prev) =>
+      prev.includes(pref)
+        ? prev.filter((p) => p !== pref)
+        : [...prev, pref]
+    );
+    setPage(1);
+    setIsFiltersOpen(false);
+  };
+
+  useEffect(() => {
+    if (!isLoading) {
+      setSkipLoading(false);
+    }
+  }, [isLoading]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -296,8 +319,8 @@ export default function ConsumerHomePage() {
             </Select>
           </div>
 
-          <Collapsible 
-            open={isFiltersOpen} 
+          <Collapsible
+            open={isFiltersOpen}
             onOpenChange={handleFiltersOpenChange}
           >
             <CollapsibleContent className="py-4 space-y-4">
@@ -313,15 +336,7 @@ export default function ConsumerHomePage() {
                           ? "bg-blue-50 text-blue-700 border-blue-200"
                           : ""
                       }`}
-                      onClick={() => {
-                        setSelectedAllergens((prev) =>
-                          prev.includes(allergen)
-                            ? prev.filter((a) => a !== allergen)
-                            : [...prev, allergen]
-                        );
-                        setPage(1);
-                        setIsFiltersOpen(false); // Close dropdown after selection
-                      }}
+                      onClick={() => handleAllergenSelection(allergen)}
                     >
                       <span className="capitalize">{allergen}</span>
                     </Button>
@@ -341,15 +356,7 @@ export default function ConsumerHomePage() {
                           ? "bg-green-50 text-green-700 border-green-200"
                           : ""
                       }`}
-                      onClick={() => {
-                        setSelectedDietary((prev) =>
-                          prev.includes(pref)
-                            ? prev.filter((p) => p !== pref)
-                            : [...prev, pref]
-                        );
-                        setPage(1);
-                        setIsFiltersOpen(false); // Close dropdown after selection
-                      }}
+                      onClick={() => handleDietarySelection(pref)}
                     >
                       {pref}
                     </Button>
@@ -362,7 +369,7 @@ export default function ConsumerHomePage() {
       </header>
 
       <main className={`pt-[180px] px-4 pb-20 max-w-4xl mx-auto`}>
-        {isLoading ? (
+        {isLoading && !skipLoading ? (
           <div className="overflow-hidden" ref={emblaRef}>
             <div className="flex">
               {Array.from({ length: ITEMS_PER_PAGE }).map((_, index) => (
