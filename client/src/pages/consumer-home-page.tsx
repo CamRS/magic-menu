@@ -319,7 +319,8 @@ export default function ConsumerHomePage() {
                             ? prev.filter((a) => a !== allergen)
                             : [...prev, allergen]
                         );
-                        setPage(1); 
+                        setPage(1);
+                        setIsFiltersOpen(false); // Close dropdown after selection
                       }}
                     >
                       <span className="capitalize">{allergen}</span>
@@ -346,7 +347,8 @@ export default function ConsumerHomePage() {
                             ? prev.filter((p) => p !== pref)
                             : [...prev, pref]
                         );
-                        setPage(1); 
+                        setPage(1);
+                        setIsFiltersOpen(false); // Close dropdown after selection
                       }}
                     >
                       {pref}
