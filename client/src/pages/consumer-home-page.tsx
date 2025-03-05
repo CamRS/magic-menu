@@ -165,52 +165,50 @@ export default function ConsumerHomePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50/50 to-white pb-20">
-      <header className="fixed top-0 left-0 right-0 bg-white/80 backdrop-blur-sm border-b border-gray-100 z-50">
-        <div className="max-w-3xl mx-auto px-4 py-6">
+    <div className="min-h-screen bg-gray-50 pb-20">
+      <header className="fixed top-0 left-0 right-0 bg-white border-b z-50">
+        <div className="max-w-4xl mx-auto px-4 py-4">
           <div className="relative">
             <Input
               placeholder="Search menu..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-4 h-10 rounded-lg border-gray-200 focus:border-[#4F46E5]/30 focus:ring-[#4F46E5]/20 transition-all duration-200 bg-white/80"
+              className="w-full pl-10 pr-4 h-11 rounded-full border-gray-200 bg-white"
             />
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
           </div>
 
-          {menuItems && menuItems.length > 0 && (
-            <div className="flex gap-2 mt-3">
-              <Button
-                variant="outline"
-                onClick={() => setIsFiltersOpen(!isFiltersOpen)}
-                className="flex-1 justify-between gap-2"
-              >
-                Filters
-                {isFiltersOpen ? (
-                  <ChevronUp className="h-4 w-4" />
-                ) : (
-                  <ChevronDown className="h-4 w-4" />
-                )}
-              </Button>
+          <div className="flex gap-2 mt-3">
+            <Button
+              variant="outline"
+              onClick={() => setIsFiltersOpen(!isFiltersOpen)}
+              className="flex-1 justify-between gap-2"
+            >
+              Filters
+              {isFiltersOpen ? (
+                <ChevronUp className="h-4 w-4" />
+              ) : (
+                <ChevronDown className="h-4 w-4" />
+              )}
+            </Button>
 
-              <Select
-                value={selectedTags.length === 0 ? "all" : selectedTags.join(",")}
-                onValueChange={handleTagSelection}
-              >
-                <SelectTrigger className="flex-1">
-                  <SelectValue placeholder="All Courses" />
-                </SelectTrigger>
-                <SelectContent align="end" className="w-[200px]">
-                  <SelectItem value="all">All Courses</SelectItem>
-                  {Array.from(uniqueTags).map((tag) => (
-                    <SelectItem key={tag} value={tag}>
-                      {tag}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+            <Select
+              value={selectedTags.length === 0 ? "all" : selectedTags.join(",")}
+              onValueChange={handleTagSelection}
+            >
+              <SelectTrigger className="flex-1">
+                <SelectValue placeholder="All Courses" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Courses</SelectItem>
+                {Array.from(uniqueTags).map((tag) => (
+                  <SelectItem key={tag} value={tag}>
+                    {tag}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
           <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
             <CollapsibleContent className="py-4 space-y-4">
