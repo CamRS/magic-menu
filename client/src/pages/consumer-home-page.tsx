@@ -56,28 +56,33 @@ const MenuCard = ({ item }: { item: ConsumerMenuItem }) => {
 
   return (
     <Card className="flex-[0_0_90%] sm:flex-[0_0_45%] lg:flex-[0_0_30%] mx-2 bg-white rounded-3xl shadow-sm border border-gray-100">
-      <CardContent className="p-8 flex flex-col gap-4">
-        {courseTag && (
-          <div className="text-gray-600 text-sm">
-            {courseTag}
+      <CardContent className="p-8 flex flex-col gap-6 justify-between h-full">
+        <div className="flex items-center gap-2">
+          {courseTag && (
+            <div className="text-gray-900 text-sm">
+              {courseTag}
+            </div>
+          )}
+          <div className="text-sm text-gray-300">
+            {item.course_original}
           </div>
-        )}
+        </div>
 
         <div>
-          <h3 className="text-2xl leading-tight font-normal text-gray-900">
-            {item.name}
-          </h3>
           {item.name_original && (
-            <div className="text-sm text-gray-600 mt-1">
+            <div className="text-sm text-gray-300">
               {item.name_original}
             </div>
           )}
+          <h3 className="text-2xl leading-tight font-medium text-gray-900">
+            {item.name}
+          </h3>
         </div>
 
         {activeAllergens.length > 0 && (
           <div>
             <div className="flex items-center gap-3">
-              <span className="text-sm">Contains</span>
+              <span className="text-sm font-medium text-blue-600">Often contains</span>
               <div className="flex flex-wrap gap-2">
                 {activeAllergens.map((allergen) => (
                   <Badge
@@ -93,11 +98,15 @@ const MenuCard = ({ item }: { item: ConsumerMenuItem }) => {
           </div>
         )}
 
+        <div>
+        <div className="text-sm text-gray-300"> Common description
+        </div>
         {item.description && (
-          <p className="text-gray-900 text-sm leading-relaxed">
+          <p className="text-gray-900 text-md leading-relaxed mt-1">
             {item.description}
           </p>
         )}
+        </div>
 
         <div>
           <span className="text-xl font-normal text-gray-900">
@@ -396,7 +405,7 @@ export default function ConsumerHomePage() {
         </div>
       </header>
 
-      <main className={`pt-[180px] px-4 pb-20 max-w-4xl mx-auto`}>
+      <main className={`pt-[160px] px-4 pb-20 max-w-4xl mx-auto`}>
         {isLoading ? (
           <div className="overflow-hidden" ref={emblaRef}>
             <div className="flex">
@@ -474,7 +483,7 @@ export default function ConsumerHomePage() {
               <Input
                 type="file"
                 accept="image/*"
-                capture="user"
+                capture="environment"
                 className="hidden"
                 onChange={handleCameraCapture}
                 disabled={uploadMutation.isPending}
