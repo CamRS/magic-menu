@@ -245,19 +245,19 @@ export default function PublicMenuPage() {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 bg-white border-b z-50">
-        <div className="max-w-4xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between mb-4">
-            <h1 className="text-xl font-bold text-gray-900">{restaurant?.name}</h1>
+        <div className="max-w-4xl mx-auto px-4 py-2">
+          <div className="flex items-center justify-center mb-2">
+            <h1 className="text-md font-bold text-gray-900 text-center">{restaurant?.name}</h1>
           </div>
 
           {/* Search and Filters */}
-          <div className="space-y-3">
+          <div className="flex items-center gap-3 pb-2">
             <div className="relative">
               <Input
-                placeholder="Search menu..."
+                placeholder=""
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 h-11 rounded-full"
+                className="w-12 h-12 flex items-center justify-center rounded-full border border-gray-200 bg-white"
               />
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
             </div>
