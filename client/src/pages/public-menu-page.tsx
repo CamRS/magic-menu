@@ -3,7 +3,7 @@ import { useRoute } from "wouter";
 import { type MenuItem, type Restaurant } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { ChevronDown, Loader2, Search, ChevronUp } from "lucide-react";
+import { ChevronDown, Loader2, Search, ChevronUp, ChevronLeft, ChevronRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import useEmblaCarousel from 'embla-carousel-react';
 import {
@@ -19,14 +19,14 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 
 type AllergenType = keyof MenuItem['allergens'];
 const allergensList: AllergenType[] = ['milk', 'eggs', 'peanuts', 'nuts', 'shellfish', 'fish', 'soy', 'gluten'];
 
 const dietaryPreferences = ['Vegetarian', 'Vegan'] as const;
 
-const MenuCard = ({ item }: { item: MenuItem }) => {
+const MenuCard = ({ item }: { item: ConsumerMenuItem }) => {
   const activeAllergens = Object.entries(item.allergens)
     .filter(([_, value]) => value)
     .map(([key]) => key);
@@ -35,10 +35,10 @@ const MenuCard = ({ item }: { item: MenuItem }) => {
 
   return (
     <Card className="flex-[0_0_90%] sm:flex-[0_0_45%] lg:flex-[0_0_30%] mx-2 bg-white rounded-3xl shadow-sm border border-gray-100">
-      <CardContent className="p-8 flex flex-col gap-6 justify-between h-full">
+      <CardContent className="p-8 flex flex-col gap-5 justify-between h-full">
         <div className="flex items-center gap-2">
           {courseTag && (
-            <div className="text-gray-900 text-sm">
+            <div className="text-gray-600 text-sm">
               {courseTag}
             </div>
           )}
@@ -60,7 +60,7 @@ const MenuCard = ({ item }: { item: MenuItem }) => {
 
         {activeAllergens.length > 0 && (
           <div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <span className="text-sm font-medium text-blue-600">Contains</span>
               <div className="flex flex-wrap gap-2">
                 {activeAllergens.map((allergen) => (
@@ -76,17 +76,33 @@ const MenuCard = ({ item }: { item: MenuItem }) => {
             </div>
           </div>
         )}
+        {/* Image - only shown if "image" field exists and has content */}
+        {item.image && (
+          <div className="w-full h-[200px] rounded-lg">
+            <img
+              src={item.image}
+              alt={item.name}
+              className="w-full h-full object-cover rounded-lg"
+              onError={(e) => {
+                // Fallback to gray placeholder if image fails to load
+                e.currentTarget.onerror = null; // Prevent infinite loop
+                e.currentTarget.style.display = 'none';
+                e.currentTarget.parentElement.classList.add('bg-gray-200');
+              }}
+            />
+          </div>
+        )}
 
         <div>
           {item.description && (
-            <p className="text-gray-900 text-md leading-relaxed mt-1">
+            <p className="text-gray-600 text-md leading-relaxed">
               {item.description}
             </p>
           )}
         </div>
 
         <div>
-          <span className="text-xl font-normal text-gray-900">
+          <span className="text-lg font-normal text-gray-600">
             {item.price && parseFloat(item.price) > 0 ? `$${parseFloat(item.price).toFixed(2)}` : ''}
           </span>
         </div>
@@ -111,11 +127,29 @@ export default function PublicMenuPage() {
     slidesToScroll: 1
   });
 
-  useEffect(() => {
-    if (emblaApi) {
-      emblaApi.reInit();
-    }
+  const scrollPrev = useCallback(() => {
+    if (emblaApi) emblaApi.scrollPrev();
   }, [emblaApi]);
+
+  const scrollNext = useCallback(() => {
+    if (emblaApi) emblaApi.scrollNext();
+  }, [emblaApi]);
+
+  const [prevBtnEnabled, setPrevBtnEnabled] = useState(false);
+  const [nextBtnEnabled, setNextBtnEnabled] = useState(false);
+
+  const onSelect = useCallback(() => {
+    if (!emblaApi) return;
+    setPrevBtnEnabled(emblaApi.canScrollPrev());
+    setNextBtnEnabled(emblaApi.canScrollNext());
+  }, [emblaApi]);
+
+  useEffect(() => {
+    if (!emblaApi) return;
+    onSelect();
+    emblaApi.on('select', onSelect);
+    emblaApi.on('reInit', onSelect);
+  }, [emblaApi, onSelect]);
 
   const { data: restaurant, isLoading: isLoadingRestaurant } = useQuery<Restaurant>({
     queryKey: [`/api/restaurants/${restaurantId}`],
@@ -209,12 +243,14 @@ export default function PublicMenuPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Header */}
       <header className="fixed top-0 left-0 right-0 bg-white border-b z-50">
         <div className="max-w-4xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between mb-4">
             <h1 className="text-xl font-bold text-gray-900">{restaurant?.name}</h1>
           </div>
 
+          {/* Search and Filters */}
           <div className="space-y-3">
             <div className="relative">
               <Input
@@ -259,6 +295,7 @@ export default function PublicMenuPage() {
             </div>
           </div>
 
+          {/* Collapsible Filters */}
           <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
             <CollapsibleContent className="py-4 space-y-4">
               <div>
@@ -317,17 +354,44 @@ export default function PublicMenuPage() {
         </div>
       </header>
 
+      {/* Menu Items Grid */}
       <main className="pt-[180px] px-4 pb-20 max-w-4xl mx-auto">
         {filteredItems.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
             No menu items match your filters
           </div>
         ) : (
-          <div className="overflow-hidden" ref={emblaRef}>
-            <div className="flex">
-              {filteredItems.map((item) => (
-                <MenuCard key={item.id} item={item} />
-              ))}
+          <div className="relative">
+            <div className="overflow-hidden" ref={emblaRef}>
+              <div className="flex">
+                {filteredItems.map((item) => (
+                  <MenuCard key={item.id} item={item} />
+                ))}
+              </div>
+            </div>
+
+            <div className="absolute inset-y-0 left-0 flex items-center">
+              <Button
+                variant="ghost"
+                size="icon"
+                className={`h-8 w-8 rounded-full bg-white shadow-md ${!prevBtnEnabled && 'opacity-50 cursor-not-allowed'}`}
+                onClick={scrollPrev}
+                disabled={!prevBtnEnabled}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <div className="absolute inset-y-0 right-0 flex items-center">
+              <Button
+                variant="ghost"
+                size="icon"
+                className={`h-8 w-8 rounded-full bg-white shadow-md ${!nextBtnEnabled && 'opacity-50 cursor-not-allowed'}`}
+                onClick={scrollNext}
+                disabled={!nextBtnEnabled}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
             </div>
           </div>
         )}

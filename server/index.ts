@@ -78,6 +78,17 @@ app.use((req, res, next) => {
 (async () => {
   log('Starting server initialization...', 'startup');
 
+  // Kill any existing process on port 5000 (development only)
+  if (process.env.NODE_ENV === 'development') {
+    try {
+      const { execSync } = require('child_process');
+      execSync('fuser -k 5000/tcp', { stdio: 'ignore' });
+      log('Cleared port 5000', 'startup');
+    } catch (error) {
+      // Ignore errors, port might not be in use
+    }
+  }
+
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -102,10 +113,13 @@ app.use((req, res, next) => {
     serveStatic(app);
   }
 
-  // Only try to start on port 5000
+  // Always use port 5000
   const PORT = 5000;
 
   log(`Attempting to start server on port ${PORT}...`, 'startup');
+
+  // Add a small delay to ensure port is cleared
+  await new Promise(resolve => setTimeout(resolve, 1000));
 
   server.listen(PORT, "0.0.0.0")
     .once('listening', () => {
