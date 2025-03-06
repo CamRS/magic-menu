@@ -76,6 +76,8 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  log('Starting server initialization...', 'startup');
+
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -93,45 +95,29 @@ app.use((req, res, next) => {
   });
 
   if (app.get("env") === "development") {
+    log('Setting up Vite in development mode...', 'startup');
     await setupVite(app, server);
   } else {
+    log('Setting up static file serving for production...', 'startup');
     serveStatic(app);
   }
 
-  // Try to start the server with port handling
-  const startServer = (port: number) => {
-    return new Promise((resolve, reject) => {
-      server.listen(port, "0.0.0.0")
-        .once('listening', () => {
-          log(`Server started successfully on port ${port}`);
-          resolve(true);
-        })
-        .once('error', (err: NodeJS.ErrnoException) => {
-          if (err.code === 'EADDRINUSE') {
-            log(`Port ${port} is already in use`);
-            resolve(false);
-          } else {
-            reject(err);
-          }
-        });
-    });
-  };
-
-  // Try port 5000 first, then fallback to other ports if needed
+  // Only try to start on port 5000
   const PORT = 5000;
-  const MAX_PORT_ATTEMPTS = 10;
 
-  for (let port = PORT; port < PORT + MAX_PORT_ATTEMPTS; port++) {
-    try {
-      const success = await startServer(port);
-      if (success) break;
-    } catch (error) {
-      log(`Error starting server on port ${port}: ${error}`);
-      if (port === PORT + MAX_PORT_ATTEMPTS - 1) {
-        // If we've tried all ports and still failed, exit the process
-        log('Failed to start server after trying multiple ports');
+  log(`Attempting to start server on port ${PORT}...`, 'startup');
+
+  server.listen(PORT, "0.0.0.0")
+    .once('listening', () => {
+      log(`Server started successfully on port ${PORT}`, 'startup');
+    })
+    .once('error', (err: NodeJS.ErrnoException) => {
+      if (err.code === 'EADDRINUSE') {
+        log(`Fatal: Port ${PORT} is already in use. Please free up port ${PORT} and try again.`, 'startup');
+        process.exit(1);
+      } else {
+        log(`Fatal: Failed to start server: ${err.message}`, 'startup');
         process.exit(1);
       }
-    }
-  }
+    });
 })();

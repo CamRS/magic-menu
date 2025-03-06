@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { ChevronDown, Loader2, Search, ChevronUp } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import useEmblaCarousel from 'embla-carousel-react';
 import {
   Select,
   SelectContent,
@@ -18,14 +19,14 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 
 type AllergenType = keyof MenuItem['allergens'];
 const allergensList: AllergenType[] = ['milk', 'eggs', 'peanuts', 'nuts', 'shellfish', 'fish', 'soy', 'gluten'];
 
 const dietaryPreferences = ['Vegetarian', 'Vegan'] as const;
 
-const MenuCard = ({ item }: { item: ConsumerMenuItem }) => {
+const MenuCard = ({ item }: { item: MenuItem }) => {
   const activeAllergens = Object.entries(item.allergens)
     .filter(([_, value]) => value)
     .map(([key]) => key);
@@ -77,11 +78,11 @@ const MenuCard = ({ item }: { item: ConsumerMenuItem }) => {
         )}
 
         <div>
-        {item.description && (
-          <p className="text-gray-900 text-md leading-relaxed mt-1">
-            {item.description}
-          </p>
-        )}
+          {item.description && (
+            <p className="text-gray-900 text-md leading-relaxed mt-1">
+              {item.description}
+            </p>
+          )}
         </div>
 
         <div>
@@ -102,6 +103,19 @@ export default function PublicMenuPage() {
   const [selectedAllergens, setSelectedAllergens] = useState<AllergenType[]>([]);
   const [selectedDietary, setSelectedDietary] = useState<typeof dietaryPreferences[number][]>([]);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+
+  const [emblaRef, emblaApi] = useEmblaCarousel({
+    align: 'start',
+    containScroll: 'trimSnaps',
+    dragFree: true,
+    slidesToScroll: 1
+  });
+
+  useEffect(() => {
+    if (emblaApi) {
+      emblaApi.reInit();
+    }
+  }, [emblaApi]);
 
   const { data: restaurant, isLoading: isLoadingRestaurant } = useQuery<Restaurant>({
     queryKey: [`/api/restaurants/${restaurantId}`],
@@ -195,14 +209,12 @@ export default function PublicMenuPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
       <header className="fixed top-0 left-0 right-0 bg-white border-b z-50">
         <div className="max-w-4xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between mb-4">
             <h1 className="text-xl font-bold text-gray-900">{restaurant?.name}</h1>
           </div>
 
-          {/* Search and Filters */}
           <div className="space-y-3">
             <div className="relative">
               <Input
@@ -247,7 +259,6 @@ export default function PublicMenuPage() {
             </div>
           </div>
 
-          {/* Collapsible Filters */}
           <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
             <CollapsibleContent className="py-4 space-y-4">
               <div>
@@ -306,17 +317,18 @@ export default function PublicMenuPage() {
         </div>
       </header>
 
-      {/* Menu Items Grid */}
       <main className="pt-[180px] px-4 pb-20 max-w-4xl mx-auto">
         {filteredItems.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
             No menu items match your filters
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredItems.map((item) => (
-              <MenuCard key={item.id} item={item} />
-            ))}
+          <div className="overflow-hidden" ref={emblaRef}>
+            <div className="flex">
+              {filteredItems.map((item) => (
+                <MenuCard key={item.id} item={item} />
+              ))}
+            </div>
           </div>
         )}
       </main>

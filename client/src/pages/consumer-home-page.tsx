@@ -143,7 +143,7 @@ export default function ConsumerHomePage() {
     }
   }, [emblaApi]);
 
-  // Fetch all menu items for the user
+  // Fix query options and type annotations
   const { data: allMenuItems, isLoading } = useQuery<ConsumerMenuItem[]>({
     queryKey: ["/api/consumer-menu-items", user?.id],
     queryFn: async () => {
@@ -163,14 +163,14 @@ export default function ConsumerHomePage() {
     },
     enabled: !!user?.id,
     staleTime: 30000,
-    cacheTime: 5 * 60 * 1000,
+    gcTime: 5 * 60 * 1000, // Replace cacheTime with gcTime
   });
 
-  // Client-side filtering
+  // Client-side filtering with proper type annotations
   const filteredItems = useMemo(() => {
     if (!allMenuItems) return [];
 
-    return allMenuItems.filter(item => {
+    return allMenuItems.filter((item: ConsumerMenuItem) => {
       // Search term filter
       if (searchTerm && !item.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
           !item.description.toLowerCase().includes(searchTerm.toLowerCase())) {
@@ -187,7 +187,7 @@ export default function ConsumerHomePage() {
 
       // Course tags filter
       if (selectedTags.length > 0) {
-        if (!item.courseTags?.some(tag => selectedTags.includes(tag))) {
+        if (!item.courseTags?.some((tag: string) => selectedTags.includes(tag))) {
           return false;
         }
       }
@@ -251,15 +251,16 @@ export default function ConsumerHomePage() {
     }
   };
 
-  const uniqueTags = useMemo(() =>
-    allMenuItems?.reduce((tags, item) => {
+  // Fix uniqueTags type annotations
+  const uniqueTags = useMemo(() => {
+    if (!allMenuItems) return new Set<string>();
+    return allMenuItems.reduce((tags: Set<string>, item: ConsumerMenuItem) => {
       if (item.courseTags && item.courseTags.length > 0) {
         tags.add(item.courseTags[0]);
       }
       return tags;
-    }, new Set<string>()) || new Set<string>(),
-    [allMenuItems]
-  );
+    }, new Set<string>());
+  }, [allMenuItems]);
 
   const handleTagSelection = (value: string) => {
     if (value === "all") {
@@ -347,7 +348,7 @@ export default function ConsumerHomePage() {
               </SelectTrigger>
               <SelectContent className="w-full min-w-[200px]">
                 <SelectItem value="all">All Courses</SelectItem>
-                {Array.from(uniqueTags).map((tag) => (
+                {Array.from(uniqueTags).map((tag: string) => (
                   <SelectItem key={tag} value={tag}>
                     {tag}
                   </SelectItem>
