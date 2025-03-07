@@ -554,11 +554,11 @@ function HomePage() {
 
           <div className="flex-1 min-w-0">
             <div className="flex justify-between items-start">
-              <div>
-                <h3 className="text-lg font-medium text-custom-gray-500 line-clamp-1">
+              <div className="flex-1 mr-4">
+                <h3 className="text-lg font-medium text-custom-gray-500">
                   {item.name}
                 </h3>
-                <p className="text-custom-gray-400 mt-1 line-clamp-2">
+                <p className="text-custom-gray-400 mt-1">
                   {item.description}
                 </p>
               </div>
@@ -653,7 +653,7 @@ function HomePage() {
       className="min-h-screen bg-custom-gray-100"
       style={backgroundImage ? { backgroundImage: `url(${backgroundImage})`, backgroundSize: "cover", backgroundPosition: "center" } : {}}
     >
-      <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-sm border-b border-custom-gray-200">
+      <header className="sticky top-0 z-50 bg-white/85 backdrop-blur-sm border-b border-custom-gray-200">
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-4">
@@ -799,9 +799,9 @@ function HomePage() {
         {/* Menu Items Grid */}
         <div className="space-y-6">
           {Array.from(groupedByCourse.entries()).map(([courseType, items]) => (
-            <div key={courseType} className="bg-white rounded-lg shadow-sm overflow-hidden">
+            <div key={courseType} className="bg-white/85 rounded-lg shadow-sm overflow-hidden">
               <button
-                className="w-full px-6 py-4 flex items-center justify-between bg-white/95 hover:bg-gray-100 transition-colors"
+                className="w-full px-6 py-4 flex items-center justify-between bg-white/80 hover:bg-gray-100 transition-colors"
                 onClick={() => toggleSection(courseType)}
               >
                 <h2 className="text-lg font-semibold text-gray-900">
