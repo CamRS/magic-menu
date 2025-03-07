@@ -801,7 +801,7 @@ function HomePage() {
           {Array.from(groupedByCourse.entries()).map(([courseType, items]) => (
             <div key={courseType} className="bg-white rounded-lg shadow-sm overflow-hidden">
               <button
-                className="w-full px-6 py-4 flex items-center justify-between bg-gray-50 hover:bg-gray-100 transition-colors"
+                className="w-full px-6 py-4 flex items-center justify-between bg-white/95 hover:bg-gray-100 transition-colors"
                 onClick={() => toggleSection(courseType)}
               >
                 <h2 className="text-lg font-semibold text-gray-900">
@@ -917,8 +917,7 @@ function HomePage() {
                     }
                   }}
                 />
-                <Button
-                  type="button"
+                <Button                  type="button"
                   onClick={() => {
                     const value = newTag.trim();
                     if (value && !form.getValues("courseTags").includes(value)) {
