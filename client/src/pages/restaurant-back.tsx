@@ -950,7 +950,7 @@ function HomePage() {
                   <TooltipTrigger asChild>
                     <Button variant="outline" size="icon" className="rounded-full" onClick={() => logoutMutation.mutate()}>
                       <LogOut className="h-5 w-5" />
-                                      </Button>
+                    </Button>
                   </TooltipTrigger>
                   <TooltipContent>Sign Out</TooltipContent>
                 </Tooltip>
@@ -1031,7 +1031,7 @@ function HomePage() {
                       <div
                         ref={provided.innerRef}
                         {...provided.droppableProps}
-                        className={`space-y-4 transition-colors duration-200 ${
+                        className={`space-y-4 transition-all duration-200 ${
                           snapshot.isDraggingOver ? "bg-gray-50/50 rounded-lg p-4" : ""
                         }`}
                       >
@@ -1046,12 +1046,16 @@ function HomePage() {
                                 ref={provided.innerRef}
                                 {...provided.draggableProps}
                                 {...provided.dragHandleProps}
-                                className={`transition-all duration-200 ${
-                                  snapshot.isDragging ? "shadow-lg ring-2 ring-primary/20 rotate-1" : ""
+                                className={`transition-all duration-300 ease-in-out ${
+                                  snapshot.isDragging ? "shadow-lg ring-2 ring-primary/20" : ""
                                 }`}
                                 style={{
                                   ...provided.draggableProps.style,
-                                  transition: `transform 0.2s ease-in-out`,
+                                  transform: snapshot.isDragging
+                                    ? `${provided.draggableProps.style?.transform} scale(1.1)`
+                                    : provided.draggableProps.style?.transform || 'none',
+                                  zIndex: snapshot.isDragging ? 100 : 'auto',
+                                  transformOrigin: 'center',
                                 }}
                               >
                                 <MenuItemCard item={item} />
