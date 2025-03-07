@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -90,7 +90,72 @@ const defaultFormValues: InsertMenuItem = {
   },
 };
 
-function HomePage() {
+function MenuSection({ section, items }: { section: string; items: MenuItem[] }) {
+  const [isExpanded, setIsExpanded] = useState(true);
+
+  return (
+    <motion.div layout className="mb-8">
+      <div
+        className="flex items-center gap-2 mb-4 cursor-pointer"
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        <motion.div
+          animate={{ rotate: isExpanded ? 90 : 0 }}
+          transition={{ duration: 0.2 }}
+        >
+          <ChevronRight className="h-5 w-5" />
+        </motion.div>
+        <h2 className="text-xl font-semibold">{section}</h2>
+        <span className="text-custom-gray-400">({items.length})</span>
+      </div>
+
+      <AnimatePresence>
+        {isExpanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <Reorder.Group
+              axis="y"
+              values={items}
+              onReorder={items}
+              className="space-y-4"
+            >
+              {items.map((item) => (
+                <Reorder.Item
+                  key={item.id}
+                  value={item}
+                  dragListener
+                  className="cursor-move touch-none"
+                  whileDrag={{
+                    scale: 1.1,
+                    boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)",
+                    zIndex: 50,
+                  }}
+                  dragTransition={{
+                    bounceStiffness: 300,
+                    bounceDamping: 20
+                  }}
+                  transition={{
+                    type: "spring",
+                    stiffness: 200,
+                    damping: 20
+                  }}
+                >
+                  <MenuItemCard item={item} />
+                </Reorder.Item>
+              ))}
+            </Reorder.Group>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+}
+
+export default function HomePage() {
   const { user, logoutMutation } = useAuth();
   const { toast } = useToast();
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
@@ -177,31 +242,22 @@ function HomePage() {
     gcTime: 5 * 60 * 1000,
   });
 
-  const groupedItems = useMemo(() => {
-    if (!menuItems) return { draft: [], live: [] };
-
-    const filtered = menuItems.filter(item => {
+  const groupedItems =  menuItems?.reduce(
+    (acc, item) => {
+      const status = item.status || "draft";
       if (searchTerm && !item.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
           !item.description.toLowerCase().includes(searchTerm.toLowerCase())) {
-        return false;
+        return acc;
       }
 
       if (statusFilter && item.status !== statusFilter) {
-        return false;
-      }
-
-      return true;
-    });
-
-    return filtered.reduce(
-      (acc, item) => {
-        const status = item.status || "draft";
-        acc[status as MenuItemStatus].push(item);
         return acc;
-      },
-      { draft: [], live: [] } as Record<MenuItemStatus, MenuItem[]>
-    );
-  }, [menuItems, searchTerm, statusFilter]);
+      }
+      acc[status as MenuItemStatus].push(item);
+      return acc;
+    },
+    { draft: [], live: [] } as Record<MenuItemStatus, MenuItem[]>
+  ) || { draft: [], live: [] };
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: number; status: MenuItemStatus }) => {
@@ -617,29 +673,22 @@ function HomePage() {
     </Card>
   );
 
-  const groupedByCourse = useMemo(() => {
-    if (!groupedItems?.draft?.length && !groupedItems?.live?.length) return new Map();
+  const groupedByCourse = menuItems ? (
+    (menuItems.reduce((acc, item) => {
+      if (!item.courseTags?.length) {
+        const items = acc.get("Uncategorized") || [];
+        acc.set("Uncategorized", [...items, item]);
+        return acc;
+      }
 
-    const grouped = new Map<string, MenuItem[]>();
-
-    
-    [...groupedItems.draft, ...groupedItems.live]
-      .sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0))
-      .forEach(item => {
-        if (!item.courseTags?.length) {
-          const items = grouped.get("Uncategorized") || [];
-          grouped.set("Uncategorized", [...items, item]);
-          return;
-        }
-
-        item.courseTags.forEach(tag => {
-          const items = grouped.get(tag) || [];
-          grouped.set(tag, [...items, item]);
-        });
+      item.courseTags.forEach(tag => {
+        const items = acc.get(tag) || [];
+        acc.set(tag, [...items, item]);
       });
+      return acc;
+    }, new Map<string, MenuItem[]>())).set(...menuItems.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0)))
+  ) : new Map();
 
-    return grouped;
-  }, [groupedItems]);
 
   const reorderMutation = useMutation({
     mutationFn: async ({ id, displayOrder }: { id: number; displayOrder: number }) => {
@@ -662,76 +711,6 @@ function HomePage() {
     },
   });
 
-
-  const MenuSection = ({ section, items }: { section: string; items: MenuItem[] }) => {
-    const [isExpanded, setIsExpanded] = useState(true);
-
-    const handleReorder = async (reorderedItems: MenuItem[]) => {
-      reorderedItems.forEach((item, index) => {
-        reorderMutation.mutate({ id: item.id, displayOrder: index });
-      });
-    };
-
-    return (
-      <motion.div layout className="mb-8">
-        <div
-          className="flex items-center gap-2 mb-4 cursor-pointer"
-          onClick={() => setIsExpanded(!isExpanded)}
-        >
-          <motion.div
-            animate={{ rotate: isExpanded ? 90 : 0 }}
-            transition={{ duration: 0.2 }}
-          >
-            <ChevronRight className="h-5 w-5" />
-          </motion.div>
-          <h2 className="text-xl font-semibold">{section}</h2>
-          <span className="text-custom-gray-400">({items.length})</span>
-        </div>
-
-        <AnimatePresence>
-          {isExpanded && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.2 }}
-            >
-              <Reorder.Group
-                axis="y"
-                values={items}
-                onReorder={handleReorder}
-                className="space-y-4"
-              >
-                {items.map((item) => (
-                  <Reorder.Item
-                    key={item.id}
-                    value={item}
-                    className="cursor-move touch-none"
-                    dragListener
-                    whileDrag={{
-                      scale: 1.1,
-                      boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)",
-                      zIndex: 50,
-                    }}
-                    dragTransition={{
-                      bounceStiffness: 300,
-                      bounceDamping: 20
-                    }}
-                    transition={{
-                      duration: 0.2,
-                      ease: [0.43, 0.13, 0.23, 0.96]
-                    }}
-                  >
-                    <MenuItemCard item={item} />
-                  </Reorder.Item>
-                ))}
-              </Reorder.Group>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.div>
-    );
-  };
 
   const handleUpdateLogin = async () => {
     try {
@@ -759,10 +738,7 @@ function HomePage() {
   };
 
   return (
-    <div
-      className="min-h-screen bg-custom-gray-100"
-      style={backgroundImage ? { backgroundImage: `url(${backgroundImage})`, backgroundSize: "cover", backgroundPosition: "center" } : {}}
-    >
+    <div className="min-h-screen bg-custom-gray-100">
       <header className="sticky top-0 z-50 bg-white/85 backdrop-blur-sm border-b border-custom-gray-200">
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex items-center justify-between h-16">
@@ -1438,5 +1414,3 @@ function HomePage() {
     </div>
   );
 }
-
-export default HomePage;
