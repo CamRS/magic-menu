@@ -7,7 +7,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { X, Share2, Download, Upload, Filter, Settings, Maximize2 } from "lucide-react";
+import { 
+  Share2, Download, Upload, Filter, Settings, Maximize2, 
+  ChevronRight, Search, Eye, EyeOff, Trash2, Pencil, X 
+} from "lucide-react";
 import { type MenuItem, type InsertMenuItem, insertMenuItemSchema } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,6 +21,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -25,36 +34,23 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Loader2, Search, Eye, EyeOff, Trash2, Pencil } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 
-type AllergenType = keyof MenuItem['allergens'];
-type MenuItemStatus = "draft" | "live";
-
-interface AllergenInfo {
-  milk: boolean;
-  eggs: boolean;
-  peanuts: boolean;
-  nuts: boolean;
-  shellfish: boolean;
-  fish: boolean;
-  soy: boolean;
-  gluten: boolean;
-}
+// ... (keep existing type definitions)
 
 export default function MenuPage() {
   const [open, setOpen] = useState(false);
   const [editItem, setEditItem] = useState<MenuItem | null>(null);
   const [selectedItems, setSelectedItems] = useState<number[]>([]);
   const [newTag, setNewTag] = useState("");
-  const [selectedAllergens, setSelectedAllergens] = useState<AllergenType[]>([]);
-  const [location] = useLocation();
-  const { toast } = useToast();
-  const restaurantId = new URLSearchParams(location.split('?')[1]).get('restaurantId');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showLabels, setShowLabels] = useState(false);
   const [statusFilter, setStatusFilter] = useState<MenuItemStatus | null>(null);
-  const [searchTerm, setSearchTerm] = useState(""); // Added searchTerm state
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
 
   const form = useForm<InsertMenuItem>({
     resolver: zodResolver(insertMenuItemSchema),
@@ -100,7 +96,7 @@ export default function MenuPage() {
   }, [form, toast]);
 
   const { data: menuItems, isLoading } = useQuery<MenuItem[]>({
-    queryKey: ["/api/menu-items", restaurantId, statusFilter, searchTerm], // Added searchTerm to queryKey
+    queryKey: ["/api/menu-items", restaurantId, statusFilter, searchTerm], 
     queryFn: async () => {
       let url = `/api/menu-items?restaurantId=${restaurantId}${statusFilter ? `&status=${statusFilter}` : ''}`;
       if (searchTerm) {
@@ -386,6 +382,10 @@ export default function MenuPage() {
     );
   }, [menuItems]);
 
+  const locationData = useLocation();
+  const restaurantId = new URLSearchParams(locationData.split('?')[1]).get('restaurantId');
+
+
   if (!restaurantId) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -403,46 +403,110 @@ export default function MenuPage() {
   }
 
   return (
-    <div className="min-h-screen bg-custom-gray-100">
+    <div 
+      className="min-h-screen bg-custom-gray-100" 
+      style={backgroundImage ? {
+        backgroundImage: `url(${backgroundImage})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+      } : {}}
+    >
       {/* Top Navigation */}
-      <header className="sticky top-0 z-50 bg-white border-b border-custom-gray-200">
+      <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-sm border-b border-custom-gray-200">
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex items-center justify-between h-16">
-            {/* Restaurant Name */}
-            <Button variant="outline" className="rounded-pill px-6">
-              {restaurantId ? "Restaurant Name" : "Select Restaurant"}
-            </Button>
+            {/* Left Section */}
+            <div className="flex items-center space-x-2">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="rounded-full"
+                      onClick={() => setShowLabels(!showLabels)}
+                    >
+                      <ChevronRight className={`h-5 w-5 transition-transform ${showLabels ? 'rotate-180' : ''}`} />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Toggle Labels</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
 
             {/* Center Icons */}
             <div className="flex items-center space-x-4">
-              <Button variant="ghost" size="icon" className="rounded-full">
-                <Share2 className="h-5 w-5" />
-              </Button>
-              <Button variant="ghost" size="icon" className="rounded-full" onClick={handleExportCSV}>
-                <Download className="h-5 w-5" />
-              </Button>
-              <Button variant="ghost" size="icon" className="rounded-full relative">
-                <input
-                  type="file"
-                  accept=".csv"
-                  onChange={handleImportCSV}
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                />
-                <Upload className="h-5 w-5" />
-              </Button>
-              <Button variant="ghost" size="icon" className="rounded-full">
-                <Filter className="h-5 w-5" />
-              </Button>
+              <TooltipProvider>
+                {[
+                  { icon: Share2, label: "Share Menu" },
+                  { icon: Download, label: "Export CSV", onClick: handleExportCSV },
+                  { 
+                    icon: Upload, 
+                    label: "Import CSV",
+                    input: {
+                      type: "file",
+                      accept: ".csv",
+                      onChange: handleImportCSV,
+                    }
+                  },
+                  { icon: Filter, label: "Filter Menu" }
+                ].map(({ icon: Icon, label, onClick, input }) => (
+                  <Tooltip key={label}>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="relative rounded-full"
+                        onClick={onClick}
+                      >
+                        {input && (
+                          <input
+                            {...input}
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                          />
+                        )}
+                        <Icon className="h-5 w-5" />
+                        {showLabels && (
+                          <span className="ml-2 text-sm">{label}</span>
+                        )}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{label}</TooltipContent>
+                  </Tooltip>
+                ))}
+              </TooltipProvider>
             </div>
 
             {/* Right Icons */}
             <div className="flex items-center space-x-2">
-              <Button variant="ghost" size="icon" className="rounded-full">
-                <Settings className="h-5 w-5" />
-              </Button>
-              <Button variant="ghost" size="icon" className="rounded-full">
-                <Maximize2 className="h-5 w-5" />
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="rounded-full"
+                      onClick={() => setSettingsOpen(true)}
+                    >
+                      <Settings className="h-5 w-5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Settings</TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="rounded-full"
+                    >
+                      <Maximize2 className="h-5 w-5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Fullscreen</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
           </div>
         </div>
@@ -454,7 +518,7 @@ export default function MenuPage() {
           <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-custom-gray-400" />
           <Input
             placeholder="Search the menu"
-            className="search-input pl-12"
+            className="pl-12 h-12 rounded-3xl border-custom-gray-200 bg-white shadow-sm w-full"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -505,7 +569,7 @@ export default function MenuPage() {
                 <DialogTitle>{editItem ? "Edit Menu Item" : "Add Menu Item"}</DialogTitle>
               </DialogHeader>
               <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-                <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-4">
                     <div>
                       <Label htmlFor="name">Name</Label>
@@ -667,12 +731,9 @@ export default function MenuPage() {
             </h2>
             <div className="space-y-4">
               {items.map((item) => (
-                <Card
-                  key={item.id}
-                  className="menu-card"
-                >
+                <Card key={item.id} className="menu-card">
                   <CardContent className="p-4">
-                    <div className="flex items-start gap-4">
+                    <div className="flex items-start gap-6">
                       <Checkbox
                         checked={selectedItems.includes(item.id)}
                         onCheckedChange={() => toggleItemSelection(item.id)}
@@ -680,73 +741,78 @@ export default function MenuPage() {
                       />
 
                       {/* Image Section */}
-                      <div className="w-24 h-24 bg-custom-gray-100 rounded-lg flex items-center justify-center">
+                      <div className="w-32 h-32 flex-shrink-0 bg-custom-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
                         {item.image ? (
                           <img
                             src={item.image}
                             alt={item.name}
-                            className="w-full h-full object-cover rounded-lg"
+                            className="w-full h-full object-cover"
                           />
                         ) : (
                           <div className="text-center text-custom-gray-400 text-sm">
                             <Upload className="h-6 w-6 mx-auto mb-1" />
-                            Upload Image
+                            <span>Upload Image</span>
                           </div>
                         )}
                       </div>
 
                       {/* Content Section */}
-                      <div className="flex-1">
+                      <div className="flex-1 min-w-0">
                         <div className="flex justify-between items-start">
                           <div>
-                            <h3 className="text-lg font-medium text-custom-gray-500">
+                            <h3 className="text-lg font-medium text-custom-gray-500 line-clamp-1">
                               {item.name}
                             </h3>
-                            <p className="text-custom-gray-400 mt-1">
+                            <p className="text-custom-gray-400 mt-1 line-clamp-2">
                               {item.description}
                             </p>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <Badge variant={item.status === "live" ? "default" : "secondary"} className="rounded-full">
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <Badge 
+                              variant={item.status === "live" ? "default" : "secondary"}
+                              className="rounded-full px-3 py-1"
+                            >
                               {item.status}
                             </Badge>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => toggleItemStatus(item)}
-                              disabled={updateStatusMutation.isPending}
-                              className="rounded-full"
-                            >
-                              {item.status === "draft" ? (
-                                <Eye className="h-4 w-4" />
-                              ) : (
-                                <EyeOff className="h-4 w-4" />
-                              )}
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setEditItem(item);
-                                setOpen(true);
-                              }}
-                              className="rounded-full"
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => deleteMutation.mutate([item.id])}
-                              disabled={deleteMutation.isPending}
-                              className="rounded-full"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                            <TooltipProvider>
+                              {[
+                                {
+                                  icon: item.status === "draft" ? Eye : EyeOff,
+                                  label: item.status === "draft" ? "Make Live" : "Make Draft",
+                                  onClick: () => toggleItemStatus(item)
+                                },
+                                {
+                                  icon: Pencil,
+                                  label: "Edit",
+                                  onClick: () => {
+                                    setEditItem(item);
+                                    setOpen(true);
+                                  }
+                                },
+                                {
+                                  icon: Trash2,
+                                  label: "Delete",
+                                  onClick: () => deleteMutation.mutate([item.id])
+                                }
+                              ].map(({ icon: Icon, label, onClick }) => (
+                                <Tooltip key={label}>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="rounded-full"
+                                      onClick={onClick}
+                                    >
+                                      <Icon className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>{label}</TooltipContent>
+                                </Tooltip>
+                              ))}
+                            </TooltipProvider>
                           </div>
                         </div>
 
-                        {/* Bottom Section */}
                         <div className="flex justify-between items-center mt-4">
                           <div className="flex flex-wrap gap-2">
                             {Object.entries(item.allergens)
@@ -774,6 +840,60 @@ export default function MenuPage() {
           </div>
         ))}
       </main>
+
+      {/* Settings Dialog */}
+      <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Settings</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Background Image</Label>
+              <div
+                className="mt-2 border-2 border-dashed border-gray-300 rounded-lg p-6 cursor-pointer hover:border-primary transition-colors"
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  const file = e.dataTransfer.files[0];
+                  if (file && file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                      setBackgroundImage(reader.result as string);
+                    };
+                    reader.readAsDataURL(file);
+                  }
+                }}
+              >
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onloadend = () => {
+                        setBackgroundImage(reader.result as string);
+                      };
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                  className="hidden"
+                />
+                <div className="text-center">
+                  <Upload className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                  <p className="text-sm text-gray-600">
+                    Drag and drop an image here or click to select
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
