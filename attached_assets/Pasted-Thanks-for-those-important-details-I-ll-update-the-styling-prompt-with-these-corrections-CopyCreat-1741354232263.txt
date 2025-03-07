@@ -1,0 +1,75 @@
+Thanks for those important details. I'll update the styling prompt with these corrections:
+CopyCreate a restaurant menu management interface with the following styling specifications:
+
+LAYOUT & STRUCTURE:
+- Deepest background layer: Custom wallpaper/image that users can upload themselves
+- Main content background: 95% white (#F2F2F2), semi-transparent to allow subtle visibility of the custom background
+- Top navigation bar with purple-to-pink gradient border at the bottom (gradient from #6243FF to #FF00C7)
+- Bottom border using similar gradient styling (from #FF00C7 to #00FFD1)
+- No drop shadows anywhere in the design
+
+TYPOGRAPHY:
+- Font family: Open Sans throughout the entire interface
+- Various weights and sizes as specified below
+
+TOP NAVIGATION:
+- Height: approximately 44px
+- Background: white (#FFFFFF)
+- Left section: Restaurant name in circular button with grey outline (border-radius: 50px, border: 1px solid #E0E0E0)
+- Icon row: 7 simple utility icons in black (#000000), 24x24px, evenly spaced
+- Right section: Settings gear and expand/fullscreen icons
+
+SEARCH BAR:
+- Full-width search field (border-radius: 25px)
+- Light grey background (#F5F5F5)
+- Search icon on left side (16px, #707070)
+- Placeholder text: "Search the menu" in grey (#707070)
+- Height: approximately 40px
+- No drop shadow
+
+FILTER TABS:
+- 3 rounded pill buttons (border-radius: 20px)
+- Active tab: Blue background (#6171FF), white text (#FFFFFF)
+- Inactive tabs: White background (#FFFFFF), border: 0.5px solid #B2B2B2, dark grey text (#505050)
+- Height: approximately 30px
+- Spacing: 8px between tabs
+
+CATEGORY HEADERS:
+- Bold black text (#000000, font-weight: 600, Open Sans)
+- Dropdown/expand chevron icon (16px)
+- Subtle bottom margin (16px)
+
+MENU ITEM CARDS:
+- Full-width white cards with rounded corners (border-radius: 12px)
+- Border: 0.5px solid #B2B2B2
+- No drop shadow
+- Internal padding: 16px
+- Spacing between cards: 12px
+- Left side: Square checkbox (unchecked) and image placeholder (grey background, #F0F0F0)
+- Image placeholder: "Drag and drop upload" text in grey, with icon
+- Right side: Item information with edit icon (pencil) in light grey
+
+MENU ITEM TEXT:
+- Item name: Bold black text (16px, font-weight: 600, Open Sans)
+- Description: Grey text (14px, #707070, Open Sans)
+- Allergen/ingredient tags: Small pill shapes (border-radius: 20px, background: #F0F0F0, padding: 4px 8px)
+- Tag text: Dark grey (#505050, 12px, Open Sans)
+
+UTILITY ICONS:
+- Edit pencil: Light grey (#A0A0A0), positioned on the right
+- Three-line menu: Light grey (#A0A0A0), for additional options
+- Duplicate/copy icon: Light grey (#A0A0A0), bottom right
+
+RESPONSIVE CONSIDERATIONS:
+- Design appears optimized for tablet or desktop view
+- Clean spacing and margins throughout (16-24px)
+- White space used effectively to create a clean, uncluttered interface
+
+COLOR PALETTE:
+- Custom background: User-uploaded wallpaper image
+- Primary content background: Light grey (#F2F2F2, 95% white) with some transparency
+- Menu cards and buttons: White (#FFFFFF)
+- Accent: Blue (#6171FF)
+- Borders: #B2B2B2 with 0.5px weight for buttons and menu cards
+- Text: Black (#000000), Dark grey (#505050), Grey (#707070)
+- Gradients: Purple to pink (#6243FF to #FF00C7) and pink to teal (#FF00C7 to #00FFD1)
