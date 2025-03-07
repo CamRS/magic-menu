@@ -685,37 +685,67 @@ function HomePage() {
             </div>
 
             <div className="flex-1 flex items-center justify-center">
-              <div className="flex flex-col">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="rounded-full mb-2"
-                  onClick={() => setShowLabels(!showLabels)}
-                >
-                  <ChevronDown className={`h-5 w-5 transition-transform ${showLabels ? "rotate-180" : ""}`} />
-                </Button>
+              <div className="relative">
+                {/* Condensed view - horizontal icons */}
+                <div className="flex items-center gap-4">
+                  <ImageIcon className="h-5 w-5" />
+                  <Download className="h-5 w-5" />
+                  <Upload className="h-5 w-5" />
+                  <QrCode className="h-5 w-5" />
+                  <Globe className="h-5 w-5" />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="rounded-full"
+                    onClick={() => setShowLabels(!showLabels)}
+                  >
+                    <ChevronDown className={`h-5 w-5 transition-transform ${showLabels ? "rotate-180" : ""}`} />
+                  </Button>
+                </div>
 
+                {/* Expanded menu */}
                 {showLabels && (
-                  <div className="bg-white rounded-lg shadow-lg p-4 space-y-3">
-                    <TooltipProvider>
-                      {[
-                        { icon: ImageIcon, label: "Upload menu image", onClick: () => fileInputRef.current?.click() },
-                        { icon: Download, label: "Import menu CSV", onClick: () => csvFileInputRef.current?.click() },
-                        { icon: Upload, label: "Export menu CSV", onClick: handleExportCSV },
-                        { icon: QrCode, label: "Menu QR code", onClick: () => setShowQrCode(true) },
-                        { icon: Globe, label: "Copy menu URL", onClick: () => copyMenuUrl(selectedRestaurant?.id || 0) },
-                      ].map(({ icon: Icon, label, onClick }) => (
-                        <Button
-                          key={label}
-                          variant="ghost"
-                          className="w-full justify-start gap-3"
-                          onClick={onClick}
-                        >
-                          <Icon className="h-5 w-5" />
-                          <span>{label}</span>
-                        </Button>
-                      ))}
-                    </TooltipProvider>
+                  <div className="absolute top-full mt-2 bg-white rounded-lg shadow-lg p-4 space-y-3 w-64 z-50">
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-start gap-3"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <ImageIcon className="h-5 w-5" />
+                      <span>Upload menu image</span>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-start gap-3"
+                      onClick={() => csvFileInputRef.current?.click()}
+                    >
+                      <Download className="h-5 w-5" />
+                      <span>Import menu CSV</span>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-start gap-3"
+                      onClick={handleExportCSV}
+                    >
+                      <Upload className="h-5 w-5" />
+                      <span>Export menu CSV</span>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-start gap-3"
+                      onClick={() => setShowQrCode(true)}
+                    >
+                      <QrCode className="h-5 w-5" />
+                      <span>Menu QR code</span>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-start gap-3"
+                      onClick={() => copyMenuUrl(selectedRestaurant?.id || 0)}
+                    >
+                      <Globe className="h-5 w-5" />
+                      <span>Copy menu URL</span>
+                    </Button>
                   </div>
                 )}
               </div>
@@ -888,7 +918,7 @@ function HomePage() {
                 {form.watch("courseTags").map((tag, index) => (
                   <Badge key={index} variant="secondary" className="flex items-center gap-1">
                     {tag}
-                    <X
+                                        <X
                       className="h-3 w-3 cursor-pointer"
                       onClick={() => {
                         const newTags = [...form.getValues("courseTags")];
