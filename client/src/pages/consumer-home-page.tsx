@@ -2,11 +2,11 @@ import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Search, Camera, Upload, ChevronDown, ChevronUp, Plus, Loader2 } from "lucide-react";
+import { Search, Camera, Upload, ChevronDown, ChevronUp, GripHorizontal, Loader2 } from "lucide-react";
 import { useState, useCallback, useEffect, useMemo } from "react";
 import { SettingsMenu } from "@/components/settings-dialogs";
 import { Badge } from "@/components/ui/badge";
-import useEmblaCarousel from 'embla-carousel-react';
+import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 import {
   Select,
   SelectContent,
@@ -47,7 +47,7 @@ const MenuItemSkeleton = () => (
   </Card>
 );
 
-const MenuCard = ({ item }: { item: ConsumerMenuItem }) => {
+const MenuCard = ({ item, index }: { item: ConsumerMenuItem; index: number }) => {
   const activeAllergens = Object.entries(item.allergens)
     .filter(([_, value]) => value)
     .map(([key]) => key);
@@ -55,66 +55,81 @@ const MenuCard = ({ item }: { item: ConsumerMenuItem }) => {
   const courseTag = item.courseTags?.[0] || '';
 
   return (
-    <Card className="flex-[0_0_90%] sm:flex-[0_0_45%] lg:flex-[0_0_30%] mx-2 bg-white rounded-3xl shadow-sm border border-gray-100">
-      <CardContent className="p-8 flex flex-col gap-6 justify-between h-full">
-        <div className="flex items-center gap-2">
-          {courseTag && (
-            <div className="text-gray-900 text-sm">
-              {courseTag}
-            </div>
-          )}
-          <div className="text-sm text-gray-300">
-            {item.course_original}
-          </div>
-        </div>
-
-        <div>
-          {item.name_original && (
-            <div className="text-sm text-gray-300">
-              {item.name_original}
-            </div>
-          )}
-          <h3 className="text-2xl leading-tight font-medium text-gray-900">
-            {item.name}
-          </h3>
-        </div>
-
-        {activeAllergens.length > 0 && (
-          <div>
-            <div className="flex items-center gap-3">
-              <span className="text-sm font-medium text-blue-600">Often contains</span>
-              <div className="flex flex-wrap gap-2">
-                {activeAllergens.map((allergen) => (
-                  <Badge
-                    key={allergen}
-                    variant="secondary"
-                    className="bg-[#4169E1]/10 text-[#4169E1] border-none rounded-full capitalize px-3 py-0.5 text-sm"
-                  >
-                    {allergen}
-                  </Badge>
-                ))}
+    <Draggable draggableId={item.id.toString()} index={index}>
+      {(provided) => (
+        <div
+          ref={provided.innerRef}
+          {...provided.draggableProps}
+          className="relative"
+        >
+          <Card className="flex-[0_0_90%] sm:flex-[0_0_45%] lg:flex-[0_0_30%] mx-2 bg-white rounded-3xl shadow-sm border border-gray-100">
+            <CardContent className="p-8 flex flex-col gap-6 justify-between h-full">
+              <div 
+                {...provided.dragHandleProps}
+                className="absolute top-4 right-4 cursor-move text-gray-400 hover:text-gray-600"
+              >
+                <GripHorizontal className="h-5 w-5" />
               </div>
-            </div>
-          </div>
-        )}
+              <div className="flex items-center gap-2">
+                {courseTag && (
+                  <div className="text-gray-900 text-sm">
+                    {courseTag}
+                  </div>
+                )}
+                <div className="text-sm text-gray-300">
+                  {item.course_original}
+                </div>
+              </div>
 
-        <div>
-        <div className="text-sm text-gray-300"> Common description
-        </div>
-        {item.description && (
-          <p className="text-gray-900 text-md leading-relaxed mt-1">
-            {item.description}
-          </p>
-        )}
-        </div>
+              <div>
+                {item.name_original && (
+                  <div className="text-sm text-gray-300">
+                    {item.name_original}
+                  </div>
+                )}
+                <h3 className="text-2xl leading-tight font-medium text-gray-900">
+                  {item.name}
+                </h3>
+              </div>
 
-        <div>
-          <span className="text-xl font-normal text-gray-900">
-            {item.price && parseFloat(item.price) > 0 ? `$${parseFloat(item.price).toFixed(2)}` : ''}
-          </span>
+              {activeAllergens.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-medium text-blue-600">Often contains</span>
+                    <div className="flex flex-wrap gap-2">
+                      {activeAllergens.map((allergen) => (
+                        <Badge
+                          key={allergen}
+                          variant="secondary"
+                          className="bg-[#4169E1]/10 text-[#4169E1] border-none rounded-full capitalize px-3 py-0.5 text-sm"
+                        >
+                          {allergen}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <div className="text-sm text-gray-300">Common description</div>
+                {item.description && (
+                  <p className="text-gray-900 text-md leading-relaxed mt-1">
+                    {item.description}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <span className="text-xl font-normal text-gray-900">
+                  {item.price && parseFloat(item.price) > 0 ? `$${parseFloat(item.price).toFixed(2)}` : ''}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
         </div>
-      </CardContent>
-    </Card>
+      )}
+    </Draggable>
   );
 };
 
@@ -130,20 +145,6 @@ export default function ConsumerHomePage() {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [page, setPage] = useState(1);
 
-  const [emblaRef, emblaApi] = useEmblaCarousel({
-    align: 'start',
-    containScroll: 'trimSnaps',
-    dragFree: true,
-    slidesToScroll: 1
-  });
-
-  useEffect(() => {
-    if (emblaApi) {
-      emblaApi.reInit();
-    }
-  }, [emblaApi]);
-
-  // Fix query options and type annotations
   const { data: allMenuItems, isLoading } = useQuery<ConsumerMenuItem[]>({
     queryKey: ["/api/consumer-menu-items", user?.id],
     queryFn: async () => {
@@ -163,95 +164,95 @@ export default function ConsumerHomePage() {
     },
     enabled: !!user?.id,
     staleTime: 30000,
-    gcTime: 5 * 60 * 1000, // Replace cacheTime with gcTime
+    gcTime: 5 * 60 * 1000,
   });
 
-  // Client-side filtering with proper type annotations
+  const reorderMutation = useMutation({
+    mutationFn: async ({ itemId, newOrder }: { itemId: number; newOrder: number }) => {
+      const response = await apiRequest('PATCH', `/api/consumer-menu-items/${itemId}/reorder`, {
+        displayOrder: newOrder,
+      });
+      return response;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/consumer-menu-items"] });
+      toast({
+        title: "Success",
+        description: "Menu item order updated",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: "Failed to update menu item order",
+        variant: "destructive",
+      });
+    },
+  });
+
   const filteredItems = useMemo(() => {
     if (!allMenuItems) return [];
 
-    return allMenuItems.filter((item: ConsumerMenuItem) => {
-      // Search term filter
-      if (searchTerm && !item.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
-          !item.description.toLowerCase().includes(searchTerm.toLowerCase())) {
-        return false;
-      }
-
-      // Allergens filter
-      if (selectedAllergens.length > 0) {
-        const hasSelectedAllergen = selectedAllergens.some(
-          allergen => !item.allergens[allergen]
-        );
-        if (!hasSelectedAllergen) return false;
-      }
-
-      // Course tags filter
-      if (selectedTags.length > 0) {
-        if (!item.courseTags?.some((tag: string) => selectedTags.includes(tag))) {
+    return allMenuItems
+      .filter((item: ConsumerMenuItem) => {
+        // Search term filter
+        if (searchTerm && !item.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
+            !item.description.toLowerCase().includes(searchTerm.toLowerCase())) {
           return false;
         }
-      }
 
-      return true;
-    });
+        // Allergens filter
+        if (selectedAllergens.length > 0) {
+          const hasSelectedAllergen = selectedAllergens.some(
+            allergen => !item.allergens[allergen]
+          );
+          if (!hasSelectedAllergen) return false;
+        }
+
+        // Course tags filter
+        if (selectedTags.length > 0) {
+          if (!item.courseTags?.some((tag: string) => selectedTags.includes(tag))) {
+            return false;
+          }
+        }
+
+        return true;
+      })
+      .sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
   }, [allMenuItems, searchTerm, selectedAllergens, selectedTags]);
 
-  // Pagination
   const paginatedItems = useMemo(() => {
     const start = (page - 1) * ITEMS_PER_PAGE;
     const end = start + ITEMS_PER_PAGE;
     return filteredItems.slice(start, end);
   }, [filteredItems, page]);
 
-  const totalPages = Math.ceil(filteredItems.length / ITEMS_PER_PAGE);
+  const handleDragEnd = (result: any) => {
+    if (!result.destination || !paginatedItems) return;
 
-  const uploadMutation = useMutation({
-    mutationFn: async (file: File) => {
-      const formData = new FormData();
-      formData.append('file', file);
+    const sourceIndex = result.source.index;
+    const destinationIndex = result.destination.index;
 
-      const response = await fetch('/api/consumer-menu-items/upload', {
-        method: 'POST',
-        body: formData,
-      });
+    if (sourceIndex === destinationIndex) return;
 
-      if (!response.ok) {
-        throw new Error('Failed to upload menu');
-      }
+    const itemToMove = paginatedItems[sourceIndex];
+    const newItems = Array.from(paginatedItems);
+    newItems.splice(sourceIndex, 1);
+    newItems.splice(destinationIndex, 0, itemToMove);
 
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/consumer-menu-items"] });
-      toast({
-        title: "Success",
-        description: "Menu uploaded successfully",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
+    // Calculate new display order
+    const newOrder = newItems.map((item, index) => ({
+      id: item.id,
+      displayOrder: index + (page - 1) * ITEMS_PER_PAGE,
+    }));
 
-  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      await uploadMutation.mutate(file);
-    }
+    // Update the order in the backend
+    reorderMutation.mutate({
+      itemId: itemToMove.id,
+      newOrder: newOrder.find(item => item.id === itemToMove.id)!.displayOrder,
+    });
   };
 
-  const handleCameraCapture = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      await uploadMutation.mutate(file);
-    }
-  };
-
-  // Fix uniqueTags type annotations
   const uniqueTags = useMemo(() => {
     if (!allMenuItems) return new Set<string>();
     return allMenuItems.reduce((tags: Set<string>, item: ConsumerMenuItem) => {
@@ -305,6 +306,53 @@ export default function ConsumerHomePage() {
     setPage(1);
     setIsFiltersOpen(false);
   };
+
+  const uploadMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch('/api/consumer-menu-items/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to upload menu');
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/consumer-menu-items"] });
+      toast({
+        title: "Success",
+        description: "Menu uploaded successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      await uploadMutation.mutate(file);
+    }
+  };
+
+  const handleCameraCapture = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      await uploadMutation.mutate(file);
+    }
+  };
+
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -408,7 +456,7 @@ export default function ConsumerHomePage() {
 
       <main className={`pt-[160px] px-4 pb-20 max-w-4xl mx-auto`}>
         {isLoading ? (
-          <div className="overflow-hidden" ref={emblaRef}>
+          <div className="overflow-hidden">
             <div className="flex">
               {Array.from({ length: ITEMS_PER_PAGE }).map((_, index) => (
                 <MenuItemSkeleton key={index} />
@@ -417,13 +465,22 @@ export default function ConsumerHomePage() {
           </div>
         ) : paginatedItems.length > 0 ? (
           <>
-            <div className="overflow-hidden" ref={emblaRef}>
-              <div className="flex">
-                {paginatedItems.map((item) => (
-                  <MenuCard key={item.id} item={item} />
-                ))}
-              </div>
-            </div>
+            <DragDropContext onDragEnd={handleDragEnd}>
+              <Droppable droppableId="menu-items" direction="horizontal">
+                {(provided) => (
+                  <div
+                    ref={provided.innerRef}
+                    {...provided.droppableProps}
+                    className="flex flex-wrap gap-4"
+                  >
+                    {paginatedItems.map((item, index) => (
+                      <MenuCard key={item.id} item={item} index={index} />
+                    ))}
+                    {provided.placeholder}
+                  </div>
+                )}
+              </Droppable>
+            </DragDropContext>
 
             {totalPages > 1 && (
               <div className="flex justify-center gap-2 mt-8">
