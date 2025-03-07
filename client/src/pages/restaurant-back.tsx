@@ -224,7 +224,7 @@ const MenuSection = ({ section, items, selectedItems, handleStatusChange, handle
   }, [items]);
 
   return (
-    <motion.div layout className="mb-8 relative z-0">
+    <motion.div layout className="mb-8">
       <div
         className="flex items-center gap-2 mb-4 cursor-pointer"
         onClick={() => setIsExpanded(!isExpanded)}
@@ -246,7 +246,6 @@ const MenuSection = ({ section, items, selectedItems, handleStatusChange, handle
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="relative"
           >
             <Reorder.Group
               axis="y"
@@ -259,11 +258,10 @@ const MenuSection = ({ section, items, selectedItems, handleStatusChange, handle
                   key={item.id}
                   value={item}
                   dragListener
-                  className="cursor-move touch-none relative z-0 transition-all duration-200"
+                  className="cursor-move touch-none"
                   whileDrag={{
                     scale: 1.02,
                     boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)",
-                    zIndex: 999,
                   }}
                   dragTransition={{
                     bounceStiffness: 300,
@@ -272,9 +270,6 @@ const MenuSection = ({ section, items, selectedItems, handleStatusChange, handle
                   transition={{
                     duration: 0.2,
                     ease: [0.43, 0.13, 0.23, 0.96]
-                  }}
-                  style={{
-                    transformOrigin: "50% 50%",
                   }}
                 >
                   <MenuItemCard
@@ -746,7 +741,6 @@ function HomePage() {
       });
     },
   });
-
 
   const handleUpdateLogin = async () => {
     try {
