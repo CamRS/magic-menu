@@ -748,19 +748,91 @@ function HomePage() {
               <div className="relative">
                 {/* Condensed view - horizontal icons */}
                 <div className="flex items-center gap-6">
-                  <ImageIcon className="h-5 w-5" />
-                  <Download className="h-5 w-5" />
-                  <Upload className="h-5 w-5" />
-                  <QrCode className="h-5 w-5" />
-                  <Globe className="h-5 w-5" />
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="rounded-full"
-                    onClick={() => setShowLabels(!showLabels)}
-                  >
-                    <ChevronDown className={`h-5 w-5 transition-transform ${showLabels ? "rotate-180" : ""}`} />
-                  </Button>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="rounded-full"
+                          onClick={() => fileInputRef.current?.click()}
+                        >
+                          <ImageIcon className="h-5 w-5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Upload menu image</TooltipContent>
+                    </Tooltip>
+
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="rounded-full"
+                          onClick={() => csvFileInputRef.current?.click()}
+                        >
+                          <Download className="h-5 w-5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Import menu CSV</TooltipContent>
+                    </Tooltip>
+
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="rounded-full"
+                          onClick={handleExportCSV}
+                        >
+                          <Upload className="h-5 w-5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Export menu CSV</TooltipContent>
+                    </Tooltip>
+
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="rounded-full"
+                          onClick={() => setShowQrCode(true)}
+                        >
+                          <QrCode className="h-5 w-5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Menu QR code</TooltipContent>
+                    </Tooltip>
+
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="rounded-full"
+                          onClick={() => copyMenuUrl(selectedRestaurant?.id || 0)}
+                        >
+                          <Globe className="h-5 w-5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Copy menu URL</TooltipContent>
+                    </Tooltip>
+
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="rounded-full"
+                          onClick={() => setShowLabels(!showLabels)}
+                        >
+                          <ChevronDown className={`h-5 w-5 transition-transform ${showLabels ? "rotate-180" : ""}`} />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Toggle menu</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
 
                 {/* Expanded menu */}
