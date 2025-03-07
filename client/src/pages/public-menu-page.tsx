@@ -3,27 +3,24 @@ import { useRoute } from "wouter";
 import { type MenuItem, type Restaurant } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { ChevronDown, Loader2, Search, ChevronUp, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, Filter, X, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import useEmblaCarousel from 'embla-carousel-react';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from "@/components/ui/drawer";
 import { useState, useMemo, useEffect, useCallback } from "react";
 
 type AllergenType = keyof MenuItem['allergens'];
 const allergensList: AllergenType[] = ['milk', 'eggs', 'peanuts', 'nuts', 'shellfish', 'fish', 'soy', 'gluten'];
-
 const dietaryPreferences = ['Vegetarian', 'Vegan'] as const;
 
 const MenuCard = ({ item }: { item: MenuItem }) => {
@@ -76,7 +73,6 @@ const MenuCard = ({ item }: { item: MenuItem }) => {
             </div>
           </div>
         )}
-        {/* Image - only shown if "image" field exists and has content */}
         {item.image && (
           <div className="w-full h-[200px] rounded-lg">
             <img
@@ -84,8 +80,7 @@ const MenuCard = ({ item }: { item: MenuItem }) => {
               alt={item.name}
               className="w-full h-full object-cover rounded-lg"
               onError={(e) => {
-                // Fallback to gray placeholder if image fails to load
-                e.currentTarget.onerror = null; // Prevent infinite loop
+                e.currentTarget.onerror = null;
                 e.currentTarget.style.display = 'none';
                 const parent = e.currentTarget.parentElement;
                 if (parent) {
@@ -121,6 +116,7 @@ export default function PublicMenuPage() {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedAllergens, setSelectedAllergens] = useState<AllergenType[]>([]);
   const [selectedDietary, setSelectedDietary] = useState<typeof dietaryPreferences[number][]>([]);
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
 
   const [emblaRef, emblaApi] = useEmblaCarousel({
@@ -166,7 +162,6 @@ export default function PublicMenuPage() {
         throw new Error('Restaurant ID is required');
       }
 
-      console.log(`Fetching menu items for restaurant ${restaurantId}`);
       const response = await fetch(`/api/menu-items?${new URLSearchParams({
         restaurantId: restaurantId.toString(),
         status: 'live'
@@ -182,12 +177,11 @@ export default function PublicMenuPage() {
       }
 
       const items = await response.json();
-      console.log(`Retrieved ${items.length} menu items for restaurant ${restaurantId}`);
       return items;
     },
     enabled: !!restaurantId,
     retry: 2,
-    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+    staleTime: 1000 * 60 * 5, 
   });
 
   const uniqueTags = useMemo(() => {
@@ -226,15 +220,13 @@ export default function PublicMenuPage() {
     }
   };
 
-  if (!matches || !restaurantId) {
+  if (!matches || !restaurantId || isLoadingRestaurant || isLoadingMenu) {
     return <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <p className="text-gray-500">Restaurant not found</p>
-    </div>;
-  }
-
-  if (isLoadingRestaurant || isLoadingMenu) {
-    return <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+      {!matches || !restaurantId ? (
+        <p className="text-gray-500">Restaurant not found</p>
+      ) : (
+        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+      )}
     </div>;
   }
 
@@ -246,121 +238,41 @@ export default function PublicMenuPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="fixed top-0 left-0 right-0 bg-white border-b z-50">
-        <div className="max-w-4xl mx-auto h-[60px] px-4 flex items-center gap-4">
-          <div className="flex items-center gap-4 flex-1">
-            <h1 className="text-lg font-semibold text-gray-900 whitespace-nowrap">
+      <header className="fixed top-0 left-0 right-0 bg-white border-b z-40">
+        <div className="max-w-4xl mx-auto h-[60px] px-4">
+          <div className="flex items-center justify-center h-full">
+            <h1 className="text-xl font-semibold text-gray-900 text-center">
               {restaurant?.name}
             </h1>
-            <div className="relative flex-1 max-w-xs">
-              <Input
-                placeholder="Search menu..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 pr-4 h-9 rounded-full border-gray-200 bg-white text-sm"
-              />
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsFiltersOpen(!isFiltersOpen)}
-              className="h-9 px-3 flex items-center gap-1"
-            >
-              Filters
-              {isFiltersOpen ? (
-                <ChevronUp className="h-3 w-3" />
-              ) : (
-                <ChevronDown className="h-3 w-3" />
-              )}
-            </Button>
-
-            <Select
-              value={selectedTags.length === 0 ? "all" : selectedTags.join(",")}
-              onValueChange={handleTagSelection}
-            >
-              <SelectTrigger className="h-9 w-[130px] text-sm">
-                <SelectValue placeholder="All Courses" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Courses</SelectItem>
-                {Array.from(uniqueTags).map((tag) => (
-                  <SelectItem key={tag} value={tag}>
-                    {tag}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
         </div>
 
-        <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
-          <CollapsibleContent className="border-t bg-white">
-            <div className="max-w-4xl mx-auto px-4 py-4">
-              <div className="flex flex-wrap gap-4">
-                <div className="flex-1 min-w-[200px]">
-                  <h3 className="text-sm font-medium mb-2">Allergens</h3>
-                  <div className="grid grid-cols-2 gap-2">
-                    {allergensList.map((allergen) => (
-                      <Button
-                        key={allergen}
-                        variant="outline"
-                        size="sm"
-                        className={`justify-start gap-2 ${
-                          selectedAllergens.includes(allergen)
-                            ? "bg-blue-50 text-blue-700 border-blue-200"
-                            : ""
-                        }`}
-                        onClick={() => {
-                          setSelectedAllergens((prev) =>
-                            prev.includes(allergen)
-                              ? prev.filter((a) => a !== allergen)
-                              : [...prev, allergen]
-                          );
-                        }}
-                      >
-                        <span className="capitalize">{allergen}</span>
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="flex-1 min-w-[200px]">
-                  <h3 className="text-sm font-medium mb-2">Dietary Preferences</h3>
-                  <div className="grid grid-cols-2 gap-2">
-                    {dietaryPreferences.map((pref) => (
-                      <Button
-                        key={pref}
-                        variant="outline"
-                        size="sm"
-                        className={`justify-start gap-2 ${
-                          selectedDietary.includes(pref)
-                            ? "bg-green-50 text-green-700 border-green-200"
-                            : ""
-                        }`}
-                        onClick={() => {
-                          setSelectedDietary((prev) =>
-                            prev.includes(pref)
-                              ? prev.filter((p) => p !== pref)
-                              : [...prev, pref]
-                          );
-                        }}
-                      >
-                        {pref}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-              </div>
+        <div className="border-t bg-white overflow-x-auto scrollbar-hide">
+          <div className="max-w-4xl mx-auto px-4 py-2">
+            <div className="flex space-x-2">
+              <Button
+                variant={selectedTags.length === 0 ? "default" : "outline"}
+                className="rounded-full whitespace-nowrap"
+                onClick={() => handleTagSelection("all")}
+              >
+                All Courses
+              </Button>
+              {Array.from(uniqueTags).map((tag) => (
+                <Button
+                  key={tag}
+                  variant={selectedTags.includes(tag) ? "default" : "outline"}
+                  className="rounded-full whitespace-nowrap"
+                  onClick={() => handleTagSelection(tag)}
+                >
+                  {tag}
+                </Button>
+              ))}
             </div>
-          </CollapsibleContent>
-        </Collapsible>
+          </div>
+        </div>
       </header>
 
-      <main className={`pt-[${isFiltersOpen ? '180px' : '76px'}] px-4 pb-20 max-w-4xl mx-auto`}>
+      <main className="pt-[104px] pb-24 px-4 max-w-4xl mx-auto">
         {filteredItems.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
             No menu items match your filters
@@ -401,6 +313,118 @@ export default function PublicMenuPage() {
           </div>
         )}
       </main>
+
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t z-50">
+        <div className="max-w-4xl mx-auto">
+          <div className={`px-4 py-2 bg-white transition-all duration-200 ${isSearchFocused ? 'pb-4' : ''}`}>
+            <div className="relative">
+              <Input
+                placeholder="Search menu..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                onFocus={() => setIsSearchFocused(true)}
+                onBlur={() => setIsSearchFocused(false)}
+                className="w-full pl-10 pr-10 h-12 rounded-full border-gray-200 bg-white text-base"
+              />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+              {searchTerm && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8"
+                  onClick={() => setSearchTerm("")}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+          </div>
+
+          <div className="flex justify-end px-4 pb-4">
+            <Drawer open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
+              <DrawerTrigger asChild>
+                <Button
+                  variant="default"
+                  size="lg"
+                  className="rounded-full px-6 relative"
+                >
+                  <Filter className="h-5 w-5 mr-2" />
+                  Filters
+                  {(selectedAllergens.length > 0 || selectedDietary.length > 0) && (
+                    <span className="absolute top-0 right-0 -mt-1 -mr-1 h-3 w-3 bg-blue-500 rounded-full" />
+                  )}
+                </Button>
+              </DrawerTrigger>
+              <DrawerContent>
+                <DrawerHeader>
+                  <DrawerTitle>Filters</DrawerTitle>
+                  <DrawerDescription>
+                    Customize your menu view
+                  </DrawerDescription>
+                </DrawerHeader>
+                <div className="px-4 py-2 space-y-6">
+                  <div>
+                    <h3 className="text-sm font-medium mb-3">Allergens</h3>
+                    <div className="grid grid-cols-2 gap-3">
+                      {allergensList.map((allergen) => (
+                        <Button
+                          key={allergen}
+                          variant="outline"
+                          className={`justify-start gap-2 h-12 ${
+                            selectedAllergens.includes(allergen)
+                              ? "bg-blue-50 text-blue-700 border-blue-200"
+                              : ""
+                          }`}
+                          onClick={() => {
+                            setSelectedAllergens((prev) =>
+                              prev.includes(allergen)
+                                ? prev.filter((a) => a !== allergen)
+                                : [...prev, allergen]
+                            );
+                          }}
+                        >
+                          <span className="capitalize">{allergen}</span>
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="text-sm font-medium mb-3">Dietary Preferences</h3>
+                    <div className="grid grid-cols-2 gap-3">
+                      {dietaryPreferences.map((pref) => (
+                        <Button
+                          key={pref}
+                          variant="outline"
+                          className={`justify-start gap-2 h-12 ${
+                            selectedDietary.includes(pref)
+                              ? "bg-green-50 text-green-700 border-green-200"
+                              : ""
+                          }`}
+                          onClick={() => {
+                            setSelectedDietary((prev) =>
+                              prev.includes(pref)
+                                ? prev.filter((p) => p !== pref)
+                                : [...prev, pref]
+                            );
+                          }}
+                        >
+                          {pref}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <DrawerFooter>
+                  <DrawerClose asChild>
+                    <Button variant="outline">Done</Button>
+                  </DrawerClose>
+                </DrawerFooter>
+              </DrawerContent>
+            </Drawer>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
