@@ -517,7 +517,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           // Check if item with same name exists
           const existingMenuItems = await storage.getMenuItems(restaurantId);
-          const existingItem = existingMenuItems.find(item => 
+          const existingItem = existingMenuItems.find(item =>
             item.name.toLowerCase() === menuItem.name.toLowerCase()
           );
 
@@ -613,25 +613,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         for (const item of parsedData) {
           try {
+            // Process allergens as an array
+            const allergensList = Array.isArray(item.Allergens)
+              ? item.Allergens.map(allergen => String(allergen).toLowerCase())
+              : [];
+
             const menuItem = {
               name: String(item.Name || ''),
               description: String(item.Description || ''),
               restaurantId: parseInt(item.RestaurantID || '0'),
               price: String(item.Price || '0').replace(/[^\d.-]/g, ''),
-              courseTags: item.Category,
+              courseTags: Array.isArray(item.Category) ? item.Category :
+                         typeof item.Category === 'string' ? [item.Category] : [],
               customTags: [],
               image: '',
               allergens: {
-                milk: item.Allergens?.toLowerCase().includes('milk') || false,
-                eggs: item.Allergens?.toLowerCase().includes('eggs') || false,
-                peanuts: item.Allergens?.toLowerCase().includes('peanuts') || false,
-                nuts: item.Allergens?.toLowerCase().includes('nuts') || false,
-                shellfish: item.Allergens?.toLowerCase().includes('shellfish') || false,
-                fish: item.Allergens?.toLowerCase().includes('fish') || false,
-                soy: item.Allergens?.toLowerCase().includes('soy') || false,
-                gluten: item.Allergens?.toLowerCase().includes('gluten') || false,
+                milk: allergensList.includes('milk'),
+                eggs: allergensList.includes('eggs'),
+                peanuts: allergensList.includes('peanuts'),
+                nuts: allergensList.includes('nuts'),
+                shellfish: allergensList.includes('shellfish'),
+                fish: allergensList.includes('fish'),
+                soy: allergensList.includes('soy'),
+                gluten: allergensList.includes('gluten'),
               }
             };
+
+            console.log("Processing menu item:", menuItem);
 
             const parsed = insertMenuItemSchema.safeParse(menuItem);
             if (!parsed.success) {
@@ -651,6 +659,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             await storage.createMenuItem(parsed.data);
             results.success++;
           } catch (itemError) {
+            console.error("Error processing item:", itemError);
             results.failed++;
             results.errors.push(`Failed to process item: ${itemError instanceof Error ? itemError.message : 'Unknown error'}`);
           }
