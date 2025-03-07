@@ -181,7 +181,7 @@ export default function PublicMenuPage() {
     },
     enabled: !!restaurantId,
     retry: 2,
-    staleTime: 1000 * 60 * 5, 
+    staleTime: 1000 * 60 * 5,
   });
 
   const uniqueTags = useMemo(() => {
@@ -315,41 +315,29 @@ export default function PublicMenuPage() {
       </main>
 
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t z-50">
-        <div className="max-w-4xl mx-auto">
-          <div className={`px-4 py-2 bg-white transition-all duration-200 ${isSearchFocused ? 'pb-4' : ''}`}>
-            <div className="relative">
+        <div className="max-w-4xl mx-auto px-4 py-3">
+          <div className="flex items-center gap-3">
+            <div className="relative flex-1">
               <Input
                 placeholder="Search menu..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 onFocus={() => setIsSearchFocused(true)}
                 onBlur={() => setIsSearchFocused(false)}
-                className="w-full pl-10 pr-10 h-12 rounded-full border-gray-200 bg-white text-base"
+                className="w-full pl-10 pr-4 h-12 rounded-full border-gray-200 bg-white text-base"
               />
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-              {searchTerm && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8"
-                  onClick={() => setSearchTerm("")}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              )}
             </div>
-          </div>
 
-          <div className="flex justify-end px-4 pb-4">
             <Drawer open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
               <DrawerTrigger asChild>
                 <Button
-                  variant="default"
+                  variant="outline"
                   size="lg"
-                  className="rounded-full px-6 relative"
+                  className="h-12 px-6 rounded-full border-2 border-gray-200 hover:bg-gray-50 hover:border-gray-300 relative flex items-center gap-2"
                 >
-                  <Filter className="h-5 w-5 mr-2" />
-                  Filters
+                  <Filter className="h-5 w-5 text-gray-600" />
+                  <span className="font-medium">Filters</span>
                   {(selectedAllergens.length > 0 || selectedDietary.length > 0) && (
                     <span className="absolute top-0 right-0 -mt-1 -mr-1 h-3 w-3 bg-blue-500 rounded-full" />
                   )}
@@ -373,7 +361,7 @@ export default function PublicMenuPage() {
                           className={`justify-start gap-2 h-12 ${
                             selectedAllergens.includes(allergen)
                               ? "bg-blue-50 text-blue-700 border-blue-200"
-                              : ""
+                              : "hover:bg-gray-50"
                           }`}
                           onClick={() => {
                             setSelectedAllergens((prev) =>
@@ -399,7 +387,7 @@ export default function PublicMenuPage() {
                           className={`justify-start gap-2 h-12 ${
                             selectedDietary.includes(pref)
                               ? "bg-green-50 text-green-700 border-green-200"
-                              : ""
+                              : "hover:bg-gray-50"
                           }`}
                           onClick={() => {
                             setSelectedDietary((prev) =>
@@ -417,7 +405,12 @@ export default function PublicMenuPage() {
                 </div>
                 <DrawerFooter>
                   <DrawerClose asChild>
-                    <Button variant="outline">Done</Button>
+                    <Button
+                      size="lg"
+                      className="w-full h-12 text-base font-medium"
+                    >
+                      Done
+                    </Button>
                   </DrawerClose>
                 </DrawerFooter>
               </DrawerContent>
