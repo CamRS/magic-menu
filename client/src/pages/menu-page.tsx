@@ -7,7 +7,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { X } from "lucide-react";
+import { X, Share2, Download, Upload, Filter, Settings, Maximize2 } from "lucide-react";
 import { type MenuItem, type InsertMenuItem, insertMenuItemSchema } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -25,7 +25,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Loader2, PlusCircle, Download, Upload, Trash2, Pencil, Eye, EyeOff } from "lucide-react";
+import { Loader2, Search, Eye, EyeOff, Trash2, Pencil } from "lucide-react";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
@@ -54,6 +54,7 @@ export default function MenuPage() {
   const { toast } = useToast();
   const restaurantId = new URLSearchParams(location.split('?')[1]).get('restaurantId');
   const [statusFilter, setStatusFilter] = useState<MenuItemStatus | null>(null);
+  const [searchTerm, setSearchTerm] = useState(""); // Added searchTerm state
 
   const form = useForm<InsertMenuItem>({
     resolver: zodResolver(insertMenuItemSchema),
@@ -99,9 +100,12 @@ export default function MenuPage() {
   }, [form, toast]);
 
   const { data: menuItems, isLoading } = useQuery<MenuItem[]>({
-    queryKey: ["/api/menu-items", restaurantId, statusFilter],
+    queryKey: ["/api/menu-items", restaurantId, statusFilter, searchTerm], // Added searchTerm to queryKey
     queryFn: async () => {
-      const url = `/api/menu-items?restaurantId=${restaurantId}${statusFilter ? `&status=${statusFilter}` : ''}`;
+      let url = `/api/menu-items?restaurantId=${restaurantId}${statusFilter ? `&status=${statusFilter}` : ''}`;
+      if (searchTerm) {
+        url += `&search=${searchTerm}`;
+      }
       const response = await fetch(url);
       if (!response.ok) throw new Error('Failed to fetch menu items');
       return response.json();
@@ -399,215 +403,254 @@ export default function MenuPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#121212] p-4">
-      <div className="max-w-3xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-white">Menu Items</h1>
-          <div className="flex items-center gap-4">
-            <Dialog 
-              open={open} 
-              onOpenChange={(isOpen) => {
-                setOpen(isOpen);
-                if (!isOpen) {
-                  setEditItem(null);
-                  form.reset();
-                }
-              }}
-            >
-              <DialogTrigger asChild>
-                <Button>
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Add Item
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl bg-gray-700 text-white">
-                <DialogHeader>
-                  <DialogTitle>{editItem ? "Edit Menu Item" : "Add Menu Item"}</DialogTitle>
-                </DialogHeader>
-                <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-                  <div className="grid grid-cols-2 gap-6">
-                    <div className="space-y-4">
-                      <div>
-                        <Label htmlFor="name">Name</Label>
-                        <Input id="name" {...form.register("name")} />
-                        {form.formState.errors.name && (
-                          <p className="text-sm text-red-500 mt-1">
-                            {form.formState.errors.name.message}
-                          </p>
-                        )}
-                      </div>
-                      <div>
-                        <Label htmlFor="description">Description</Label>
-                        <Textarea id="description" {...form.register("description")} />
-                        {form.formState.errors.description && (
-                          <p className="text-sm text-red-500 mt-1">
-                            {form.formState.errors.description.message}
-                          </p>
-                        )}
-                      </div>
-                      <div>
-                        <Label htmlFor="price">Price</Label>
-                        <Input id="price" {...form.register("price")} />
-                        {form.formState.errors.price && (
-                          <p className="text-sm text-red-500 mt-1">
-                            {form.formState.errors.price.message}
-                          </p>
-                        )}
-                      </div>
-                      <div>
-                        <Label>Course Tags</Label>
-                        <div className="flex flex-wrap gap-2 mb-2">
-                          {form.watch("courseTags").map((tag, index) => (
-                            <Badge key={index} variant="secondary" className="flex items-center gap-1">
-                              {tag}
-                              <X
-                                className="h-3 w-3 cursor-pointer text-white"
-                                onClick={() => {
-                                  const newTags = [...form.getValues("courseTags")];
-                                  newTags.splice(index, 1);
-                                  form.setValue("courseTags", newTags);
-                                }}
-                              />
-                            </Badge>
-                          ))}
-                        </div>
-                        <div className="flex gap-2">
-                          <Input
-                            value={newTag}
-                            onChange={(e) => setNewTag(e.target.value)}
-                            placeholder="Add a new tag"
-                            onKeyPress={(e) => {
-                              if (e.key === "Enter") {
-                                e.preventDefault();
-                                const value = newTag.trim();
-                                if (value && !form.getValues("courseTags").includes(value)) {
-                                  form.setValue("courseTags", [...form.getValues("courseTags"), value]);
-                                  setNewTag("");
-                                }
-                              }
-                            }}
-                          />
-                          <Button
-                            type="button"
-                            onClick={() => {
-                              const value = newTag.trim();
-                              if (value && !form.getValues("courseTags").includes(value)) {
-                                form.setValue("courseTags", [...form.getValues("courseTags"), value]);
-                                setNewTag("");
-                              }
-                            }}
-                          >
-                            Add
-                          </Button>
-                        </div>
-                      </div>
-                      <div>
-                        <Label htmlFor="image">Image</Label>
-                        <div
-                          className="border-2 border-dashed border-gray-300 rounded-lg p-6 cursor-pointer hover:border-primary transition-colors"
-                          onDragOver={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                          }}
-                          onDrop={handleImageDrop}
-                        >
-                          <Input
-                            id="image"
-                            type="file"
-                            accept="image/*"
-                            onChange={handleImageUpload}
-                            className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
-                          />
-                          <p className="text-sm text-muted-foreground mt-2">
-                            Drag and drop an image here or click to select
-                          </p>
-                          {form.watch("image") && (
-                            <img
-                              src={form.watch("image")}
-                              alt="Preview"
-                              className="mt-4 max-h-40 rounded-lg"
-                            />
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    <div>
-                      <Label>Allergens</Label>
-                      <div className="grid grid-cols-2 gap-4 mt-2">
-                        {(Object.keys(form.getValues().allergens) as Array<keyof AllergenInfo>).map((key) => (
-                          <div key={key} className="flex items-center space-x-2">
-                            <Checkbox
-                              id={key}
-                              checked={form.getValues().allergens[key]}
-                              onCheckedChange={(checked) => handleAllergenChange(key, checked as boolean)}
-                            />
-                            <Label htmlFor={key} className="capitalize">
-                              {key}
-                            </Label>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                  <Button
-                    type="submit"
-                    className="w-full"
-                    disabled={createMutation.isPending || updateMutation.isPending}
-                  >
-                    {(createMutation.isPending || updateMutation.isPending) && (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    )}
-                    {editItem ? "Update Item" : "Add Item"}
-                  </Button>
-                </form>
-              </DialogContent>
-            </Dialog>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={handleExportCSV}>
-                <Download className="mr-2 h-4 w-4" />
-                Export CSV
+    <div className="min-h-screen bg-custom-gray-100">
+      {/* Top Navigation */}
+      <header className="sticky top-0 z-50 bg-white border-b border-custom-gray-200">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="flex items-center justify-between h-16">
+            {/* Restaurant Name */}
+            <Button variant="outline" className="rounded-pill px-6">
+              {restaurantId ? "Restaurant Name" : "Select Restaurant"}
+            </Button>
+
+            {/* Center Icons */}
+            <div className="flex items-center space-x-4">
+              <Button variant="ghost" size="icon" className="rounded-full">
+                <Share2 className="h-5 w-5" />
               </Button>
-              <Button variant="outline" className="relative">
+              <Button variant="ghost" size="icon" className="rounded-full" onClick={handleExportCSV}>
+                <Download className="h-5 w-5" />
+              </Button>
+              <Button variant="ghost" size="icon" className="rounded-full relative">
                 <input
                   type="file"
                   accept=".csv"
                   onChange={handleImportCSV}
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                 />
-                <Upload className="mr-2 h-4 w-4" />
-                Import CSV
+                <Upload className="h-5 w-5" />
+              </Button>
+              <Button variant="ghost" size="icon" className="rounded-full">
+                <Filter className="h-5 w-5" />
+              </Button>
+            </div>
+
+            {/* Right Icons */}
+            <div className="flex items-center space-x-2">
+              <Button variant="ghost" size="icon" className="rounded-full">
+                <Settings className="h-5 w-5" />
+              </Button>
+              <Button variant="ghost" size="icon" className="rounded-full">
+                <Maximize2 className="h-5 w-5" />
               </Button>
             </div>
           </div>
         </div>
+      </header>
 
-        <div className="flex gap-2 mb-4">
+      <main className="max-w-7xl mx-auto px-4 py-6">
+        {/* Search Bar */}
+        <div className="relative mb-6">
+          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-custom-gray-400" />
+          <Input
+            placeholder="Search the menu"
+            className="search-input pl-12"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+
+        {/* Filter Tabs */}
+        <div className="flex gap-3 mb-6">
           <Button
             variant={statusFilter === null ? "default" : "outline"}
+            className={`filter-tab ${statusFilter === null ? 'filter-tab-active' : 'filter-tab-inactive'}`}
             onClick={() => setStatusFilter(null)}
           >
             All Items
           </Button>
           <Button
             variant={statusFilter === "draft" ? "default" : "outline"}
+            className={`filter-tab ${statusFilter === "draft" ? 'filter-tab-active' : 'filter-tab-inactive'}`}
             onClick={() => setStatusFilter("draft")}
           >
             Drafts
           </Button>
           <Button
             variant={statusFilter === "live" ? "default" : "outline"}
+            className={`filter-tab ${statusFilter === "live" ? 'filter-tab-active' : 'filter-tab-inactive'}`}
             onClick={() => setStatusFilter("live")}
           >
             Live
           </Button>
+
+          {/* Add Item Button */}
+          <Dialog 
+            open={open} 
+            onOpenChange={(isOpen) => {
+              setOpen(isOpen);
+              if (!isOpen) {
+                setEditItem(null);
+                form.reset();
+              }
+            }}
+          >
+            <DialogTrigger asChild>
+              <Button className="filter-tab filter-tab-active ml-auto">
+                Add Item
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl bg-gray-700 text-white">
+              <DialogHeader>
+                <DialogTitle>{editItem ? "Edit Menu Item" : "Add Menu Item"}</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="name">Name</Label>
+                      <Input id="name" {...form.register("name")} />
+                      {form.formState.errors.name && (
+                        <p className="text-sm text-red-500 mt-1">
+                          {form.formState.errors.name.message}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <Label htmlFor="description">Description</Label>
+                      <Textarea id="description" {...form.register("description")} />
+                      {form.formState.errors.description && (
+                        <p className="text-sm text-red-500 mt-1">
+                          {form.formState.errors.description.message}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <Label htmlFor="price">Price</Label>
+                      <Input id="price" {...form.register("price")} />
+                      {form.formState.errors.price && (
+                        <p className="text-sm text-red-500 mt-1">
+                          {form.formState.errors.price.message}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <Label>Course Tags</Label>
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {form.watch("courseTags").map((tag, index) => (
+                          <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                            {tag}
+                            <X
+                              className="h-3 w-3 cursor-pointer text-white"
+                              onClick={() => {
+                                const newTags = [...form.getValues("courseTags")];
+                                newTags.splice(index, 1);
+                                form.setValue("courseTags", newTags);
+                              }}
+                            />
+                          </Badge>
+                        ))}
+                      </div>
+                      <div className="flex gap-2">
+                        <Input
+                          value={newTag}
+                          onChange={(e) => setNewTag(e.target.value)}
+                          placeholder="Add a new tag"
+                          onKeyPress={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              const value = newTag.trim();
+                              if (value && !form.getValues("courseTags").includes(value)) {
+                                form.setValue("courseTags", [...form.getValues("courseTags"), value]);
+                                setNewTag("");
+                              }
+                            }
+                          }}
+                        />
+                        <Button
+                          type="button"
+                          onClick={() => {
+                            const value = newTag.trim();
+                            if (value && !form.getValues("courseTags").includes(value)) {
+                              form.setValue("courseTags", [...form.getValues("courseTags"), value]);
+                              setNewTag("");
+                            }
+                          }}
+                        >
+                          Add
+                        </Button>
+                      </div>
+                    </div>
+                    <div>
+                      <Label htmlFor="image">Image</Label>
+                      <div
+                        className="border-2 border-dashed border-gray-300 rounded-lg p-6 cursor-pointer hover:border-primary transition-colors"
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                        }}
+                        onDrop={handleImageDrop}
+                      >
+                        <Input
+                          id="image"
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageUpload}
+                          className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+                        />
+                        <p className="text-sm text-muted-foreground mt-2">
+                          Drag and drop an image here or click to select
+                        </p>
+                        {form.watch("image") && (
+                          <img
+                            src={form.watch("image")}
+                            alt="Preview"
+                            className="mt-4 max-h-40 rounded-lg"
+                          />
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <Label>Allergens</Label>
+                    <div className="grid grid-cols-2 gap-4 mt-2">
+                      {(Object.keys(form.getValues().allergens) as Array<keyof AllergenInfo>).map((key) => (
+                        <div key={key} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={key}
+                            checked={form.getValues().allergens[key]}
+                            onCheckedChange={(checked) => handleAllergenChange(key, checked as boolean)}
+                          />
+                          <Label htmlFor={key} className="capitalize">
+                            {key}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={createMutation.isPending || updateMutation.isPending}
+                >
+                  {(createMutation.isPending || updateMutation.isPending) && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  {editItem ? "Update Item" : "Add Item"}
+                </Button>
+              </form>
+            </DialogContent>
+          </Dialog>
         </div>
 
+        {/* Selected Items Actions */}
         {selectedItems.length > 0 && (
           <Button
             variant="destructive"
             onClick={handleDeleteSelected}
             disabled={deleteMutation.isPending}
-            className="mb-4"
+            className="mb-6 rounded-full"
           >
             {deleteMutation.isPending && (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -616,90 +659,113 @@ export default function MenuPage() {
           </Button>
         )}
 
+        {/* Menu Items Grid */}
         {Object.entries(groupedItems).map(([status, items]) => (
           <div key={status} className="mb-8">
-            <h2 className="text-xl font-bold text-white mb-4 capitalize">
+            <h2 className="text-xl font-semibold text-custom-gray-500 mb-4 capitalize">
               {status} Items ({items.length})
             </h2>
             <div className="space-y-4">
               {items.map((item) => (
                 <Card
                   key={item.id}
-                  className="bg-[#1E1E1E]/80 border-none text-white overflow-hidden"
+                  className="menu-card"
                 >
                   <CardContent className="p-4">
-                    <div className="flex justify-between items-start mb-4">
-                      <div className="flex items-center gap-2">
-                        <Checkbox
-                          checked={selectedItems.includes(item.id)}
-                          onCheckedChange={() => toggleItemSelection(item.id)}
-                        />
-                        <h3 className="text-xl font-bold">{item.name}</h3>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant={item.status === "live" ? "default" : "secondary"}>
-                          {item.status}
-                        </Badge>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => toggleItemStatus(item)}
-                          disabled={updateStatusMutation.isPending}
-                        >
-                          {item.status === "draft" ? (
-                            <Eye className="h-4 w-4" />
-                          ) : (
-                            <EyeOff className="h-4 w-4" />
-                          )}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setEditItem(item);
-                            setOpen(true);
-                          }}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => deleteMutation.mutate([item.id])}
-                          disabled={deleteMutation.isPending}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-
-                    {item.image && (
-                      <img
-                        src={item.image}
-                        alt={item.name}
-                        className="w-full h-48 object-cover rounded-lg mb-4"
+                    <div className="flex items-start gap-4">
+                      <Checkbox
+                        checked={selectedItems.includes(item.id)}
+                        onCheckedChange={() => toggleItemSelection(item.id)}
+                        className="mt-1"
                       />
-                    )}
 
-                    <p className="text-gray-300 mb-4">{item.description}</p>
-
-                    <div className="flex justify-between items-center">
-                      <div className="flex flex-wrap gap-2">
-                        {Object.entries(item.allergens)
-                          .filter(([_, value]) => value)
-                          .map(([key]) => (
-                            <Badge
-                              key={key}
-                              variant="outline"
-                              className="bg-transparent border-gray-600 text-gray-300"
-                            >
-                              Contains {key}
-                            </Badge>
-                          ))}
+                      {/* Image Section */}
+                      <div className="w-24 h-24 bg-custom-gray-100 rounded-lg flex items-center justify-center">
+                        {item.image ? (
+                          <img
+                            src={item.image}
+                            alt={item.name}
+                            className="w-full h-full object-cover rounded-lg"
+                          />
+                        ) : (
+                          <div className="text-center text-custom-gray-400 text-sm">
+                            <Upload className="h-6 w-6 mx-auto mb-1" />
+                            Upload Image
+                          </div>
+                        )}
                       </div>
-                      <span className="text-lg font-semibold">
-                        {item.price ? `$${parseFloat(item.price).toFixed(2)}` : ''}
-                      </span>
+
+                      {/* Content Section */}
+                      <div className="flex-1">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h3 className="text-lg font-medium text-custom-gray-500">
+                              {item.name}
+                            </h3>
+                            <p className="text-custom-gray-400 mt-1">
+                              {item.description}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge variant={item.status === "live" ? "default" : "secondary"} className="rounded-full">
+                              {item.status}
+                            </Badge>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => toggleItemStatus(item)}
+                              disabled={updateStatusMutation.isPending}
+                              className="rounded-full"
+                            >
+                              {item.status === "draft" ? (
+                                <Eye className="h-4 w-4" />
+                              ) : (
+                                <EyeOff className="h-4 w-4" />
+                              )}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setEditItem(item);
+                                setOpen(true);
+                              }}
+                              className="rounded-full"
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => deleteMutation.mutate([item.id])}
+                              disabled={deleteMutation.isPending}
+                              className="rounded-full"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+
+                        {/* Bottom Section */}
+                        <div className="flex justify-between items-center mt-4">
+                          <div className="flex flex-wrap gap-2">
+                            {Object.entries(item.allergens)
+                              .filter(([_, value]) => value)
+                              .map(([key]) => (
+                                <Badge
+                                  key={key}
+                                  variant="outline"
+                                  className="rounded-full bg-custom-gray-100 text-custom-gray-400 border-none px-3"
+                                >
+                                  Contains {key}
+                                </Badge>
+                              ))}
+                          </div>
+                          <span className="text-lg font-medium text-custom-gray-500">
+                            {item.price ? `$${parseFloat(item.price).toFixed(2)}` : ''}
+                          </span>
+                        </div>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -707,7 +773,7 @@ export default function MenuPage() {
             </div>
           </div>
         ))}
-      </div>
+      </main>
     </div>
   );
 }
