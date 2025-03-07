@@ -248,7 +248,7 @@ function MenuSection({ section, items, selectedItems, handleStatusChange, handle
     setSectionItems(reorderedItems);
 
     Promise.all(
-      reorderedItems.map((item, index) => 
+      reorderedItems.map((item, index) =>
         reorderMutation.mutateAsync({ id: item.id, displayOrder: index })
       )
     ).then(() => {
@@ -258,32 +258,29 @@ function MenuSection({ section, items, selectedItems, handleStatusChange, handle
 
   return (
     <motion.div layout className="mb-8">
-      <div
-        className="flex items-center gap-2 mb-4 cursor-pointer"
-        onClick={() => setIsExpanded(!isExpanded)}
-      >
-        <motion.div
-          animate={{ rotate: isExpanded ? 90 : 0 }}
-          transition={{ duration: 0.3, ease: "anticipate" }}
+      <div className="bg-white/80 backdrop-blur-sm rounded-lg p-6">
+        <div
+          className="flex items-center gap-2 mb-4 cursor-pointer"
+          onClick={() => setIsExpanded(!isExpanded)}
         >
-          <ChevronRight className="h-5 w-5" />
-        </motion.div>
-        <h2 className="text-xl font-semibold">{section}</h2>
-        <span className="text-custom-gray-400">({items.length})</span>
-      </div>
+          <ChevronRight
+            className={`h-5 w-5 transform transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}
+          />
+          <h2 className="text-xl font-semibold">{section}</h2>
+          <span className="text-custom-gray-400">({items.length})</span>
+        </div>
 
-      <AnimatePresence initial={false}>
-        {isExpanded && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ 
-              height: { duration: 0.3, ease: "easeInOut" },
-              opacity: { duration: 0.2, ease: "easeInOut" }
-            }}
-          >
-            <div className="bg-white/80 backdrop-blur-sm rounded-lg p-6">
+        <AnimatePresence initial={false}>
+          {isExpanded && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{
+                height: { duration: 0.3, ease: "easeInOut" },
+                opacity: { duration: 0.2, ease: "easeInOut" }
+              }}
+            >
               <Reorder.Group
                 axis="y"
                 values={sectionItems}
@@ -322,10 +319,10 @@ function MenuSection({ section, items, selectedItems, handleStatusChange, handle
                   </Reorder.Item>
                 ))}
               </Reorder.Group>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </motion.div>
   );
 }
@@ -345,10 +342,10 @@ function HomePage() {
   const [showLabels, setShowLabels] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
-  const [isUpdateLoginOpen, setIsUpdateLoginOpen] = useState(false); 
-  const [newEmail, setNewEmail] = useState(""); 
-  const [currentPassword, setCurrentPassword] = useState(""); 
-  const [newPassword, setNewPassword] = useState(""); 
+  const [isUpdateLoginOpen, setIsUpdateLoginOpen] = useState(false);
+  const [newEmail, setNewEmail] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const qrCodeRef = useRef<HTMLDivElement>(null);
   const csvFileInputRef = useRef<HTMLInputElement>(null);
@@ -418,11 +415,11 @@ function HomePage() {
     gcTime: 5 * 60 * 1000,
   });
 
-  const groupedItems =  menuItems?.reduce(
+  const groupedItems = menuItems?.reduce(
     (acc, item) => {
       const status = item.status || "draft";
       if (searchTerm && !item.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
-          !item.description.toLowerCase().includes(searchTerm.toLowerCase())) {
+        !item.description.toLowerCase().includes(searchTerm.toLowerCase())) {
         return acc;
       }
 
@@ -744,7 +741,7 @@ function HomePage() {
   };
 
 
-  const groupedByCourse = menuItems ? 
+  const groupedByCourse = menuItems ?
     menuItems.reduce((acc, item) => {
       if (!item.courseTags?.length) {
         const items = acc.get("Uncategorized") || [];
@@ -917,7 +914,7 @@ function HomePage() {
 
                 {showLabels && (
                   <div className="absolute top-full mt-2 bg-white rounded-lg shadow-lg p-4 space-y-3 w-64 z-50">
-                    <Button                      variant="ghost"
+                    <Button variant="ghost"
                       className="w-full justify-start gap-3"
                       onClick={() => fileInputRef.current?.click()}
                     >
@@ -941,8 +938,8 @@ function HomePage() {
                       <span>Export menu CSV</span>
                     </Button>
                     <Button
-                      variant="ghost"
-                      className="w-fulljustify-start gap-3 justify-start gap-3"
+                                            variant="ghost"
+                      className="w-full justify-start gap-3"
                       onClick={() => setShowQrCode(true)}
                     >
                       <QrCode className="h-5 w-5" />
