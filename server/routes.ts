@@ -575,27 +575,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Zapier endpoint to create a menu item
   app.post("/api/zapier/menu-items", requireApiKey, async (req, res) => {
     try {
-      console.log("Received request body:", req.body); // Add logging
+      console.log("Received Zapier request with headers:", req.headers); // Add header logging
+      console.log("Received request body:", req.body);
 
       // Validate request format
       if (!req.body.data) {
         return res.status(400).json({
           message: "Invalid request format",
-          details: "Request must include 'data' field containing stringified JSON",
+          details: "Request must include 'data' field containing menu items array",
           received: Object.keys(req.body)
         });
       }
 
       let parsedData;
       try {
-        // Parse the stringified JSON data
+        // Parse the stringified JSON data if needed
         parsedData = typeof req.body.data === 'string'
           ? JSON.parse(req.body.data)
           : req.body.data;
 
-        console.log("Parsed data:", parsedData); // Add logging
+        console.log("Parsed data:", parsedData);
       } catch (parseError) {
-        console.error("Error parsing data:", parseError); // Add logging
+        console.error("Error parsing data:", parseError);
         return res.status(400).json({
           message: "Invalid JSON data format",
           error: parseError instanceof Error ? parseError.message : 'Failed to parse JSON data',
