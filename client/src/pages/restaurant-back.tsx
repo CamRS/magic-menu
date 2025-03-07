@@ -205,7 +205,7 @@ const MenuItemCard = ({ item, selectedItems, handleStatusChange, handleEdit, han
   </Card>
 );
 
-const MenuSection = ({ section, items, selectedItems, handleStatusChange, handleEdit, handleDelete, handleImageDrop, handleImageDelete, toggleItemSelection }: {
+function MenuSection({ section, items, selectedItems, handleStatusChange, handleEdit, handleDelete, handleImageDrop, handleImageDelete, toggleItemSelection }: {
   section: string;
   items: MenuItem[];
   selectedItems: number[];
@@ -215,7 +215,7 @@ const MenuSection = ({ section, items, selectedItems, handleStatusChange, handle
   handleImageDrop: (e: React.DragEvent<HTMLDivElement>, id?: number) => void;
   handleImageDelete: (id: number) => void;
   toggleItemSelection: (id: number) => void;
-}) => {
+}) {
   const [isExpanded, setIsExpanded] = useState(true);
   const [sectionItems, setSectionItems] = useState(items);
   const queryClient = useQueryClient();
@@ -240,16 +240,13 @@ const MenuSection = ({ section, items, selectedItems, handleStatusChange, handle
         description: "Failed to save menu item order. Please try again.",
         variant: "destructive",
       });
-      // Revert to original order on error
       setSectionItems(items);
     }
   });
 
   const handleReorder = (reorderedItems: MenuItem[]) => {
-    // Optimistically update the UI
     setSectionItems(reorderedItems);
 
-    // Update the database in the background
     Promise.all(
       reorderedItems.map((item, index) => 
         reorderMutation.mutateAsync({ id: item.id, displayOrder: index })
@@ -267,7 +264,7 @@ const MenuSection = ({ section, items, selectedItems, handleStatusChange, handle
       >
         <motion.div
           animate={{ rotate: isExpanded ? 90 : 0 }}
-          transition={{ duration: 0.2 }}
+          transition={{ duration: 0.3, ease: "anticipate" }}
         >
           <ChevronRight className="h-5 w-5" />
         </motion.div>
@@ -275,58 +272,63 @@ const MenuSection = ({ section, items, selectedItems, handleStatusChange, handle
         <span className="text-custom-gray-400">({items.length})</span>
       </div>
 
-      <AnimatePresence>
+      <AnimatePresence initial={false}>
         {isExpanded && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ 
+              height: { duration: 0.3, ease: "easeInOut" },
+              opacity: { duration: 0.2, ease: "easeInOut" }
+            }}
           >
-            <Reorder.Group
-              axis="y"
-              values={sectionItems}
-              onReorder={handleReorder}
-              className="space-y-4"
-            >
-              {sectionItems.map((item) => (
-                <Reorder.Item
-                  key={item.id}
-                  value={item}
-                  dragListener
-                  className="cursor-move touch-none"
-                  whileDrag={{
-                    scale: 1.02,
-                    boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)",
-                  }}
-                  dragTransition={{
-                    bounceStiffness: 300,
-                    bounceDamping: 20
-                  }}
-                  transition={{
-                    duration: 0.2,
-                    ease: [0.43, 0.13, 0.23, 0.96]
-                  }}
-                >
-                  <MenuItemCard
-                    item={item}
-                    selectedItems={selectedItems}
-                    handleStatusChange={handleStatusChange}
-                    handleEdit={handleEdit}
-                    handleDelete={handleDelete}
-                    handleImageDrop={handleImageDrop}
-                    handleImageDelete={handleImageDelete}
-                    toggleItemSelection={toggleItemSelection}
-                  />
-                </Reorder.Item>
-              ))}
-            </Reorder.Group>
+            <div className="bg-white/80 backdrop-blur-sm rounded-lg p-6">
+              <Reorder.Group
+                axis="y"
+                values={sectionItems}
+                onReorder={handleReorder}
+                className="space-y-4"
+              >
+                {sectionItems.map((item) => (
+                  <Reorder.Item
+                    key={item.id}
+                    value={item}
+                    dragListener
+                    className="cursor-move touch-none"
+                    whileDrag={{
+                      scale: 1.02,
+                      boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)",
+                    }}
+                    dragTransition={{
+                      bounceStiffness: 300,
+                      bounceDamping: 20
+                    }}
+                    transition={{
+                      duration: 0.2,
+                      ease: [0.43, 0.13, 0.23, 0.96]
+                    }}
+                  >
+                    <MenuItemCard
+                      item={item}
+                      selectedItems={selectedItems}
+                      handleStatusChange={handleStatusChange}
+                      handleEdit={handleEdit}
+                      handleDelete={handleDelete}
+                      handleImageDrop={handleImageDrop}
+                      handleImageDelete={handleImageDelete}
+                      toggleItemSelection={toggleItemSelection}
+                    />
+                  </Reorder.Item>
+                ))}
+              </Reorder.Group>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
     </motion.div>
   );
-};
+}
 
 function HomePage() {
   const { user, logoutMutation } = useAuth();
