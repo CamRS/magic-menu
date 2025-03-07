@@ -404,14 +404,40 @@ function HomePage() {
     }
   };
 
-  const handleImageDrop = (e: React.DragEvent<HTMLDivElement>) => {
+  // Fix the handleImageDrop function to work with direct drag and drop
+  const handleImageDrop = async (e: React.DragEvent<HTMLDivElement>, itemId?: number) => {
     e.preventDefault();
     e.stopPropagation();
+    e.currentTarget.classList.remove('border-2', 'border-primary', 'border-dashed');
+
     const file = e.dataTransfer.files[0];
     if (file && file.type.startsWith('image/')) {
       const reader = new FileReader();
-      reader.onloadend = () => {
-        form.setValue("image", reader.result as string);
+      reader.onloadend = async () => {
+        const imageData = reader.result as string;
+        if (itemId) {
+          try {
+            const response = await apiRequest("PATCH", `/api/menu-items/${itemId}`, {
+              image: imageData
+            });
+
+            if (!response.ok) {
+              throw new Error('Failed to update image');
+            }
+
+            queryClient.invalidateQueries({ queryKey: ["/api/menu-items", selectedRestaurant?.id] });
+            toast({
+              title: "Success",
+              description: "Image updated successfully",
+            });
+          } catch (error) {
+            toast({
+              title: "Error",
+              description: "Failed to update image",
+              variant: "destructive",
+            });
+          }
+        }
       };
       reader.readAsDataURL(file);
     }
@@ -451,42 +477,7 @@ function HomePage() {
                 e.stopPropagation();
                 e.currentTarget.classList.remove('border-2', 'border-primary', 'border-dashed');
               }}
-              onDrop={async (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                e.currentTarget.classList.remove('border-2', 'border-primary', 'border-dashed');
-
-                const file = e.dataTransfer.files[0];
-                if (file && file.type.startsWith('image/')) {
-                  const reader = new FileReader();
-                  reader.onloadend = async () => {
-                    const imageData = reader.result as string;
-                    try {
-                      const response = await apiRequest("PATCH", `/api/menu-items/${item.id}`, {
-                        ...item,
-                        image: imageData
-                      });
-
-                      if (!response.ok) {
-                        throw new Error('Failed to update image');
-                      }
-
-                      queryClient.invalidateQueries({ queryKey: ["/api/menu-items", selectedRestaurant?.id] });
-                      toast({
-                        title: "Success",
-                        description: "Image updated successfully",
-                      });
-                    } catch (error) {
-                      toast({
-                        title: "Error",
-                        description: "Failed to update image",
-                        variant: "destructive",
-                      });
-                    }
-                  };
-                  reader.readAsDataURL(file);
-                }
-              }}
+              onDrop={(e) => handleImageDrop(e, item.id)}
             >
               {item.image ? (
                 <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
