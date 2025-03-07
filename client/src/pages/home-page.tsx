@@ -1,3 +1,4 @@
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -44,7 +45,6 @@ import {
   type InsertMenuItem,
   insertMenuItemSchema,
 } from "@shared/schema";
-import { useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Label } from "@/components/ui/label";
@@ -910,7 +910,7 @@ function HomePage() {
             <div>
               <Label>Background Image</Label>
               <div
-                                className="mt-2 border-2 border-dashed border-gray-300 rounded-lg p-6 cursor-pointer hover:border-primary transition-colors"
+                className="mt-2 border-2 border-dashed border-gray-300 rounded-lg p-6 cursor-pointer hover:border-primary transition-colors"
                 onDragOver={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
