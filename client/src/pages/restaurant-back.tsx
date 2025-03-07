@@ -110,7 +110,7 @@ const MenuItemCard = ({ item, selectedItems, handleStatusChange, handleEdit, han
         />
 
         <div
-          className="w-32 h-32 flex-shrink-0 bg-custom-gray-100 rounded-lg flex items-center justify-center overflow-hidden transition-all duration-200 relative group"
+          className="w-32 h-32 flex-shrink-0 bg-white rounded-lg flex flex-col items-center justify-center overflow-hidden transition-all duration-200 relative group border border-dashed border-gray-300"
           onDragOver={(e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -139,9 +139,11 @@ const MenuItemCard = ({ item, selectedItems, handleStatusChange, handleEdit, han
               </Button>
             </>
           ) : (
-            <div className="text-center text-custom-gray-400 text-sm">
-              <Upload className="h-6 w-6 mx-auto mb-1" />
-              <span>Upload Image</span>
+            <div className="text-center p-2">
+              <p className="text-sm font-semibold text-gray-700 mb-1">Image</p>
+              <p className="text-xs text-gray-500">
+                Drag and drop an image here, or click to select
+              </p>
             </div>
           )}
         </div>
