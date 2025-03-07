@@ -40,7 +40,7 @@ import {
   LogOut,
 } from "lucide-react";
 import { Reorder, motion, AnimatePresence } from "framer-motion";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   type Restaurant,
   type MenuItem,
@@ -218,10 +218,46 @@ const MenuSection = ({ section, items, selectedItems, handleStatusChange, handle
 }) => {
   const [isExpanded, setIsExpanded] = useState(true);
   const [sectionItems, setSectionItems] = useState(items);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   useEffect(() => {
     setSectionItems(items);
   }, [items]);
+
+  const reorderMutation = useMutation({
+    mutationFn: async ({ id, displayOrder }: { id: number; displayOrder: number }) => {
+      const response = await apiRequest("PATCH", `/api/menu-items/${id}`, { displayOrder });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to update item order");
+      }
+      return response.json();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: "Failed to save menu item order. Please try again.",
+        variant: "destructive",
+      });
+      // Revert to original order on error
+      setSectionItems(items);
+    }
+  });
+
+  const handleReorder = (reorderedItems: MenuItem[]) => {
+    // Optimistically update the UI
+    setSectionItems(reorderedItems);
+
+    // Update the database in the background
+    Promise.all(
+      reorderedItems.map((item, index) => 
+        reorderMutation.mutateAsync({ id: item.id, displayOrder: index })
+      )
+    ).then(() => {
+      queryClient.invalidateQueries({ queryKey: ["/api/menu-items"] });
+    });
+  };
 
   return (
     <motion.div layout className="mb-8">
@@ -250,7 +286,7 @@ const MenuSection = ({ section, items, selectedItems, handleStatusChange, handle
             <Reorder.Group
               axis="y"
               values={sectionItems}
-              onReorder={setSectionItems}
+              onReorder={handleReorder}
               className="space-y-4"
             >
               {sectionItems.map((item) => (
@@ -314,6 +350,7 @@ function HomePage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const qrCodeRef = useRef<HTMLDivElement>(null);
   const csvFileInputRef = useRef<HTMLInputElement>(null);
+  const queryClient = useQueryClient();
 
   const form = useForm<InsertMenuItem>({
     resolver: zodResolver(insertMenuItemSchema),
@@ -721,27 +758,6 @@ function HomePage() {
     }, new Map<string, MenuItem[]>())
     : new Map<string, MenuItem[]>();
 
-  const reorderMutation = useMutation({
-    mutationFn: async ({ id, displayOrder }: { id: number; displayOrder: number }) => {
-      const response = await apiRequest("PATCH", `/api/menu-items/${id}`, { displayOrder });
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Failed to update item order");
-      }
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/menu-items", selectedRestaurant?.id] });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
   const handleUpdateLogin = async () => {
     try {
       await apiRequest('PATCH', '/api/user', {
@@ -899,8 +915,7 @@ function HomePage() {
 
                 {showLabels && (
                   <div className="absolute top-full mt-2 bg-white rounded-lg shadow-lg p-4 space-y-3 w-64 z-50">
-                    <Button
-                      variant="ghost"
+                    <Button                      variant="ghost"
                       className="w-full justify-start gap-3"
                       onClick={() => fileInputRef.current?.click()}
                     >
@@ -925,7 +940,7 @@ function HomePage() {
                     </Button>
                     <Button
                       variant="ghost"
-                      className="w-full justify-start gap-3"
+                      className="w-fulljustify-start gap-3 justify-start gap-3"
                       onClick={() => setShowQrCode(true)}
                     >
                       <QrCode className="h-5 w-5" />
