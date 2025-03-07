@@ -205,7 +205,7 @@ const MenuItemCard = ({ item, selectedItems, handleStatusChange, handleEdit, han
   </Card>
 );
 
-function MenuSection({ section, items, selectedItems, handleStatusChange, handleEdit, handleDelete, handleImageDrop, handleImageDelete, toggleItemSelection }: {
+const MenuSection = ({ section, items, selectedItems, handleStatusChange, handleEdit, handleDelete, handleImageDrop, handleImageDelete, toggleItemSelection }: {
   section: string;
   items: MenuItem[];
   selectedItems: number[];
@@ -215,8 +215,13 @@ function MenuSection({ section, items, selectedItems, handleStatusChange, handle
   handleImageDrop: (e: React.DragEvent<HTMLDivElement>, id?: number) => void;
   handleImageDelete: (id: number) => void;
   toggleItemSelection: (id: number) => void;
-}) {
+}) => {
   const [isExpanded, setIsExpanded] = useState(true);
+  const [sectionItems, setSectionItems] = useState(items);
+
+  useEffect(() => {
+    setSectionItems(items);
+  }, [items]);
 
   return (
     <motion.div layout className="mb-8">
@@ -244,11 +249,11 @@ function MenuSection({ section, items, selectedItems, handleStatusChange, handle
           >
             <Reorder.Group
               axis="y"
-              values={items}
-              onReorder={items}
+              values={sectionItems}
+              onReorder={setSectionItems}
               className="space-y-4"
             >
-              {items.map((item) => (
+              {sectionItems.map((item) => (
                 <Reorder.Item
                   key={item.id}
                   value={item}
@@ -287,7 +292,7 @@ function MenuSection({ section, items, selectedItems, handleStatusChange, handle
       </AnimatePresence>
     </motion.div>
   );
-}
+};
 
 function HomePage() {
   const { user, logoutMutation } = useAuth();
@@ -702,22 +707,21 @@ function HomePage() {
   };
 
 
-  const groupedByCourse = menuItems ? (
-    (menuItems.reduce((acc, item) => {
+  const groupedByCourse = menuItems ? 
+    menuItems.reduce((acc, item) => {
       if (!item.courseTags?.length) {
         const items = acc.get("Uncategorized") || [];
-        acc.set("Uncategorized", [...items, item]);
+        acc.set("Uncategorized", [...items, item].sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0)));
         return acc;
       }
 
       item.courseTags.forEach(tag => {
         const items = acc.get(tag) || [];
-        acc.set(tag, [...items, item]);
+        acc.set(tag, [...items, item].sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0)));
       });
       return acc;
-    }, new Map<string, MenuItem[]>())).set(...menuItems.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0)))
-  ) : new Map();
-
+    }, new Map<string, MenuItem[]>())
+    : new Map<string, MenuItem[]>();
 
   const reorderMutation = useMutation({
     mutationFn: async ({ id, displayOrder }: { id: number; displayOrder: number }) => {
