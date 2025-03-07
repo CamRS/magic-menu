@@ -1014,72 +1014,71 @@ function HomePage() {
                   <TooltipContent>Sign Out</TooltipContent>
                 </Tooltip>
               </TooltipProvider>
-
-              {selectedItems.length > 0 && (
-                <Button
-                  variant="destructive"
-                  onClick={handleDeleteSelected}
-                  className="rounded-full ml-4"
-                >
-                  Delete Selected ({selectedItems.length})
-                </Button>
-              )}
             </div>
           </div>
         </div>
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-6">
-        <div className="flex items-center justify-between mb-6">
-          <div className="relative flex-1 max-w-xl">
-            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-custom-gray-400" />
-            <Input
-              placeholder="Search menu items..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-12 h-12 rounded-3xl border-custom-gray-200 bg-white shadow-sm w-full"
-            />
-          </div>
-          <div className="flex gap-2">
-            <Button
-              variant={selectedStatus === null ? "default" : "outline"}
-              onClick={() => setSelectedStatus(null)}
-              className={`flex-1 ${selectedStatus === null ? 'bg-primary text-white' : 'bg-white text-gray-700'}`}
-            >
-              All Items ({statusCounts.all})
-            </Button>
-            <Button
-              variant={selectedStatus === "draft" ? "default" : "outline"}
-              onClick={() => setSelectedStatus("draft")}
-              className={`flex-1 ${selectedStatus === "draft" ? 'bg-primary text-white' : 'bg-white text-gray-700'}`}
-            >
-              Drafts ({statusCounts.draft})
-            </Button>
-            <Button
-              variant={selectedStatus === "live" ? "default" : "outline"}
-              onClick={() => setSelectedStatus("live")}
-              className={`flex-1 ${selectedStatus === "live" ? 'bg-primary text-white' : 'bg-white text-gray-700'}`}
-            >
-              Live ({statusCounts.live})
-            </Button>
-          </div>
-        </div>
+            <div className="flex items-center justify-between mb-6">
+              <div className="relative flex-1 max-w-xl">
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-custom-gray-400" />
+                <Input
+                  placeholder="Search menu items..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-12 h-12 rounded-3xl border-custom-gray-200 bg-white shadow-sm w-full"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant={selectedStatus === null ? "default" : "outline"}
+                  onClick={() => setSelectedStatus(null)}
+                  className={`${selectedStatus === null ? 'bg-primary text-white' : 'bg-white text-gray-700'}`}
+                >
+                  All Items ({statusCounts.all})
+                </Button>
+                <Button
+                  variant={selectedStatus === "draft" ? "default" : "outline"}
+                  onClick={() => setSelectedStatus("draft")}
+                  className={`${selectedStatus === "draft" ? 'bg-primary text-white' : 'bg-white text-gray-700'}`}
+                >
+                  Drafts ({statusCounts.draft})
+                </Button>
+                <Button
+                  variant={selectedStatus === "live" ? "default" : "outline"}
+                  onClick={() => setSelectedStatus("live")}
+                  className={`${selectedStatus === "live" ? 'bg-primary text-white' : 'bg-white text-gray-700'}`}
+                >
+                  Live ({statusCounts.live})
+                </Button>
+                {selectedItems.length > 0 && (
+                  <Button
+                    variant="destructive"
+                    onClick={handleDeleteSelected}
+                    className="ml-2"
+                  >
+                    Delete Selected ({selectedItems.length})
+                  </Button>
+                )}
+              </div>
+            </div>
 
-        {Array.from(groupedByCourse.entries()).map(([section, items]) => (
-          <MenuSection
-            key={section}
-            section={section}
-            items={items}
-            selectedItems={selectedItems}
-            handleStatusChange={handleStatusChange}
-            handleEdit={handleEdit}
-            handleDelete={handleDelete}
-            handleImageDrop={handleImageDrop}
-            handleImageDelete={handleImageDelete}
-            toggleItemSelection={toggleItemSelection}
-          />
-        ))}
-      </main>
+            {Array.from(groupedByCourse.entries()).map(([section, items]) => (
+              <MenuSection
+                key={section}
+                section={section}
+                items={items}
+                selectedItems={selectedItems}
+                handleStatusChange={handleStatusChange}
+                handleEdit={handleEdit}
+                handleDelete={handleDelete}
+                handleImageDrop={handleImageDrop}
+                handleImageDelete={handleImageDelete}
+                toggleItemSelection={toggleItemSelection}
+              />
+            ))}
+          </main>
 
       <Dialog
         open={isCreateMenuItemOpen}
