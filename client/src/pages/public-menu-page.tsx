@@ -239,9 +239,9 @@ export default function PublicMenuPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="fixed top-0 left-0 right-0 bg-white border-b z-40">
-        <div className="max-w-4xl mx-auto h-[60px] px-4">
+        <div className="max-w-4xl mx-auto h-[50px] px-4">
           <div className="flex items-center justify-center h-full">
-            <h1 className="text-xl font-semibold text-gray-900 text-center">
+            <h1 className="text-lg font-semibold text-gray-900 text-center">
               {restaurant?.name}
             </h1>
           </div>
@@ -337,7 +337,7 @@ export default function PublicMenuPage() {
                   className="h-12 px-6 rounded-full border-2 border-gray-200 hover:bg-gray-50 hover:border-gray-300 relative flex items-center gap-2"
                 >
                   <Filter className="h-5 w-5 text-gray-600" />
-                  <span className="font-medium">Filters</span>
+                  <span className="font-medium">Allergies</span>
                   {(selectedAllergens.length > 0 || selectedDietary.length > 0) && (
                     <span className="absolute top-0 right-0 -mt-1 -mr-1 h-3 w-3 bg-blue-500 rounded-full" />
                   )}
