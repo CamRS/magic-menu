@@ -950,7 +950,7 @@ function HomePage() {
                   <TooltipTrigger asChild>
                     <Button variant="outline" size="icon" className="rounded-full" onClick={() => logoutMutation.mutate()}>
                       <LogOut className="h-5 w-5" />
-                    </Button>
+                                      </Button>
                   </TooltipTrigger>
                   <TooltipContent>Sign Out</TooltipContent>
                 </Tooltip>
@@ -1027,11 +1027,13 @@ function HomePage() {
 
                 {expandedSections.has(section) && (
                   <Droppable droppableId={section}>
-                    {(provided) => (
+                    {(provided, snapshot) => (
                       <div
                         ref={provided.innerRef}
                         {...provided.droppableProps}
-                        className="space-y-4"
+                        className={`space-y-4 transition-colors duration-200 ${
+                          snapshot.isDraggingOver ? "bg-gray-50/50 rounded-lg p-4" : ""
+                        }`}
                       >
                         {items.map((item, index) => (
                           <Draggable
@@ -1039,11 +1041,18 @@ function HomePage() {
                             draggableId={`item-${item.id}`}
                             index={index}
                           >
-                            {(provided) => (
+                            {(provided, snapshot) => (
                               <div
                                 ref={provided.innerRef}
                                 {...provided.draggableProps}
                                 {...provided.dragHandleProps}
+                                className={`transition-all duration-200 ${
+                                  snapshot.isDragging ? "shadow-lg ring-2 ring-primary/20 rotate-1" : ""
+                                }`}
+                                style={{
+                                  ...provided.draggableProps.style,
+                                  transition: `transform 0.2s ease-in-out`,
+                                }}
                               >
                                 <MenuItemCard item={item} />
                               </div>
