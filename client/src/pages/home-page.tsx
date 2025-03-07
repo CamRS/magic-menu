@@ -147,18 +147,12 @@ function HomePage() {
   }, [restaurants, selectedRestaurant, form]);
 
   const { data: menuItems, isLoading: isLoadingMenuItems } = useQuery<MenuItem[]>({
-    queryKey: ["/api/menu-items", selectedRestaurant?.id, statusFilter],
+    queryKey: ["/api/menu-items", selectedRestaurant?.id],
     queryFn: async () => {
       if (!selectedRestaurant?.id) return [];
       console.log("Fetching menu items for restaurant:", selectedRestaurant.id);
-      const params = new URLSearchParams({
-        restaurantId: selectedRestaurant.id.toString(),
-      });
-      if (statusFilter) {
-        params.append("status", statusFilter);
-      }
 
-      const response = await apiRequest("GET", `/api/menu-items?${params}`);
+      const response = await apiRequest("GET", `/api/menu-items?restaurantId=${selectedRestaurant.id}`);
       if (!response.ok) {
         console.error("Failed to fetch menu items:", await response.text());
         throw new Error("Failed to fetch menu items");
@@ -168,11 +162,27 @@ function HomePage() {
       return items;
     },
     enabled: !!selectedRestaurant?.id && !!user?.id,
+    staleTime: 30000,
+    gcTime: 5 * 60 * 1000,
   });
 
   const groupedItems = useMemo(() => {
     if (!menuItems) return { draft: [], live: [] };
-    return menuItems.reduce(
+
+    const filtered = menuItems.filter(item => {
+      if (searchTerm && !item.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
+          !item.description.toLowerCase().includes(searchTerm.toLowerCase())) {
+        return false;
+      }
+
+      if (statusFilter && item.status !== statusFilter) {
+        return false;
+      }
+
+      return true;
+    });
+
+    return filtered.reduce(
       (acc, item) => {
         const status = item.status || "draft";
         acc[status as MenuItemStatus].push(item);
@@ -180,23 +190,6 @@ function HomePage() {
       },
       { draft: [], live: [] } as Record<MenuItemStatus, MenuItem[]>
     );
-  }, [menuItems]);
-
-  const filteredItems = useMemo(() => {
-    let items = menuItems || [];
-
-    if (searchTerm) {
-      items = items.filter((item) =>
-        item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.description.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    if (statusFilter) {
-      items = items.filter((item) => item.status === statusFilter);
-    }
-
-    return items;
   }, [menuItems, searchTerm, statusFilter]);
 
   const updateStatusMutation = useMutation({
@@ -612,12 +605,12 @@ function HomePage() {
   );
 
   const groupedByCourse = useMemo(() => {
-    if (!filteredItems?.length) return new Map();
+    if (!groupedItems?.draft?.length && !groupedItems?.live?.length) return new Map();
 
     const grouped = new Map<string, MenuItem[]>();
 
     // Group all items that don't have course tags under "Uncategorized"
-    filteredItems.forEach(item => {
+    [...groupedItems.draft, ...groupedItems.live].forEach(item => {
       if (!item.courseTags?.length) {
         const items = grouped.get("Uncategorized") || [];
         grouped.set("Uncategorized", [...items, item]);
@@ -632,7 +625,7 @@ function HomePage() {
     });
 
     return grouped;
-  }, [filteredItems]);
+  }, [groupedItems]);
 
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(Array.from(groupedByCourse.keys())));
 
@@ -766,7 +759,7 @@ function HomePage() {
             className={`filter-tab ${statusFilter === null ? "filter-tab-active" : "filter-tab-inactive"}`}
             onClick={() => setStatusFilter(null)}
           >
-            All Items ({filteredItems.length})
+            All Items ({groupedItems.draft.length + groupedItems.live.length})
           </Button>
           <Button
             variant={statusFilter === "draft" ? "default" : "outline"}
@@ -826,7 +819,6 @@ function HomePage() {
             </div>
           ))}
         </div>
-
 
 
       </main>
@@ -924,8 +916,7 @@ function HomePage() {
                   onClick={() => {
                     const value = newTag.trim();
                     if (value && !form.getValues("courseTags").includes(value)) {
-                      form.setValue("courseTags", [...form.getValues("courseTags"), value]);
-                      setNewTag("");
+                      form.setValue("courseTags", [...form.getValues("courseTags"), value]);                      setNewTag("");
                     }
                   }}
                 >
