@@ -687,7 +687,7 @@ function HomePage() {
             <div className="flex-1 flex items-center justify-center">
               <div className="relative">
                 {/* Condensed view - horizontal icons */}
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-6">
                   <ImageIcon className="h-5 w-5" />
                   <Download className="h-5 w-5" />
                   <Upload className="h-5 w-5" />
@@ -918,7 +918,7 @@ function HomePage() {
                 {form.watch("courseTags").map((tag, index) => (
                   <Badge key={index} variant="secondary" className="flex items-center gap-1">
                     {tag}
-                                        <X
+                    <X
                       className="h-3 w-3 cursor-pointer"
                       onClick={() => {
                         const newTags = [...form.getValues("courseTags")];
