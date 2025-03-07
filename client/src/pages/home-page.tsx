@@ -530,31 +530,44 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex items-center justify-between h-16">
             {/* Left Section - Restaurant Selector */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="rounded-pill">
-                  <Store className="mr-2 h-4 w-4" />
-                  {selectedRestaurant?.name || "Select Restaurant"}
-                  <ChevronDown className="ml-2 h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                {restaurants?.map((restaurant) => (
-                  <DropdownMenuItem key={restaurant.id} onClick={() => setSelectedRestaurant(restaurant)}>
-                    {restaurant.name}
+            <div className="flex items-center gap-4">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="rounded-pill">
+                    <Store className="mr-2 h-4 w-4" />
+                    {selectedRestaurant?.name || "Select Restaurant"}
+                    <ChevronDown className="ml-2 h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  {restaurants?.map((restaurant) => (
+                    <DropdownMenuItem key={restaurant.id} onClick={() => setSelectedRestaurant(restaurant)}>
+                      {restaurant.name}
+                    </DropdownMenuItem>
+                  ))}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => setCreateRestaurantOpen(true)}>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Add New Restaurant
                   </DropdownMenuItem>
-                ))}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => setCreateRestaurantOpen(true)}>
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Add New Restaurant
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                </DropdownMenuContent>
+              </DropdownMenu>
 
-            {/* Center Icons with Add Item */}
-            <div className="flex items-center">
-              <div className="flex items-center space-x-6">
+              <Button
+                className="bg-primary text-white hover:bg-primary/90"
+                onClick={() => {
+                  setCreateMenuItemOpen(true);
+                  form.setValue("restaurantId", selectedRestaurant?.id || 0);
+                }}
+              >
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Add Item
+              </Button>
+            </div>
+
+            {/* Center Icons */}
+            <div className="flex-1 flex items-center justify-center">
+              <div className="flex items-center gap-6">
                 <TooltipProvider>
                   {[
                     { icon: Share2, label: "Share Menu", onClick: () => copyMenuUrl(selectedRestaurant?.id || 0) },
@@ -562,15 +575,11 @@ export default function HomePage() {
                     { icon: Upload, label: "Import CSV", onClick: () => fileInputRef.current?.click() },
                     { icon: Filter, label: "Filter Menu" },
                     { icon: QrCode, label: "Show QR Code", onClick: () => setShowQrCode(true) },
-                    { icon: PlusCircle, label: "Add Item", onClick: () => {
-                      setCreateMenuItemOpen(true);
-                      form.setValue("restaurantId", selectedRestaurant?.id || 0);
-                    }},
                   ].map(({ icon: Icon, label, onClick }) => (
                     <Tooltip key={label}>
                       <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon" className="rounded-full" onClick={onClick}>
-                          <Icon className="h-5 w-5" />
+                        <Button variant="ghost" size="icon" className="rounded-full flex items-center" onClick={onClick}>
+                          <Icon className="h-5 w-5 flex-shrink-0" />
                           {showLabels && <span className="ml-2 whitespace-nowrap">{label}</span>}
                         </Button>
                       </TooltipTrigger>
@@ -578,24 +587,17 @@ export default function HomePage() {
                     </Tooltip>
                   ))}
                 </TooltipProvider>
-
-                {/* Toggle Labels Button - Moved to end of icon cluster */}
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="rounded-full"
-                        onClick={() => setShowLabels(!showLabels)}
-                      >
-                        <ChevronRight className={`h-5 w-5 transition-transform ${showLabels ? "rotate-180" : ""}`} />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Toggle Labels</TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
               </div>
+
+              {/* Toggle Labels Button */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="rounded-full ml-4"
+                onClick={() => setShowLabels(!showLabels)}
+              >
+                <ChevronRight className={`h-5 w-5 transition-transform ${showLabels ? "rotate-180" : ""}`} />
+              </Button>
             </div>
 
             {/* Right Icons */}
@@ -895,7 +897,7 @@ export default function HomePage() {
             <div>
               <Label>Background Image</Label>
               <div
-                className="mt-2 border-2 border-dashed border-gray-300 rounded-lg p-6 cursor-pointer hover:border-primary transition-colors"
+                className="mt-2 border2 border-dashed border-gray-300 rounded-lg p-6 cursor-pointer hover:border-primary transition-colors"
                 onDragOver={(e) => {                  e.preventDefault();
                   e.stopPropagation();
                 }}
