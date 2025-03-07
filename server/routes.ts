@@ -456,6 +456,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "CSV file is empty" });
       }
 
+      const results = {
+        created: 0,
+        updated: 0,
+        failed: 0,
+        errors: [] as string[]
+      };
 
       // Process each row (skip header)
       for (let i = 1; i < rows.length; i++) {
@@ -490,6 +496,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
               gluten: false,
             },
             image: '',
+            status: 'draft' as const,
+            dietary_preferences: {
+              vegan: false,
+              vegetarian: false,
+              kosher: false,
+              halal: false,
+            }
           };
 
           // Process allergens
@@ -502,14 +515,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
             });
           }
 
-          await storage.createMenuItem(menuItem);
+          // Check if item with same name exists
+          const existingMenuItems = await storage.getMenuItems(restaurantId);
+          const existingItem = existingMenuItems.find(item => 
+            item.name.toLowerCase() === menuItem.name.toLowerCase()
+          );
+
+          if (existingItem) {
+            // Update existing item
+            await storage.updateMenuItem(existingItem.id, {
+              ...menuItem,
+              id: existingItem.id,
+              status: existingItem.status, // Preserve existing status
+              image: existingItem.image, // Preserve existing image
+              displayOrder: existingItem.displayOrder // Preserve display order
+            });
+            results.updated++;
+          } else {
+            // Create new item
+            await storage.createMenuItem(menuItem);
+            results.created++;
+          }
         } catch (error) {
           console.error(`Error processing row ${i}:`, error);
-          throw error;
+          results.failed++;
+          results.errors.push(`Row ${i}: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
       }
 
-      res.json({ message: "Menu items imported successfully" });
+      res.json({
+        message: "Menu items imported successfully",
+        results: {
+          created: results.created,
+          updated: results.updated,
+          failed: results.failed,
+          errors: results.errors
+        }
+      });
     } catch (error) {
       console.error('Error importing menu:', error);
       res.status(500).json({ message: "Internal server error" });
