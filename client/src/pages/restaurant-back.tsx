@@ -260,18 +260,17 @@ const MenuSection = ({ section, items, selectedItems, handleStatusChange, handle
                   dragListener
                   className="cursor-move touch-none"
                   whileDrag={{
-                    scale: 1.1,
+                    scale: 1.02,
                     boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)",
-                    zIndex: 50,
+                    zIndex: 999,
                   }}
                   dragTransition={{
                     bounceStiffness: 300,
                     bounceDamping: 20
                   }}
                   transition={{
-                    type: "spring",
-                    stiffness: 200,
-                    damping: 20
+                    duration: 0.2,
+                    ease: [0.43, 0.13, 0.23, 0.96]
                   }}
                 >
                   <MenuItemCard
