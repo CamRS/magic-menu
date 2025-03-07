@@ -641,23 +641,25 @@ function HomePage() {
     if (!file) return;
 
     try {
-      const formData = new FormData();
-      formData.append("file", file);
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        const csvData = event.target?.result;
 
-      const response = await fetch(`/api/restaurants/${selectedRestaurant.id}/menu/import`, {
-        method: "POST",
-        body: formData,
-      });
+        const response = await apiRequest("POST", `/api/restaurants/${selectedRestaurant.id}/menu/import`, {
+          csvData
+        });
 
-      if (!response.ok) {
-        throw new Error("Failed to import menu items");
-      }
+        if (!response.ok) {
+          throw new Error("Failed to import menu items");
+        }
 
-      queryClient.invalidateQueries({ queryKey: ["/api/menu-items", selectedRestaurant.id] });
-      toast({
-        title: "Success",
-        description: "Menu items imported successfully",
-      });
+        queryClient.invalidateQueries({ queryKey: ["/api/menu-items", selectedRestaurant.id] });
+        toast({
+          title: "Success",
+          description: "Menu items imported successfully",
+        });
+      };
+      reader.readAsText(file);
     } catch (error) {
       toast({
         title: "Error",
