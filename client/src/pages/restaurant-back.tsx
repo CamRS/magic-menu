@@ -1018,41 +1018,35 @@ function HomePage() {
 
         {/* Filter Tabs and Delete Button */}
         <div className="flex items-center gap-4 mb-6">
-          <div className="flex items-center gap-2">
-            <Button
-              variant={!statusFilter ? "default" : "ghost"}
-              className="rounded-full"
-              onClick={() => setStatusFilter(null)}
-            >
-              All Items ({(groupedItems.draft?.length || 0) + (groupedItems.live?.length || 0)})
-            </Button>
-            <Button
-              variant={statusFilter === "draft" ? "default" : "ghost"}
-              className="rounded-full"
-              onClick={() => setStatusFilter("draft")}
-            >
-              Drafts ({groupedItems.draft?.length || 0})
-            </Button>
-            <Button
-              variant={statusFilter === "live" ? "default" : "ghost"}
-              className="rounded-full"
-              onClick={() => setStatusFilter("live")}
-            >
-              Live ({groupedItems.live?.length || 0})
-            </Button>
-          </div>
-
-          {selectedItems.length > 0 && (
-            <Button
-              variant="destructive"
-              size="sm"
-              className="rounded-full"
-              onClick={handleDeleteSelected}
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Delete Selected ({selectedItems.length})
-            </Button>
-          )}
+          <Button
+            variant={!statusFilter ? "default" : "ghost"}
+            className="rounded-full"
+            onClick={() => setStatusFilter(null)}
+          >
+            All Items ({(groupedItems.draft?.length || 0) + (groupedItems.live?.length || 0)})
+          </Button>
+          <Button
+            variant={statusFilter === "draft" ? "default" : "secondary"}
+            className={`rounded-full ${
+              statusFilter === "draft"
+                ? "bg-primary text-white hover:bg-primary/90"
+                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+            }`}
+            onClick={() => setStatusFilter(statusFilter === "draft" ? null : "draft")}
+          >
+            Drafts ({groupedItems.draft.length})
+          </Button>
+          <Button
+            variant={statusFilter === "live" ? "default" : "secondary"}
+            className={`rounded-full ${
+              statusFilter === "live"
+                ? "bg-green-600 text-white hover:bg-green-700"
+                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+            }`}
+            onClick={() => setStatusFilter(statusFilter === "live" ? null : "live")}
+          >
+            Live ({groupedItems.live.length})
+          </Button>
         </div>
 
         {/* Menu Items Grid */}
