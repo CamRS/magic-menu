@@ -411,9 +411,8 @@ export default function HomePage() {
   const handleImageDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
-
     const file = e.dataTransfer.files[0];
-    if (file && file.type.startsWith("image/")) {
+    if (file && file.type.startsWith('image/')) {
       const reader = new FileReader();
       reader.onloadend = () => {
         form.setValue("image", reader.result as string);
@@ -468,6 +467,9 @@ export default function HomePage() {
                   </p>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
+                  <span className="text-lg font-medium text-custom-gray-500 mr-4">
+                    {item.price ? `$${parseFloat(item.price).toFixed(2)}` : ""}
+                  </span>
                   <Badge variant={item.status === "live" ? "default" : "secondary"} className="rounded-full px-3 py-1">
                     {item.status}
                   </Badge>
@@ -494,23 +496,18 @@ export default function HomePage() {
                 </div>
               </div>
 
-              <div className="flex justify-between items-center mt-4">
-                <div className="flex flex-wrap gap-2">
-                  {Object.entries(item.allergens)
-                    .filter(([_, value]) => value)
-                    .map(([key]) => (
-                      <Badge
-                        key={key}
-                        variant="outline"
-                        className="rounded-full bg-custom-gray-100 text-custom-gray-400 border-none px-3"
-                      >
-                        Contains {key}
-                      </Badge>
-                    ))}
-                </div>
-                <span className="text-lg font-medium text-custom-gray-500 absolute top-4 right-4">
-                  {item.price ? `$${parseFloat(item.price).toFixed(2)}` : ""}
-                </span>
+              <div className="flex flex-wrap gap-2 mt-4">
+                {Object.entries(item.allergens)
+                  .filter(([_, value]) => value)
+                  .map(([key]) => (
+                    <Badge
+                      key={key}
+                      variant="outline"
+                      className="rounded-full bg-custom-gray-100 text-custom-gray-400 border-none px-3"
+                    >
+                      Contains {key}
+                    </Badge>
+                  ))}
               </div>
             </div>
           </div>
@@ -790,19 +787,7 @@ export default function HomePage() {
                   e.stopPropagation();
                   e.currentTarget.classList.remove('border-primary');
                 }}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  e.currentTarget.classList.remove('border-primary');
-                  const file = e.dataTransfer.files[0];
-                  if (file && file.type.startsWith("image/")) {
-                    const reader = new FileReader();
-                    reader.onloadend = () => {
-                      form.setValue("image", reader.result as string);
-                    };
-                    reader.readAsDataURL(file);
-                  }
-                }}
+                onDrop={handleImageDrop}
                 onClick={() => document.getElementById('image-upload')?.click()}
               >
                 <input
