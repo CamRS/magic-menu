@@ -26,7 +26,7 @@ const allergensList: AllergenType[] = ['milk', 'eggs', 'peanuts', 'nuts', 'shell
 
 const dietaryPreferences = ['Vegetarian', 'Vegan'] as const;
 
-const MenuCard = ({ item }: { item: ConsumerMenuItem }) => {
+const MenuCard = ({ item }: { item: MenuItem }) => {
   const activeAllergens = Object.entries(item.allergens)
     .filter(([_, value]) => value)
     .map(([key]) => key);
@@ -87,7 +87,7 @@ const MenuCard = ({ item }: { item: ConsumerMenuItem }) => {
                 // Fallback to gray placeholder if image fails to load
                 e.currentTarget.onerror = null; // Prevent infinite loop
                 e.currentTarget.style.display = 'none';
-                e.currentTarget.parentElement.classList.add('bg-gray-200');
+                e.currentTarget.parentElement?.classList.add('bg-gray-200');
               }}
             />
           </div>
@@ -309,7 +309,7 @@ export default function PublicMenuPage() {
                         selectedAllergens.includes(allergen)
                           ? "bg-blue-50 text-blue-700 border-blue-200"
                           : ""
-                      }`}
+                        }`}
                       onClick={() => {
                         setSelectedAllergens((prev) =>
                           prev.includes(allergen)
@@ -335,7 +335,7 @@ export default function PublicMenuPage() {
                         selectedDietary.includes(pref)
                           ? "bg-green-50 text-green-700 border-green-200"
                           : ""
-                      }`}
+                        }`}
                       onClick={() => {
                         setSelectedDietary((prev) =>
                           prev.includes(pref)
@@ -365,75 +365,7 @@ export default function PublicMenuPage() {
             <div className="overflow-hidden -mx-4 px-4" ref={emblaRef}>
               <div className="flex items-center -mx-2">
                 {filteredItems.map((item) => (
-                  <Card key={item.id} className="flex-[0_0_90%] sm:flex-[0_0_45%] lg:flex-[0_0_30%] mx-2 bg-white rounded-3xl shadow-sm border border-gray-100">
-                    <CardContent className="p-8 flex flex-col gap-5 justify-between min-h-[400px]">
-                      <div className="flex items-center gap-2">
-                        {item.courseTags?.[0] && (
-                          <div className="text-gray-600 text-sm">
-                            {item.courseTags[0]}
-                          </div>
-                        )}
-                      </div>
-
-                      <div>
-                        <h3 className="text-2xl leading-tight font-medium text-gray-900">
-                          {item.name}
-                        </h3>
-                      </div>
-
-                      {Object.entries(item.allergens)
-                        .filter(([_, value]) => value)
-                        .length > 0 && (
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-blue-600">Contains</span>
-                            <div className="flex flex-wrap gap-2">
-                              {Object.entries(item.allergens)
-                                .filter(([_, value]) => value)
-                                .map(([allergen]) => (
-                                  <Badge
-                                    key={allergen}
-                                    variant="secondary"
-                                    className="bg-[#4169E1]/10 text-[#4169E1] border-none rounded-full capitalize px-3 py-0.5 text-sm"
-                                  >
-                                    {allergen}
-                                  </Badge>
-                                ))}
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {item.image && (
-                        <div className="w-full h-[200px] rounded-lg">
-                          <img
-                            src={item.image}
-                            alt={item.name}
-                            className="w-full h-full object-cover rounded-lg"
-                            onError={(e) => {
-                              e.currentTarget.onerror = null;
-                              e.currentTarget.style.display = 'none';
-                              if (e.currentTarget.parentElement) {
-                                e.currentTarget.parentElement.classList.add('bg-gray-200');
-                              }
-                            }}
-                          />
-                        </div>
-                      )}
-
-                      {item.description && (
-                        <p className="text-gray-600 text-md leading-relaxed">
-                          {item.description}
-                        </p>
-                      )}
-
-                      <div className="mt-auto">
-                        <span className="text-lg font-normal text-gray-600">
-                          {item.price && parseFloat(item.price) > 0 ? `$${parseFloat(item.price).toFixed(2)}` : ''}
-                        </span>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <MenuCard key={item.id} item={item} />
                 ))}
               </div>
             </div>
