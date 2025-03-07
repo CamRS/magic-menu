@@ -857,12 +857,169 @@ function HomePage() {
               </Button>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex-1 flex items-center justify-center">
+              <div className="relative">
+                <div className="flex items-center gap-6">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="rounded-full"
+                          onClick={() => fileInputRef.current?.click()}
+                        >
+                          <ImageIcon className="h-5 w-5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Upload menu image</TooltipContent>
+                    </Tooltip>
+
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="rounded-full"
+                          onClick={() => csvFileInputRef.current?.click()}
+                        >
+                          <Download className="h-5 w-5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Import menu CSV</TooltipContent>
+                    </Tooltip>
+
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="rounded-full"
+                          onClick={handleExportCSV}
+                        >
+                          <Upload className="h-5 w-5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Export menu CSV</TooltipContent>
+                    </Tooltip>
+
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="rounded-full"
+                          onClick={() => setShowQrCode(true)}
+                        >
+                          <QrCode className="h-5 w-5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Menu QR code</TooltipContent>
+                    </Tooltip>
+
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="rounded-full"
+                          onClick={() => copyMenuUrl(selectedRestaurant?.id || 0)}
+                        >
+                          <Globe className="h-5 w-5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Copy menu URL</TooltipContent>
+                    </Tooltip>
+
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="rounded-full"
+                          onClick={() => setShowLabels(!showLabels)}
+                        >
+                          <ChevronDown className={`h-5 w-5 transition-transform ${showLabels ? "rotate-180" : ""}`} />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Toggle menu</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+
+                {showLabels && (
+                  <div className="absolute top-full mt-2 bg-white rounded-lg shadow-lg p-4 space-y-3 w-64 z-50">
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-start gap-3"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <ImageIcon className="h-5 w-5" />
+                      <span>Upload menu image</span>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-start gap-3"
+                      onClick={() => csvFileInputRef.current?.click()}
+                    >
+                      <Download className="h-5 w-5" />
+                      <span>Import menu CSV</span>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-start gap-3"
+                      onClick={handleExportCSV}
+                    >
+                      <Upload className="h-5 w-5" />
+                      <span>Export menu CSV</span>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-start gap-3"
+                      onClick={() => setShowQrCode(true)}
+                    >
+                      <QrCode className="h-5 w-5" />
+                      <span>Menu QR code</span>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-start gap-3"
+                      onClick={() => copyMenuUrl(selectedRestaurant?.id || 0)}
+                    >
+                      <Globe className="h-5 w-5" />
+                      <span>Copy menu URL</span>
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="icon" className="rounded-full" onClick={() => setSettingsOpen(true)}>
+                      <Settings className="h-5 w-5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Settings</TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="outline" size="icon" className="rounded-full" onClick={() => logoutMutation.mutate()}>
+                      <LogOut className="h5 w-5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Sign Out</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
               {selectedItems.length > 0 && (
                 <Button
                   variant="destructive"
                   onClick={handleDeleteSelected}
-                  className="rounded-full"
+                  className="rounded-full ml-4"
                 >
                   Delete Selected ({selectedItems.length})
                 </Button>
