@@ -88,9 +88,19 @@ export default function AuthPage() {
       <div className="flex-1 flex justify-center items-center p-8">
         <div className="w-full max-w-md">
           <Tabs defaultValue="login" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="login">Login</TabsTrigger>
-              <TabsTrigger value="register">Register</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-2 mb-4">
+              <TabsTrigger 
+                value="login" 
+                className="data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:font-bold"
+              >
+                Login
+              </TabsTrigger>
+              <TabsTrigger 
+                value="register"
+                className="data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:font-bold"
+              >
+                Register
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="login">
@@ -119,7 +129,7 @@ export default function AuthPage() {
                           </p>
                         )}
                       </div>
-                      <Button type="submit" className="w-full" disabled={loginMutation.isPending}>
+                      <Button type="submit" className="w-full font-bold" disabled={loginMutation.isPending}>
                         {loginMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         Login
                       </Button>
@@ -213,9 +223,9 @@ export default function AuthPage() {
                           )}
                         </>
                       )}
-                      <Button type="submit" className="w-full" disabled={registerMutation.isPending}>
+                      <Button type="submit" className="w-full font-bold" disabled={registerMutation.isPending}>
                         {registerMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        {registrationStep === 1 ? "Next" : "Create Account"}
+                        {registrationStep === 1 ? "Get started" : "Create Account"}
                       </Button>
                       {registrationStep === 2 && (
                         <Button

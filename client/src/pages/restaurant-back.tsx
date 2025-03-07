@@ -166,7 +166,7 @@ const MenuItemCard = ({ item, selectedItems, handleStatusChange, handleEdit, han
               <TooltipProvider>
                 {[
                   {
-                    icon: item.status === "live" ? EyeOff : Eye,
+                    icon: item.status === "live" ? Eye : EyeOff,
                     label: item.status === "live" ? "Make Draft" : "Make Live",
                     onClick: () => handleStatusChange(item),
                   },
