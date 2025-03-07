@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -350,6 +350,7 @@ function HomePage() {
   const qrCodeRef = useRef<HTMLDivElement>(null);
   const csvFileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
+  const [selectedStatus, setSelectedStatus] = useState<MenuItemStatus | null>(null);
 
   const form = useForm<InsertMenuItem>({
     resolver: zodResolver(insertMenuItemSchema),
@@ -415,22 +416,50 @@ function HomePage() {
     gcTime: 5 * 60 * 1000,
   });
 
-  const groupedItems = menuItems?.reduce(
-    (acc, item) => {
-      const status = item.status || "draft";
+  const filteredItems = useMemo(() => {
+    if (!menuItems) return [];
+
+    return menuItems.filter(item => {
+      if (selectedStatus !== null && item.status !== selectedStatus) {
+        return false;
+      }
+
       if (searchTerm && !item.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
-        !item.description.toLowerCase().includes(searchTerm.toLowerCase())) {
+          !item.description?.toLowerCase().includes(searchTerm.toLowerCase())) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [menuItems, selectedStatus, searchTerm]);
+
+  const groupedByCourse = useMemo(() => {
+    if (!filteredItems) return new Map<string, MenuItem[]>();
+
+    return filteredItems.reduce((acc, item) => {
+      if (!item.courseTags?.length) {
+        const items = acc.get("Uncategorized") || [];
+        acc.set("Uncategorized", [...items, item].sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0)));
         return acc;
       }
 
-      if (statusFilter && item.status !== statusFilter) {
-        return acc;
-      }
-      acc[status as MenuItemStatus].push(item);
+      item.courseTags.forEach(tag => {
+        const items = acc.get(tag) || [];
+        acc.set(tag, [...items, item].sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0)));
+      });
       return acc;
-    },
-    { draft: [], live: [] } as Record<MenuItemStatus, MenuItem[]>
-  ) || { draft: [], live: [] };
+    }, new Map<string, MenuItem[]>());
+  }, [filteredItems]);
+
+  const statusCounts = useMemo(() => {
+    if (!menuItems) return { all: 0, draft: 0, live: 0 };
+
+    return menuItems.reduce((acc, item) => {
+      acc.all++;
+      acc[item.status]++;
+      return acc;
+    }, { all: 0, draft: 0, live: 0 });
+  }, [menuItems]);
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: number; status: MenuItemStatus }) => {
@@ -743,22 +772,6 @@ function HomePage() {
   };
 
 
-  const groupedByCourse = menuItems ?
-    menuItems.reduce((acc, item) => {
-      if (!item.courseTags?.length) {
-        const items = acc.get("Uncategorized") || [];
-        acc.set("Uncategorized", [...items, item].sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0)));
-        return acc;
-      }
-
-      item.courseTags.forEach(tag => {
-        const items = acc.get(tag) || [];
-        acc.set(tag, [...items, item].sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0)));
-      });
-      return acc;
-    }, new Map<string, MenuItem[]>())
-    : new Map<string, MenuItem[]>();
-
   const handleUpdateLogin = async () => {
     try {
       await apiRequest('PATCH', '/api/user', {
@@ -841,6 +854,30 @@ function HomePage() {
               >
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Add Item
+              </Button>
+            </div>
+
+            <div className="flex gap-2 ml-4">
+              <Button
+                variant={selectedStatus === null ? "default" : "outline"}
+                onClick={() => setSelectedStatus(null)}
+                className={`flex-1 ${selectedStatus === null ? 'bg-primary text-white' : 'bg-white text-gray-700'}`}
+              >
+                All Items ({statusCounts.all})
+              </Button>
+              <Button
+                variant={selectedStatus === "draft" ? "default" : "outline"}
+                onClick={() => setSelectedStatus("draft")}
+                className={`flex-1 ${selectedStatus === "draft" ? 'bg-primary text-white' : 'bg-white text-gray-700'}`}
+              >
+                Drafts ({statusCounts.draft})
+              </Button>
+              <Button
+                variant={selectedStatus === "live" ? "default" : "outline"}
+                onClick={() => setSelectedStatus("live")}
+                className={`flex-1 ${selectedStatus === "live" ? 'bg-primary text-white' : 'bg-white text-gray-700'}`}
+              >
+                Live ({statusCounts.live})
               </Button>
             </div>
 
@@ -1005,58 +1042,21 @@ function HomePage() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-6">
-        <div className="relative mb-6">
-          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-custom-gray-400" />
-          <Input
-            placeholder="Search menu items..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-12 h-12 rounded-3xl border-custom-gray-200 bg-white shadow-sm w-full"
+      <main className="container mx-auto px-4 py-8">
+        {Array.from(groupedByCourse.entries()).map(([section, items]) => (
+          <MenuSection
+            key={section}
+            section={section}
+            items={items}
+            selectedItems={selectedItems}
+            handleStatusChange={handleStatusChange}
+            handleEdit={handleEdit}
+            handleDelete={handleDelete}
+            handleImageDrop={handleImageDrop}
+            handleImageDelete={handleImageDelete}
+            toggleItemSelection={toggleItemSelection}
           />
-        </div>
-
-        {/* Filter Tabs and Delete Button */}
-        <div className="flex items-center gap-4 mb-6">
-          <Button
-            variant={!statusFilter ? "default" : "ghost"}
-            className="rounded-full"
-            onClick={() => setStatusFilter(null)}
-          >
-            All Items ({(groupedItems.draft?.length || 0) + (groupedItems.live?.length || 0)})
-          </Button>
-          <Button
-            variant={statusFilter === "draft" ? "default" : "secondary"}
-            className={`rounded-full ${
-              statusFilter === "draft"
-                ? "bg-primary text-white hover:bg-primary/90"
-                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-            }`}
-            onClick={() => setStatusFilter(statusFilter === "draft" ? null : "draft")}
-          >
-            Drafts ({groupedItems.draft.length})
-          </Button>
-          <Button
-            variant={statusFilter === "live" ? "default" : "secondary"}
-            className={`rounded-full ${
-              statusFilter === "live"
-                ? "bg-green-600 text-white hover:bg-green-700"
-                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-            }`}
-            onClick={() => setStatusFilter(statusFilter === "live" ? null : "live")}
-          >
-            Live ({groupedItems.live.length})
-          </Button>
-        </div>
-
-        {/* Menu Items Grid */}
-        <motion.div layout className="space-y-6">
-          {Array.from(groupedByCourse.entries()).map(([section, items]) => (
-            <MenuSection key={section} section={section} items={items} selectedItems={selectedItems} handleStatusChange={handleStatusChange} handleEdit={handleEdit} handleDelete={handleDelete} handleImageDrop={handleImageDrop} handleImageDelete={handleImageDelete} toggleItemSelection={toggleItemSelection} />
-          ))}
-        </motion.div>
-
-
+        ))}
       </main>
 
       <Dialog
