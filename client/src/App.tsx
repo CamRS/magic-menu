@@ -6,7 +6,6 @@ import { AuthProvider } from "./hooks/use-auth";
 import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
 import HomePage from "@/pages/home-page";
-import MenuPage from "@/pages/menu-page";
 import PublicMenuPage from "@/pages/public-menu-page";
 import ConsumerHomePage from "@/pages/consumer-home-page";
 import { ProtectedRoute } from "./lib/protected-route";
@@ -28,11 +27,6 @@ function Router() {
         path="/consumer" 
         component={ConsumerHomePage}
         requiredUserType="consumer"
-      />
-      <ProtectedRoute 
-        path="/menu" 
-        component={MenuPage}
-        requiredUserType="restaurant"
       />
 
       {/* 404 route */}
