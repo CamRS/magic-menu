@@ -685,36 +685,40 @@ function HomePage() {
             </div>
 
             <div className="flex-1 flex items-center justify-center">
-              <div className="flex items-center gap-6">
-                <TooltipProvider>
-                  {[
-                    { icon: Share2, label: "Share Menu", onClick: () => copyMenuUrl(selectedRestaurant?.id || 0) },
-                    { icon: Download, label: "Export CSV", onClick: handleExportCSV },
-                    { icon: Upload, label: "Import CSV", onClick: () => csvFileInputRef.current?.click() },
-                    { icon: Filter, label: "Filter Menu" },
-                    { icon: QrCode, label: "Show QR Code", onClick: () => setShowQrCode(true) },
-                  ].map(({ icon: Icon, label, onClick }) => (
-                    <Tooltip key={label}>
-                      <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon" className="rounded-full flex items-center" onClick={onClick}>
-                          <Icon className="h-5 w-5 flex-shrink-0" />
-                          {showLabels && <span className="ml-2 whitespace-nowrap">{label}</span>}
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>{label}</TooltipContent>
-                    </Tooltip>
-                  ))}
-                </TooltipProvider>
-              </div>
+              <div className="flex flex-col">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="rounded-full mb-2"
+                  onClick={() => setShowLabels(!showLabels)}
+                >
+                  <ChevronDown className={`h-5 w-5 transition-transform ${showLabels ? "rotate-180" : ""}`} />
+                </Button>
 
-              <Button
-                variant="ghost"
-                size="icon"
-                className="rounded-full ml-4"
-                onClick={() => setShowLabels(!showLabels)}
-              >
-                <ChevronRight className={`h-5 w-5 transition-transform ${showLabels ? "rotate-180" : ""}`} />
-              </Button>
+                {showLabels && (
+                  <div className="bg-white rounded-lg shadow-lg p-4 space-y-3">
+                    <TooltipProvider>
+                      {[
+                        { icon: ImageIcon, label: "Upload menu image", onClick: () => fileInputRef.current?.click() },
+                        { icon: Download, label: "Import menu CSV", onClick: () => csvFileInputRef.current?.click() },
+                        { icon: Upload, label: "Export menu CSV", onClick: handleExportCSV },
+                        { icon: QrCode, label: "Menu QR code", onClick: () => setShowQrCode(true) },
+                        { icon: Globe, label: "Copy menu URL", onClick: () => copyMenuUrl(selectedRestaurant?.id || 0) },
+                      ].map(({ icon: Icon, label, onClick }) => (
+                        <Button
+                          key={label}
+                          variant="ghost"
+                          className="w-full justify-start gap-3"
+                          onClick={onClick}
+                        >
+                          <Icon className="h-5 w-5" />
+                          <span>{label}</span>
+                        </Button>
+                      ))}
+                    </TooltipProvider>
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="flex items-center space-x-2">
