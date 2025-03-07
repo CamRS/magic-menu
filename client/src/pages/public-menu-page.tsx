@@ -3,7 +3,7 @@ import { useRoute } from "wouter";
 import { type MenuItem, type Restaurant } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { ChevronDown, Loader2, Search, ChevronUp, ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronDown, Loader2, Search, ChevronUp } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import useEmblaCarousel from 'embla-carousel-react';
 import {
@@ -19,12 +19,29 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect } from "react";
 
 type AllergenType = keyof MenuItem['allergens'];
 const allergensList: AllergenType[] = ['milk', 'eggs', 'peanuts', 'nuts', 'shellfish', 'fish', 'soy', 'gluten'];
 
 const dietaryPreferences = ['Vegetarian', 'Vegan'] as const;
+
+const ITEMS_PER_PAGE = 9;
+
+const MenuItemSkeleton = () => (
+  <Card className="flex-[0_0_90%] sm:flex-[0_0_45%] lg:flex-[0_0_30%] mx-2 bg-white rounded-xl shadow-sm border border-gray-100">
+    <CardContent className="p-6 space-y-4">
+      <div className="h-6 w-3/4 bg-gray-200 rounded animate-pulse" />
+      <div className="h-4 w-full bg-gray-200 rounded animate-pulse" />
+      <div className="h-4 w-2/3 bg-gray-200 rounded animate-pulse" />
+      <div className="flex gap-2">
+        <div className="h-6 w-16 bg-gray-200 rounded animate-pulse" />
+        <div className="h-6 w-16 bg-gray-200 rounded animate-pulse" />
+      </div>
+      <div className="h-8 w-24 bg-gray-200 rounded animate-pulse" />
+    </CardContent>
+  </Card>
+);
 
 const MenuCard = ({ item }: { item: MenuItem }) => {
   const activeAllergens = Object.entries(item.allergens)
@@ -35,10 +52,10 @@ const MenuCard = ({ item }: { item: MenuItem }) => {
 
   return (
     <Card className="flex-[0_0_90%] sm:flex-[0_0_45%] lg:flex-[0_0_30%] mx-2 bg-white rounded-3xl shadow-sm border border-gray-100">
-      <CardContent className="p-8 flex flex-col gap-5 justify-between h-full">
+      <CardContent className="p-8 flex flex-col gap-6 justify-between h-full">
         <div className="flex items-center gap-2">
           {courseTag && (
-            <div className="text-gray-600 text-sm">
+            <div className="text-gray-900 text-sm">
               {courseTag}
             </div>
           )}
@@ -60,8 +77,8 @@ const MenuCard = ({ item }: { item: MenuItem }) => {
 
         {activeAllergens.length > 0 && (
           <div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-blue-600">Contains</span>
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-medium text-blue-600">Often contains</span>
               <div className="flex flex-wrap gap-2">
                 {activeAllergens.map((allergen) => (
                   <Badge
@@ -76,33 +93,18 @@ const MenuCard = ({ item }: { item: MenuItem }) => {
             </div>
           </div>
         )}
-        {/* Image - only shown if "image" field exists and has content */}
-        {item.image && (
-          <div className="w-full h-[200px] rounded-lg">
-            <img
-              src={item.image}
-              alt={item.name}
-              className="w-full h-full object-cover rounded-lg"
-              onError={(e) => {
-                // Fallback to gray placeholder if image fails to load
-                e.currentTarget.onerror = null; // Prevent infinite loop
-                e.currentTarget.style.display = 'none';
-                e.currentTarget.parentElement?.classList.add('bg-gray-200');
-              }}
-            />
-          </div>
-        )}
 
         <div>
+          <div className="text-sm text-gray-300">Common description</div>
           {item.description && (
-            <p className="text-gray-600 text-md leading-relaxed">
+            <p className="text-gray-900 text-md leading-relaxed mt-1">
               {item.description}
             </p>
           )}
         </div>
 
         <div>
-          <span className="text-lg font-normal text-gray-600">
+          <span className="text-xl font-normal text-gray-900">
             {item.price && parseFloat(item.price) > 0 ? `$${parseFloat(item.price).toFixed(2)}` : ''}
           </span>
         </div>
@@ -119,6 +121,8 @@ export default function PublicMenuPage() {
   const [selectedAllergens, setSelectedAllergens] = useState<AllergenType[]>([]);
   const [selectedDietary, setSelectedDietary] = useState<typeof dietaryPreferences[number][]>([]);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [isCoursesOpen, setIsCoursesOpen] = useState(false);
+  const [page, setPage] = useState(1);
 
   const [emblaRef, emblaApi] = useEmblaCarousel({
     align: 'start',
@@ -127,29 +131,11 @@ export default function PublicMenuPage() {
     slidesToScroll: 1
   });
 
-  const scrollPrev = useCallback(() => {
-    if (emblaApi) emblaApi.scrollPrev();
-  }, [emblaApi]);
-
-  const scrollNext = useCallback(() => {
-    if (emblaApi) emblaApi.scrollNext();
-  }, [emblaApi]);
-
-  const [prevBtnEnabled, setPrevBtnEnabled] = useState(false);
-  const [nextBtnEnabled, setNextBtnEnabled] = useState(false);
-
-  const onSelect = useCallback(() => {
-    if (!emblaApi) return;
-    setPrevBtnEnabled(emblaApi.canScrollPrev());
-    setNextBtnEnabled(emblaApi.canScrollNext());
-  }, [emblaApi]);
-
   useEffect(() => {
-    if (!emblaApi) return;
-    onSelect();
-    emblaApi.on('select', onSelect);
-    emblaApi.on('reInit', onSelect);
-  }, [emblaApi, onSelect]);
+    if (emblaApi) {
+      emblaApi.reInit();
+    }
+  }, [emblaApi]);
 
   const { data: restaurant, isLoading: isLoadingRestaurant } = useQuery<Restaurant>({
     queryKey: [`/api/restaurants/${restaurantId}`],
@@ -163,7 +149,6 @@ export default function PublicMenuPage() {
         throw new Error('Restaurant ID is required');
       }
 
-      console.log(`Fetching menu items for restaurant ${restaurantId}`);
       const response = await fetch(`/api/menu-items?${new URLSearchParams({
         restaurantId: restaurantId.toString(),
         status: 'live'
@@ -178,41 +163,58 @@ export default function PublicMenuPage() {
         throw new Error('Failed to fetch menu items');
       }
 
-      const items = await response.json();
-      console.log(`Retrieved ${items.length} menu items for restaurant ${restaurantId}`);
-      return items;
+      return response.json();
     },
     enabled: !!restaurantId,
-    retry: 2,
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes
   });
 
   const uniqueTags = useMemo(() => {
-    if (!menuItems) return [];
-    const tagSet = new Set<string>();
-    menuItems.forEach(item => {
-      item.courseTags?.forEach(tag => tagSet.add(tag));
-    });
-    return Array.from(tagSet).sort();
+    if (!menuItems) return new Set<string>();
+    return menuItems.reduce((tags: Set<string>, item: MenuItem) => {
+      if (item.courseTags && item.courseTags.length > 0) {
+        item.courseTags.forEach(tag => tags.add(tag));
+      }
+      return tags;
+    }, new Set<string>());
   }, [menuItems]);
 
   const filteredItems = useMemo(() => {
     if (!menuItems) return [];
-    return menuItems
-      .filter(({ name, description, courseTags, allergens }) => {
-        const matchesSearch = !searchTerm ||
-          name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          description.toLowerCase().includes(searchTerm.toLowerCase());
+    return menuItems.filter((item) => {
+      // Search term filter
+      if (searchTerm && !item.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
+          !item.description.toLowerCase().includes(searchTerm.toLowerCase())) {
+        return false;
+      }
 
-        const matchesTags = selectedTags.length === 0 ||
-          selectedTags.every(tag => courseTags?.includes(tag));
+      // Allergens filter
+      if (selectedAllergens.length > 0) {
+        const hasSelectedAllergen = selectedAllergens.some(
+          allergen => !item.allergens[allergen]
+        );
+        if (!hasSelectedAllergen) return false;
+      }
 
-        const matchesAllergens = selectedAllergens.every(allergen => !allergens[allergen]);
+      // Course tags filter
+      if (selectedTags.length > 0) {
+        if (!item.courseTags?.some(tag => selectedTags.includes(tag))) {
+          return false;
+        }
+      }
 
-        return matchesSearch && matchesTags && matchesAllergens;
-      })
-      .sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
-  }, [menuItems, searchTerm, selectedTags, selectedAllergens]);
+      return true;
+    }).sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+  }, [menuItems, searchTerm, selectedAllergens, selectedTags]);
+
+  // Pagination
+  const paginatedItems = useMemo(() => {
+    const start = (page - 1) * ITEMS_PER_PAGE;
+    const end = start + ITEMS_PER_PAGE;
+    return filteredItems.slice(start, end);
+  }, [filteredItems, page]);
+
+  const totalPages = Math.ceil(filteredItems.length / ITEMS_PER_PAGE);
 
   const handleTagSelection = (value: string) => {
     if (value === "all") {
@@ -220,6 +222,21 @@ export default function PublicMenuPage() {
     } else {
       const tags = value.split(",").filter(Boolean);
       setSelectedTags(tags);
+    }
+    setPage(1);
+  };
+
+  const handleCoursesOpenChange = (open: boolean) => {
+    setIsCoursesOpen(open);
+    if (open) {
+      setIsFiltersOpen(false);
+    }
+  };
+
+  const handleFiltersOpenChange = (open: boolean) => {
+    setIsFiltersOpen(open);
+    if (open) {
+      setIsCoursesOpen(false);
     }
   };
 
@@ -243,60 +260,63 @@ export default function PublicMenuPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
       <header className="fixed top-0 left-0 right-0 bg-white border-b z-50">
-        <div className="max-w-4xl mx-auto px-4 py-2">
+        <div className="max-w-4xl mx-auto px-4 py-4">
           <div className="flex items-center justify-center mb-2">
             <h1 className="text-md font-bold text-gray-900 text-center">{restaurant?.name}</h1>
           </div>
 
-          {/* Search and Filters */}
-          <div className="flex items-center gap-3 pb-2">
-            <div className="relative">
-              <Input
-                placeholder=""
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-12 h-12 flex items-center justify-center rounded-full border border-gray-200 bg-white"
-              />
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-            </div>
-
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setIsFiltersOpen(!isFiltersOpen)}
-                className="flex-1 justify-between gap-2"
-              >
-                Filters
-                {isFiltersOpen ? (
-                  <ChevronUp className="h-4 w-4" />
-                ) : (
-                  <ChevronDown className="h-4 w-4" />
-                )}
-              </Button>
-
-              <Select
-                value={selectedTags.length === 0 ? "all" : selectedTags.join(",")}
-                onValueChange={handleTagSelection}
-              >
-                <SelectTrigger className="flex-1">
-                  <SelectValue placeholder="All Courses" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Courses</SelectItem>
-                  {uniqueTags.map((tag) => (
-                    <SelectItem key={tag} value={tag}>
-                      {tag}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="relative">
+            <Input
+              placeholder="Search menu..."
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setPage(1);
+              }}
+              className="w-full pl-10 pr-4 h-11 rounded-full border-gray-200 bg-white"
+            />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
           </div>
 
-          {/* Collapsible Filters */}
-          <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
+          <div className="flex gap-2 mt-3">
+            <Button
+              variant="outline"
+              onClick={() => handleFiltersOpenChange(!isFiltersOpen)}
+              className="flex-1 justify-between gap-2 h-10 px-4 py-2"
+            >
+              Filters
+              {isFiltersOpen ? (
+                <ChevronUp className="h-4 w-4" />
+              ) : (
+                <ChevronDown className="h-4 w-4" />
+              )}
+            </Button>
+
+            <Select
+              value={selectedTags.length === 0 ? "all" : selectedTags.join(",")}
+              onValueChange={handleTagSelection}
+              open={isCoursesOpen}
+              onOpenChange={handleCoursesOpenChange}
+            >
+              <SelectTrigger className="flex-1 h-10 px-4 py-2">
+                <SelectValue placeholder="All Courses" />
+              </SelectTrigger>
+              <SelectContent className="w-full min-w-[200px]">
+                <SelectItem value="all">All Courses</SelectItem>
+                {Array.from(uniqueTags).map((tag) => (
+                  <SelectItem key={tag} value={tag}>
+                    {tag}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <Collapsible
+            open={isFiltersOpen}
+            onOpenChange={handleFiltersOpenChange}
+          >
             <CollapsibleContent className="py-4 space-y-4">
               <div>
                 <h3 className="font-medium mb-2">Allergens</h3>
@@ -309,13 +329,15 @@ export default function PublicMenuPage() {
                         selectedAllergens.includes(allergen)
                           ? "bg-blue-50 text-blue-700 border-blue-200"
                           : ""
-                        }`}
+                      }`}
                       onClick={() => {
                         setSelectedAllergens((prev) =>
                           prev.includes(allergen)
                             ? prev.filter((a) => a !== allergen)
                             : [...prev, allergen]
                         );
+                        setPage(1);
+                        setIsFiltersOpen(false);
                       }}
                     >
                       <span className="capitalize">{allergen}</span>
@@ -335,13 +357,15 @@ export default function PublicMenuPage() {
                         selectedDietary.includes(pref)
                           ? "bg-green-50 text-green-700 border-green-200"
                           : ""
-                        }`}
+                      }`}
                       onClick={() => {
                         setSelectedDietary((prev) =>
                           prev.includes(pref)
                             ? prev.filter((p) => p !== pref)
                             : [...prev, pref]
                         );
+                        setPage(1);
+                        setIsFiltersOpen(false);
                       }}
                     >
                       {pref}
@@ -354,45 +378,50 @@ export default function PublicMenuPage() {
         </div>
       </header>
 
-      {/* Menu Items Grid */}
-      <main className="pt-[180px] px-4 pb-20 max-w-4xl mx-auto">
-        {filteredItems.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
-            No menu items match your filters
+      <main className={`pt-[160px] px-4 pb-20 max-w-4xl mx-auto`}>
+        {isLoadingMenu ? (
+          <div className="overflow-hidden" ref={emblaRef}>
+            <div className="flex">
+              {Array.from({ length: ITEMS_PER_PAGE }).map((_, index) => (
+                <MenuItemSkeleton key={index} />
+              ))}
+            </div>
           </div>
-        ) : (
-          <div className="relative py-8">
-            <div className="overflow-hidden -mx-4 px-4" ref={emblaRef}>
-              <div className="flex items-center -mx-2">
-                {filteredItems.map((item) => (
+        ) : paginatedItems.length > 0 ? (
+          <>
+            <div className="overflow-hidden" ref={emblaRef}>
+              <div className="flex">
+                {paginatedItems.map((item) => (
                   <MenuCard key={item.id} item={item} />
                 ))}
               </div>
             </div>
 
-            <div className="absolute inset-y-0 left-0 flex items-center">
-              <Button
-                variant="ghost"
-                size="icon"
-                className={`h-8 w-8 rounded-full bg-white shadow-md ${!prevBtnEnabled && 'opacity-50 cursor-not-allowed'}`}
-                onClick={scrollPrev}
-                disabled={!prevBtnEnabled}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-            </div>
-
-            <div className="absolute inset-y-0 right-0 flex items-center">
-              <Button
-                variant="ghost"
-                size="icon"
-                className={`h-8 w-8 rounded-full bg-white shadow-md ${!nextBtnEnabled && 'opacity-50 cursor-not-allowed'}`}
-                onClick={scrollNext}
-                disabled={!nextBtnEnabled}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
+            {totalPages > 1 && (
+              <div className="flex justify-center gap-2 mt-8">
+                <Button
+                  variant="outline"
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                >
+                  Previous
+                </Button>
+                <span className="flex items-center px-4 text-sm">
+                  Page {page} of {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                >
+                  Next
+                </Button>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="text-center py-8 text-gray-500">
+            No menu items found
           </div>
         )}
       </main>
