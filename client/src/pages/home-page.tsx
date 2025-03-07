@@ -21,7 +21,6 @@ import {
   Upload,
   Filter,
   Settings,
-  Maximize2,
   ChevronRight,
   Search,
   Eye,
@@ -36,7 +35,7 @@ import {
   Image as ImageIcon,
   QrCode,
   X,
-  LogOut, // Added LogOut import
+  LogOut,
 } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import {
@@ -45,7 +44,7 @@ import {
   type InsertMenuItem,
   insertMenuItemSchema,
 } from "@shared/schema";
-import { useState, useRef, useMemo, useEffect } from "react";
+import { useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Label } from "@/components/ui/label";
@@ -60,7 +59,7 @@ import {Tooltip, TooltipContent, TooltipProvider, TooltipTrigger} from "@/compon
 
 type MenuItemStatus = "draft" | "live";
 
-export default function HomePage() {
+function HomePage() {
   const { user, logoutMutation } = useAuth();
   const { toast } = useToast();
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
@@ -77,6 +76,7 @@ export default function HomePage() {
   const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const qrCodeRef = useRef<HTMLDivElement>(null);
+  const csvFileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<InsertMenuItem>({
     resolver: zodResolver(insertMenuItemSchema),
@@ -112,7 +112,6 @@ export default function HomePage() {
     enabled: !!user?.id,
   });
 
-  // Auto-select first restaurant when data loads
   useEffect(() => {
     if (restaurants?.length && !selectedRestaurant) {
       setSelectedRestaurant(restaurants[0]);
@@ -120,7 +119,6 @@ export default function HomePage() {
     }
   }, [restaurants, selectedRestaurant, form]);
 
-  // Update the menu items query to properly handle status
   const { data: menuItems, isLoading: isLoadingMenuItems } = useQuery<MenuItem[]>({
     queryKey: ["/api/menu-items", selectedRestaurant?.id, statusFilter],
     queryFn: async () => {
@@ -129,7 +127,6 @@ export default function HomePage() {
       const params = new URLSearchParams({
         restaurantId: selectedRestaurant.id.toString(),
       });
-      // Only add status if filtering is active
       if (statusFilter) {
         params.append("status", statusFilter);
       }
@@ -146,12 +143,11 @@ export default function HomePage() {
     enabled: !!selectedRestaurant?.id && !!user?.id,
   });
 
-  // Update groupedItems to properly handle menu items with no status
   const groupedItems = useMemo(() => {
     if (!menuItems) return { draft: [], live: [] };
     return menuItems.reduce(
       (acc, item) => {
-        const status = item.status || "draft"; // Default to draft if no status
+        const status = item.status || "draft";
         acc[status as MenuItemStatus].push(item);
         return acc;
       },
@@ -280,9 +276,9 @@ export default function HomePage() {
     form.reset({
       name: item.name,
       description: item.description,
-      price: item.price || "", // Handle potential null price
+      price: item.price || "",
       courseTags: item.courseTags,
-      image: item.image || "", // Handle potential null image
+      image: item.image || "",
       status: item.status as MenuItemStatus,
       allergens: item.allergens,
       restaurantId: item.restaurantId,
@@ -443,8 +439,55 @@ export default function HomePage() {
               className="mt-1"
             />
 
-            {/* Image Section */}
-            <div className="w-32 h-32 flex-shrink-0 bg-custom-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
+            <div
+              className="w-32 h-32 flex-shrink-0 bg-custom-gray-100 rounded-lg flex items-center justify-center overflow-hidden transition-all duration-200"
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                e.currentTarget.classList.add('border-2', 'border-primary', 'border-dashed');
+              }}
+              onDragLeave={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                e.currentTarget.classList.remove('border-2', 'border-primary', 'border-dashed');
+              }}
+              onDrop={async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                e.currentTarget.classList.remove('border-2', 'border-primary', 'border-dashed');
+
+                const file = e.dataTransfer.files[0];
+                if (file && file.type.startsWith('image/')) {
+                  const reader = new FileReader();
+                  reader.onloadend = async () => {
+                    const imageData = reader.result as string;
+                    try {
+                      const response = await apiRequest("PATCH", `/api/menu-items/${item.id}`, {
+                        ...item,
+                        image: imageData
+                      });
+
+                      if (!response.ok) {
+                        throw new Error('Failed to update image');
+                      }
+
+                      queryClient.invalidateQueries({ queryKey: ["/api/menu-items", selectedRestaurant?.id] });
+                      toast({
+                        title: "Success",
+                        description: "Image updated successfully",
+                      });
+                    } catch (error) {
+                      toast({
+                        title: "Error",
+                        description: "Failed to update image",
+                        variant: "destructive",
+                      });
+                    }
+                  };
+                  reader.readAsDataURL(file);
+                }
+              }}
+            >
               {item.image ? (
                 <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
               ) : (
@@ -455,7 +498,6 @@ export default function HomePage() {
               )}
             </div>
 
-            {/* Content Section */}
             <div className="flex-1 min-w-0">
               <div className="flex justify-between items-start">
                 <div>
@@ -521,12 +563,9 @@ export default function HomePage() {
       className="min-h-screen bg-custom-gray-100"
       style={backgroundImage ? { backgroundImage: `url(${backgroundImage})`, backgroundSize: "cover", backgroundPosition: "center" } : {}}
     >
-      {/* Top Navigation */}
-      {/* Header Navigation */}
       <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-sm border-b border-custom-gray-200">
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex items-center justify-between h-16">
-            {/* Left Section - Restaurant Selector */}
             <div className="flex items-center gap-4">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -562,14 +601,13 @@ export default function HomePage() {
               </Button>
             </div>
 
-            {/* Center Icons */}
             <div className="flex-1 flex items-center justify-center">
               <div className="flex items-center gap-6">
                 <TooltipProvider>
                   {[
                     { icon: Share2, label: "Share Menu", onClick: () => copyMenuUrl(selectedRestaurant?.id || 0) },
                     { icon: Download, label: "Export CSV", onClick: handleExportCSV },
-                    { icon: Upload, label: "Import CSV", onClick: () => fileInputRef.current?.click() },
+                    { icon: Upload, label: "Import CSV", onClick: () => csvFileInputRef.current?.click() },
                     { icon: Filter, label: "Filter Menu" },
                     { icon: QrCode, label: "Show QR Code", onClick: () => setShowQrCode(true) },
                   ].map(({ icon: Icon, label, onClick }) => (
@@ -586,7 +624,6 @@ export default function HomePage() {
                 </TooltipProvider>
               </div>
 
-              {/* Toggle Labels Button */}
               <Button
                 variant="ghost"
                 size="icon"
@@ -597,7 +634,6 @@ export default function HomePage() {
               </Button>
             </div>
 
-            {/* Right Icons */}
             <div className="flex items-center space-x-2">
               <TooltipProvider>
                 <Tooltip>
@@ -624,7 +660,6 @@ export default function HomePage() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-6">
-        {/* Search Bar */}
         <div className="relative mb-6">
           <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-custom-gray-400" />
           <Input
@@ -635,7 +670,6 @@ export default function HomePage() {
           />
         </div>
 
-        {/* Filter Tabs */}
         <div className="flex gap-3 mb-6">
           <Button
             variant={statusFilter === null ? "default" : "outline"}
@@ -660,7 +694,6 @@ export default function HomePage() {
           </Button>
         </div>
 
-        {/* Selected Items Actions */}
         {selectedItems.length > 0 && (
           <Button
             variant="destructive"
@@ -673,7 +706,6 @@ export default function HomePage() {
           </Button>
         )}
 
-        {/* Menu Items Grid */}
         <div className="space-y-4">
           {filteredItems.map((item) => (
             <MenuItemCard item={item} />
@@ -681,7 +713,6 @@ export default function HomePage() {
         </div>
       </main>
 
-      {/* Keep existing dialogs */}
       <Dialog
         open={isCreateMenuItemOpen}
         onOpenChange={(isOpen) => {
@@ -852,53 +883,41 @@ export default function HomePage() {
             </div>
 
             <div>
-              <Label htmlFor="status">Status</Label>
-              <select {...form.register("status")} className="w-full p-2 border rounded-md">
+              <Label>Status</Label>
+              <select
+                {...form.register("status")}
+                className="w-full rounded-md border border-input bg-background px-3 py-2"
+              >
                 <option value="draft">Draft</option>
                 <option value="live">Live</option>
               </select>
             </div>
-
-            <Button type="submit" className="w-full">
-              {editingItem ? "Update Item" : "Add Item"}
-            </Button>
+            <div>
+              <Button type="submit" className="w-full">
+                {editingItem ? "Update Item" : "Add Item"}
+              </Button>
+            </div>
           </form>
         </DialogContent>
       </Dialog>
 
-      {selectedRestaurant && (
-        <Dialog open={showQrCode} onOpenChange={setShowQrCode}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Menu QR Code</DialogTitle>
-            </DialogHeader>
-            <div ref={qrCodeRef} className="flex flex-col items-center justify-center p-4">
-              <QRCodeSVG value={getPublicMenuUrl(selectedRestaurant.id)} size={200} className="mb-4" />
-              <p className="text-sm text-gray-500 break-all">
-                {getPublicMenuUrl(selectedRestaurant.id)}
-              </p>
-            </div>
-            <DialogFooter>
-              <Button onClick={() => setShowQrCode(false)}>Close</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      )}
-
       <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
         <DialogContent>
-          <DialogHeader>            <DialogTitle>Settings</DialogTitle>
+          <DialogHeader>
+            <DialogTitle>Settings</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
               <Label>Background Image</Label>
               <div
-                className="mt-2 border2 border-dashed border-gray-300 rounded-lg p-6 cursor-pointer hover:border-primary transition-colors"
-                onDragOver={(e) => {                  e.preventDefault();
+                                className="mt-2 border-2 border-dashed border-gray-300 rounded-lg p-6 cursor-pointer hover:border-primary transition-colors"
+                onDragOver={(e) => {
+                  e.preventDefault();
                   e.stopPropagation();
                 }}
                 onDrop={(e) => {
                   e.preventDefault();
+                  e.stopPropagation();
                   const file = e.dataTransfer.files[0];
                   if (file && file.type.startsWith("image/")) {
                     const reader = new FileReader();
@@ -909,40 +928,59 @@ export default function HomePage() {
                   }
                 }}
               >
-                <Input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      const reader = new FileReader();
-                      reader.onloadend = () => {
-                        setBackgroundImage(reader.result as string);
-                      };
-                      reader.readAsDataURL(file);
-                    }
-                  }}
-                  className="hidden"
-                />
                 <div className="text-center">
-                  <Upload className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                  <p className="text-sm text-gray-600">
-                    Drag and drop an image here or click to select
+                  <Upload className="mx-auto h-12 w-12 text-gray-400" />
+                  <p className="mt-2 text-sm text-gray-500">
+                    Drag and drop an image here, or click to select
                   </p>
                 </div>
+                {backgroundImage && (
+                  <img src={backgroundImage} alt="Background Preview" className="mt-4 max-h-40 rounded-lg" />
+                )}
               </div>
             </div>
           </div>
         </DialogContent>
       </Dialog>
 
+      <Dialog open={showQrCode} onOpenChange={setShowQrCode}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Menu QR Code</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col items-center" ref={qrCodeRef}>
+            <QRCodeSVG
+              value={selectedRestaurant ? getPublicMenuUrl(selectedRestaurant.id) : ""}
+              size={200}
+              level="H"
+              includeMargin={true}
+            />
+            <p className="mt-4 text-center text-sm text-muted-foreground">
+              Scan this QR code to view the menu
+            </p>
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setShowQrCode(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <input
-        ref={fileInputRef}
         type="file"
         accept=".csv"
+        ref={csvFileInputRef}
         onChange={handleImportCSV}
+        className="hidden"
+      />
+      <input
+        type="file"
+        accept="image/*"
+        ref={fileInputRef}
+        onChange={handleImageUpload}
         className="hidden"
       />
     </div>
   );
 }
+
+export default HomePage;
