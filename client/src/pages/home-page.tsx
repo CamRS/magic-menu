@@ -508,7 +508,7 @@ export default function HomePage() {
                       </Badge>
                     ))}
                 </div>
-                <span className="text-lg font-medium text-custom-gray-500">
+                <span className="text-lg font-medium text-custom-gray-500 absolute top-4 right-4">
                   {item.price ? `$${parseFloat(item.price).toFixed(2)}` : ""}
                 </span>
               </div>
@@ -554,7 +554,7 @@ export default function HomePage() {
               </DropdownMenu>
 
               <Button
-                className="bg-primary text-white hover:bg-primary/90"
+                className="bg-primary text-white hover:bg-primary/90 rounded-full"
                 onClick={() => {
                   setCreateMenuItemOpen(true);
                   form.setValue("restaurantId", selectedRestaurant?.id || 0);
@@ -660,16 +660,6 @@ export default function HomePage() {
             onClick={() => setStatusFilter("live")}
           >
             Live ({groupedItems.live?.length || 0})
-          </Button>
-
-          <Button
-            className="filter-tab filter-tab-active ml-auto"
-            onClick={() => {
-              setCreateMenuItemOpen(true);
-              form.setValue("restaurantId", selectedRestaurant?.id || 0);
-            }}
-          >
-            Add Item
           </Button>
         </div>
 
@@ -789,23 +779,45 @@ export default function HomePage() {
             <div>
               <Label htmlFor="image">Image</Label>
               <div
-                className="border-2 border-dashed border-gray-300 rounded-lg p-6 cursor-pointer hover:border-primary transition-colors"
+                className="border-2 border-dashed border-gray-300 rounded-lg p-6 cursor-pointer hover:border-primary transition-colors relative"
                 onDragOver={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
+                  e.currentTarget.classList.add('border-primary');
                 }}
-                onDrop={handleImageDrop}
+                onDragLeave={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  e.currentTarget.classList.remove('border-primary');
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  e.currentTarget.classList.remove('border-primary');
+                  const file = e.dataTransfer.files[0];
+                  if (file && file.type.startsWith("image/")) {
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                      form.setValue("image", reader.result as string);
+                    };
+                    reader.readAsDataURL(file);
+                  }
+                }}
+                onClick={() => document.getElementById('image-upload')?.click()}
               >
-                <Input
-                  id="image"
+                <input
+                  id="image-upload"
                   type="file"
                   accept="image/*"
                   onChange={handleImageUpload}
-                  className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+                  className="hidden"
                 />
-                <p className="text-sm text-muted-foreground mt-2">
-                  Drag and drop an image here or click to select
-                </p>
+                <div className="text-center">
+                  <Upload className="mx-auto h-12 w-12 text-gray-400" />
+                  <p className="mt-2 text-sm text-gray-500">
+                    Drag and drop an image here, or click to select
+                  </p>
+                </div>
                 {form.watch("image") && (
                   <img src={form.watch("image")} alt="Preview" className="mt-4 max-h-40 rounded-lg" />
                 )}
@@ -890,8 +902,7 @@ export default function HomePage() {
 
       <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Settings</DialogTitle>
+          <DialogHeader>            <DialogTitle>Settings</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
