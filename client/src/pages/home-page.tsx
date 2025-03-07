@@ -799,9 +799,9 @@ function HomePage() {
         {/* Menu Items Grid */}
         <div className="space-y-6">
           {Array.from(groupedByCourse.entries()).map(([courseType, items]) => (
-            <div key={courseType} className="bg-white/85 rounded-lg shadow-sm overflow-hidden">
+            <div key={courseType} className="bg-white/95 rounded-lg shadow-sm">
               <button
-                className="w-full px-6 py-4 flex items-center justify-between bg-white/80 hover:bg-gray-100 transition-colors"
+                className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-100 transition-colors"
                 onClick={() => toggleSection(courseType)}
               >
                 <h2 className="text-lg font-semibold text-gray-900">
@@ -815,15 +815,18 @@ function HomePage() {
               </button>
 
               {expandedSections.has(courseType) && (
-                <div className="p-4 space-y-4">
+                <div className="divide-y divide-gray-100">
                   {items.map((item) => (
-                    <MenuItemCard key={item.id} item={item} />
+                    <div key={item.id} className="p-4">
+                      <MenuItemCard item={item} />
+                    </div>
                   ))}
                 </div>
               )}
             </div>
           ))}
         </div>
+
 
 
       </main>
