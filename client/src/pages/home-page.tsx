@@ -59,6 +59,32 @@ import {Tooltip, TooltipContent, TooltipProvider, TooltipTrigger} from "@/compon
 
 type MenuItemStatus = "draft" | "live";
 
+const defaultFormValues: InsertMenuItem = {
+  name: "",
+  description: "",
+  price: "",
+  courseTags: [],
+  restaurantId: 0,
+  image: "",
+  status: "draft",
+  allergens: {
+    milk: false,
+    eggs: false,
+    peanuts: false,
+    nuts: false,
+    shellfish: false,
+    fish: false,
+    soy: false,
+    gluten: false,
+  },
+  dietary_preferences: {
+    vegan: false,
+    vegetarian: false,
+    kosher: false,
+    halal: false,
+  },
+};
+
 function HomePage() {
   const { user, logoutMutation } = useAuth();
   const { toast } = useToast();
@@ -745,18 +771,24 @@ function HomePage() {
           setCreateMenuItemOpen(isOpen);
           if (!isOpen) {
             setEditingItem(null);
-            form.reset();
+          }
+          // Reset form with clean default values when opening for new item
+          if (isOpen && !editingItem) {
+            form.reset(defaultFormValues);
           }
         }}
       >
-        <DialogContent>
+        <DialogContent className="bg-white">
           <DialogHeader>
             <DialogTitle>{editingItem ? "Edit Menu Item" : "Add Menu Item"}</DialogTitle>
           </DialogHeader>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
             <div>
               <Label htmlFor="name">Name</Label>
-              <Input {...form.register("name")} />
+              <Input 
+                {...form.register("name")} 
+                className="border border-input bg-background"
+              />
               {form.formState.errors.name && (
                 <p className="text-sm text-destructive mt-1">
                   {form.formState.errors.name.message}
@@ -765,7 +797,10 @@ function HomePage() {
             </div>
             <div>
               <Label htmlFor="description">Description</Label>
-              <Textarea {...form.register("description")} />
+              <Textarea 
+                {...form.register("description")} 
+                className="border border-input bg-background"
+              />
               {form.formState.errors.description && (
                 <p className="text-sm text-destructive mt-1">
                   {form.formState.errors.description.message}
@@ -774,7 +809,10 @@ function HomePage() {
             </div>
             <div>
               <Label htmlFor="price">Price</Label>
-              <Input {...form.register("price")} />
+              <Input 
+                {...form.register("price")} 
+                className="border border-input bg-background"
+              />
               {form.formState.errors.price && (
                 <p className="text-sm text-destructive mt-1">
                   {form.formState.errors.price.message}
@@ -804,6 +842,7 @@ function HomePage() {
                   value={newTag}
                   onChange={(e) => setNewTag(e.target.value)}
                   placeholder="Add a new tag"
+                  className="border border-input bg-background"
                   onKeyPress={(e) => {
                     if (e.key === "Enter") {
                       e.preventDefault();
@@ -833,7 +872,7 @@ function HomePage() {
             <div>
               <Label htmlFor="image">Image</Label>
               <div
-                className="border-2 border-dashed border-gray-300 rounded-lg p-6 cursor-pointer hover:border-primary transition-colors relative"
+                className="border-2 border-dashed border-gray-300 rounded-lg p-6 cursor-pointer hover:border-primary transition-colors relative bg-background"
                 onDragOver={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
@@ -880,6 +919,17 @@ function HomePage() {
             </div>
 
             <div>
+              <Label>Status</Label>
+              <select
+                {...form.register("status")}
+                className="w-full rounded-md border border-input bg-background px-3 py-2"
+              >
+                <option value="draft">Draft</option>
+                <option value="live">Live</option>
+              </select>
+            </div>
+
+            <div>
               <Label>Allergens</Label>
               <div className="grid grid-cols-2 gap-4 mt-2">
                 {(Object.keys(form.getValues().allergens) as Array<keyof InsertMenuItem["allergens"]>).map((key) => (
@@ -908,7 +958,8 @@ function HomePage() {
                       <Checkbox
                         id={key}
                         checked={form.watch(`dietary_preferences.${key}`)}
-                        onCheckedChange={(checked) => {                          form.setValue(`dietary_preferences.${key}`, checked as boolean);
+                        onCheckedChange={(checked) => {
+                          form.setValue(`dietary_preferences.${key}`, checked as boolean);
                         }}
                       />
                       <Label htmlFor={key} className="capitalize">
@@ -920,21 +971,9 @@ function HomePage() {
               </div>
             </div>
 
-            <div>
-              <Label>Status</Label>
-              <select
-                {...form.register("status")}
-                className="w-full rounded-md border border-input bg-background px-3 py-2"
-              >
-                <option value="draft">Draft</option>
-                <option value="live">Live</option>
-              </select>
-            </div>
-            <div>
-              <Button type="submit" className="w-full">
-                {editingItem ? "Update Item" : "Add Item"}
-              </Button>
-            </div>
+            <Button type="submit" className="w-full">
+              {editingItem ? "Update Item" : "Add Item"}
+            </Button>
           </form>
         </DialogContent>
       </Dialog>
