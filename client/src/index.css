@@ -1,13 +1,82 @@
+@import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --background: 0 0% 95%;
+    --foreground: 0 0% 20%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 20%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 20%;
+
+    --primary: 231 100% 56%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 0 0% 96%;
+    --secondary-foreground: 0 0% 31%;
+
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 44%;
+
+    --accent: 0 0% 96%;
+    --accent-foreground: 0 0% 31%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 231 100% 56%;
+
+    --radius: 0.75rem;
+  }
+
   * {
     @apply border-border;
   }
 
   body {
-    @apply font-sans antialiased bg-background text-foreground;
+    @apply font-sans antialiased bg-custom-gray-100 text-foreground min-h-screen;
+  }
+
+  /* Custom utility classes */
+  @layer components {
+    .nav-gradient-border {
+      @apply border-b-2 border-gradient-primary;
+    }
+
+    .bottom-gradient-border {
+      @apply border-b-2 border-gradient-secondary;
+    }
+
+    .menu-button {
+      @apply rounded-pill border border-custom-gray-200 px-4 py-2 text-sm font-medium;
+    }
+
+    .search-input {
+      @apply w-full h-10 rounded-3xl bg-muted px-4 text-sm text-custom-gray-400 placeholder-custom-gray-400;
+    }
+
+    .filter-tab {
+      @apply rounded-full px-4 py-1.5 text-sm font-medium transition-colors;
+    }
+
+    .filter-tab-active {
+      @apply bg-primary text-white;
+    }
+
+    .filter-tab-inactive {
+      @apply bg-white border border-custom-gray-300 text-custom-gray-500;
+    }
+
+    .menu-card {
+      @apply w-full rounded-xl border border-custom-gray-300 bg-white p-4 mb-3;
+    }
   }
 }
