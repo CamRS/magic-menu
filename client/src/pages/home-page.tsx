@@ -16,12 +16,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import {
   Share2,
   Download,
   Upload,
@@ -42,6 +36,7 @@ import {
   Image as ImageIcon,
   QrCode,
   X,
+  LogOut, // Added LogOut import
 } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import {
@@ -61,6 +56,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { QRCodeSVG } from "qrcode.react";
+import {Tooltip, TooltipContent, TooltipProvider, TooltipTrigger} from "@/components/ui/tooltip";
 
 type MenuItemStatus = "draft" | "live";
 
@@ -529,71 +525,77 @@ export default function HomePage() {
       style={backgroundImage ? { backgroundImage: `url(${backgroundImage})`, backgroundSize: "cover", backgroundPosition: "center" } : {}}
     >
       {/* Top Navigation */}
+      {/* Header Navigation */}
       <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-sm border-b border-custom-gray-200">
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex items-center justify-between h-16">
-            {/* Left Section */}
-            <div className="flex items-center space-x-2">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="rounded-full"
-                      onClick={() => setShowLabels(!showLabels)}
-                    >
-                      <ChevronRight className={`h-5 w-5 transition-transform ${showLabels ? "rotate-180" : ""}`} />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Toggle Labels</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="rounded-pill">
-                    <Store className="mr-2 h-4 w-4" />
-                    {selectedRestaurant?.name || "Select Restaurant"}
-                    <ChevronDown className="ml-2 h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  {restaurants?.map((restaurant) => (
-                    <DropdownMenuItem key={restaurant.id} onClick={() => setSelectedRestaurant(restaurant)}>
-                      {restaurant.name}
-                    </DropdownMenuItem>
-                  ))}
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => setCreateRestaurantOpen(true)}>
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Add New Restaurant
+            {/* Left Section - Restaurant Selector */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="rounded-pill">
+                  <Store className="mr-2 h-4 w-4" />
+                  {selectedRestaurant?.name || "Select Restaurant"}
+                  <ChevronDown className="ml-2 h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                {restaurants?.map((restaurant) => (
+                  <DropdownMenuItem key={restaurant.id} onClick={() => setSelectedRestaurant(restaurant)}>
+                    {restaurant.name}
                   </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+                ))}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => setCreateRestaurantOpen(true)}>
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Add New Restaurant
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
-            {/* Center Icons */}
-            <div className="flex items-center space-x-4">
-              <TooltipProvider>
-                {[
-                  { icon: Share2, label: "Share Menu", onClick: () => copyMenuUrl(selectedRestaurant?.id || 0) },
-                  { icon: Download, label: "Export CSV", onClick: handleExportCSV },
-                  { icon: Upload, label: "Import CSV", onClick: () => fileInputRef.current?.click() },
-                  { icon: Filter, label: "Filter Menu" },
-                  { icon: QrCode, label: "Show QR Code", onClick: () => setShowQrCode(true) },
-                ].map(({ icon: Icon, label, onClick }) => (
-                  <Tooltip key={label}>
+            {/* Center Icons with Add Item */}
+            <div className="flex items-center">
+              <div className="flex items-center space-x-6">
+                <TooltipProvider>
+                  {[
+                    { icon: Share2, label: "Share Menu", onClick: () => copyMenuUrl(selectedRestaurant?.id || 0) },
+                    { icon: Download, label: "Export CSV", onClick: handleExportCSV },
+                    { icon: Upload, label: "Import CSV", onClick: () => fileInputRef.current?.click() },
+                    { icon: Filter, label: "Filter Menu" },
+                    { icon: QrCode, label: "Show QR Code", onClick: () => setShowQrCode(true) },
+                    { icon: PlusCircle, label: "Add Item", onClick: () => {
+                      setCreateMenuItemOpen(true);
+                      form.setValue("restaurantId", selectedRestaurant?.id || 0);
+                    }},
+                  ].map(({ icon: Icon, label, onClick }) => (
+                    <Tooltip key={label}>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" size="icon" className="rounded-full" onClick={onClick}>
+                          <Icon className="h-5 w-5" />
+                          {showLabels && <span className="ml-2 whitespace-nowrap">{label}</span>}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>{label}</TooltipContent>
+                    </Tooltip>
+                  ))}
+                </TooltipProvider>
+
+                {/* Toggle Labels Button - Moved to end of icon cluster */}
+                <TooltipProvider>
+                  <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" className="rounded-full" onClick={onClick}>
-                        <Icon className="h-5 w-5" />
-                        {showLabels && <span className="ml-2 text-sm">{label}</span>}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="rounded-full"
+                        onClick={() => setShowLabels(!showLabels)}
+                      >
+                        <ChevronRight className={`h-5 w-5 transition-transform ${showLabels ? "rotate-180" : ""}`} />
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>{label}</TooltipContent>
+                    <TooltipContent>Toggle Labels</TooltipContent>
                   </Tooltip>
-                ))}
-              </TooltipProvider>
+                </TooltipProvider>
+              </div>
             </div>
 
             {/* Right Icons */}
@@ -611,7 +613,7 @@ export default function HomePage() {
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button variant="outline" size="icon" className="rounded-full" onClick={() => logoutMutation.mutate()}>
-                      <Maximize2 className="h-5 w-5" />
+                      <LogOut className="h-5 w-5" />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>Sign Out</TooltipContent>
@@ -894,8 +896,7 @@ export default function HomePage() {
               <Label>Background Image</Label>
               <div
                 className="mt-2 border-2 border-dashed border-gray-300 rounded-lg p-6 cursor-pointer hover:border-primary transition-colors"
-                onDragOver={(e) => {
-                  e.preventDefault();
+                onDragOver={(e) => {                  e.preventDefault();
                   e.stopPropagation();
                 }}
                 onDrop={(e) => {
