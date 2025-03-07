@@ -166,8 +166,8 @@ const MenuItemCard = ({ item, selectedItems, handleStatusChange, handleEdit, han
               <TooltipProvider>
                 {[
                   {
-                    icon: item.status === "draft" ? Eye : EyeOff,
-                    label: item.status === "draft" ? "Make Live" : "Make Draft",
+                    icon: item.status === "live" ? EyeOff : Eye,
+                    label: item.status === "live" ? "Make Draft" : "Make Live",
                     onClick: () => handleStatusChange(item),
                   },
                   { icon: Pencil, label: "Edit", onClick: () => handleEdit(item) },
@@ -994,41 +994,44 @@ function HomePage() {
           />
         </div>
 
-        <div className="flex gap-3 mb-6">
-          <Button
-            variant={statusFilter === null ? "default" : "outline"}
-            className={`filter-tab ${statusFilter === null ? "filter-tab-active" : "filter-tab-inactive"}`}
-            onClick={() => setStatusFilter(null)}
-          >
-            All Items ({groupedItems.draft.length + groupedItems.live.length})
-          </Button>
-          <Button
-            variant={statusFilter === "draft" ? "default" : "outline"}
-            className={`filter-tab ${statusFilter === "draft" ? "filter-tab-active" : "filter-tab-inactive"}`}
-            onClick={() => setStatusFilter("draft")}
-          >
-            Drafts ({groupedItems.draft?.length || 0})
-          </Button>
-          <Button
-            variant={statusFilter === "live" ? "default" : "outline"}
-            className={`filter-tab ${statusFilter === "live" ? "filter-tab-active" : "filter-tab-inactive"}`}
-            onClick={() => setStatusFilter("live")}
-          >
-            Live ({groupedItems.live?.length || 0})
-          </Button>
-        </div>
+        {/* Filter Tabs and Delete Button */}
+        <div className="flex items-center gap-4 mb-6">
+          <div className="flex items-center gap-2">
+            <Button
+              variant={!statusFilter ? "default" : "ghost"}
+              className="rounded-full"
+              onClick={() => setStatusFilter(null)}
+            >
+              All Items ({(groupedItems.draft?.length || 0) + (groupedItems.live?.length || 0)})
+            </Button>
+            <Button
+              variant={statusFilter === "draft" ? "default" : "ghost"}
+              className="rounded-full"
+              onClick={() => setStatusFilter("draft")}
+            >
+              Drafts ({groupedItems.draft?.length || 0})
+            </Button>
+            <Button
+              variant={statusFilter === "live" ? "default" : "ghost"}
+              className="rounded-full"
+              onClick={() => setStatusFilter("live")}
+            >
+              Live ({groupedItems.live?.length || 0})
+            </Button>
+          </div>
 
-        {selectedItems.length > 0 && (
-          <Button
-            variant="destructive"
-            onClick={handleDeleteSelected}
-            disabled={deleteMutation.isPending}
-            className="mb-6 rounded-full"
-          >
-            {deleteMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Delete Selected ({selectedItems.length})
-          </Button>
-        )}
+          {selectedItems.length > 0 && (
+            <Button
+              variant="destructive"
+              size="sm"
+              className="rounded-full"
+              onClick={handleDeleteSelected}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete Selected ({selectedItems.length})
+            </Button>
+          )}
+        </div>
 
         {/* Menu Items Grid */}
         <motion.div layout className="space-y-6">
