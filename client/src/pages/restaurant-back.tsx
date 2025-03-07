@@ -58,14 +58,18 @@ import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { QRCodeSVG } from "qrcode.react";
 import {Tooltip, TooltipContent, TooltipProvider, TooltipTrigger} from "@/components/ui/tooltip";
+import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 
 type MenuItemStatus = "draft" | "live";
 
 const defaultFormValues: InsertMenuItem = {
   name: "",
+  name_original: "",
   description: "",
   price: "",
   courseTags: [],
+  course_original: "",
+  displayOrder: 0,
   restaurantId: 0,
   image: "",
   status: "draft",
@@ -114,9 +118,12 @@ function HomePage() {
     resolver: zodResolver(insertMenuItemSchema),
     defaultValues: {
       name: "",
+      name_original: "",
       description: "",
       price: "",
       courseTags: [],
+      course_original: "",
+      displayOrder: 0,
       restaurantId: selectedRestaurant?.id || 0,
       image: "",
       status: "draft",
@@ -300,9 +307,12 @@ function HomePage() {
     setEditingItem(item);
     form.reset({
       name: item.name,
+      name_original: item.name,
       description: item.description,
       price: item.price || "",
       courseTags: item.courseTags,
+      course_original: item.courseTags.join(','),
+      displayOrder: item.displayOrder || 0,
       image: item.image || "",
       status: item.status as MenuItemStatus,
       allergens: item.allergens,
@@ -615,22 +625,64 @@ function HomePage() {
     const grouped = new Map<string, MenuItem[]>();
 
     // Group all items that don't have course tags under "Uncategorized"
-    [...groupedItems.draft, ...groupedItems.live].forEach(item => {
-      if (!item.courseTags?.length) {
-        const items = grouped.get("Uncategorized") || [];
-        grouped.set("Uncategorized", [...items, item]);
-        return;
-      }
+    [...groupedItems.draft, ...groupedItems.live]
+      .sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0))
+      .forEach(item => {
+        if (!item.courseTags?.length) {
+          const items = grouped.get("Uncategorized") || [];
+          grouped.set("Uncategorized", [...items, item]);
+          return;
+        }
 
-      // Group items by their course tags
-      item.courseTags.forEach(tag => {
-        const items = grouped.get(tag) || [];
-        grouped.set(tag, [...items, item]);
+        // Group items by their course tags
+        item.courseTags.forEach(tag => {
+          const items = grouped.get(tag) || [];
+          grouped.set(tag, [...items, item]);
+        });
       });
-    });
 
     return grouped;
   }, [groupedItems]);
+
+  const reorderMutation = useMutation({
+    mutationFn: async ({ id, displayOrder }: { id: number; displayOrder: number }) => {
+      const response = await apiRequest("PATCH", `/api/menu-items/${id}`, { displayOrder });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to update item order");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/menu-items", selectedRestaurant?.id] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleDragEnd = (result: any) => {
+    if (!result.destination) return;
+
+    const sourceSection = result.source.droppableId;
+    const destinationSection = result.destination.droppableId;
+
+    if (sourceSection === destinationSection) {
+      const items = Array.from(groupedByCourse.get(sourceSection) || []) as MenuItem[];
+      const [reorderedItem] = items.splice(result.source.index, 1);
+      items.splice(result.destination.index, 0, reorderedItem);
+
+      // Update display order for affected items
+      items.forEach((item: MenuItem, index: number) => {
+        reorderMutation.mutate({ id: item.id, displayOrder: index });
+      });
+    }
+  };
+
 
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(Array.from(groupedByCourse.keys())));
 
@@ -956,35 +1008,57 @@ function HomePage() {
         )}
 
         {/* Menu Items Grid */}
-        <div className="space-y-6">
-          {Array.from(groupedByCourse.entries()).map(([courseType, items]) => (
-            <div key={courseType} className="bg-white/95 rounded-lg shadow-sm">
-              <button
-                className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-100 transition-colors"
-                onClick={() => toggleSection(courseType)}
-              >
-                <h2 className="text-lg font-semibold text-gray-900">
-                  {courseType} ({items.length})
-                </h2>
-                <ChevronDown
-                  className={`h-5 w-5 text-gray-500 transition-transform ${
-                    expandedSections.has(courseType) ? "transform rotate-180" : ""
-                  }`}
-                />
-              </button>
-
-              {expandedSections.has(courseType) && (
-                <div className="divide-y divide-gray-100">
-                  {items.map((item) => (
-                    <div key={item.id} className="p-4">
-                      <MenuItemCard item={item} />
-                    </div>
-                  ))}
+        <DragDropContext onDragEnd={handleDragEnd}>
+          <div className="space-y-6">
+            {Array.from(groupedByCourse.entries()).map(([section, items]) => (
+              <div key={section} className="mb-8">
+                <div
+                  className="flex items-center gap-2 mb-4 cursor-pointer"
+                  onClick={() => toggleSection(section)}
+                >
+                  <ChevronRight
+                    className={`h-5 w-5 transition-transform ${
+                      expandedSections.has(section) ? "rotate-90" : ""
+                    }`}
+                  />
+                  <h2 className="text-xl font-semibold">{section}</h2>
+                  <span className="text-custom-gray-400">({items.length})</span>
                 </div>
-              )}
-            </div>
-          ))}
-        </div>
+
+                {expandedSections.has(section) && (
+                  <Droppable droppableId={section}>
+                    {(provided) => (
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.droppableProps}
+                        className="space-y-4"
+                      >
+                        {items.map((item, index) => (
+                          <Draggable
+                            key={item.id}
+                            draggableId={`item-${item.id}`}
+                            index={index}
+                          >
+                            {(provided) => (
+                              <div
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                {...provided.dragHandleProps}
+                              >
+                                <MenuItemCard item={item} />
+                              </div>
+                            )}
+                          </Draggable>
+                        ))}
+                        {provided.placeholder}
+                      </div>
+                    )}
+                  </Droppable>
+                )}
+              </div>
+            ))}
+          </div>
+        </DragDropContext>
 
 
       </main>
