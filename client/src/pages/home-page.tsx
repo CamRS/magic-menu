@@ -1189,6 +1189,49 @@ function HomePage() {
             </div>
 
             <div className="border-t border-gray-100 pt-4">
+              <h3 className="text-sm font-medium text-gray-900">Background Image</h3>
+              <div
+                className="mt-2 border-2 border-dashed border-gray-300 rounded-lg p-6 cursor-pointer hover:border-primary transition-colors relative"
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  const file = e.dataTransfer.files[0];
+                  if (file && file.type.startsWith("image/")) {
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                      setBackgroundImage(reader.result as string);
+                    };
+                    reader.readAsDataURL(file);
+                  }
+                }}
+              >
+                <div className="text-center">
+                  <Upload className="mx-auto h-12 w-12 text-gray-400" />
+                  <p className="mt-2 text-sm text-gray-500">
+                    Drag and drop an image here, or click to select
+                  </p>
+                </div>
+                {backgroundImage && (
+                  <div className="relative mt-4">
+                    <img src={backgroundImage} alt="Background Preview" className="max-h-40 rounded-lg" />
+                    <Button
+                      variant="destructive"
+                      size="icon"
+                      className="absolute top-2 right-2"
+                      onClick={() => setBackgroundImage(null)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="border-t border-gray-100 pt-4">
               <p className="text-sm text-gray-500">
                 Found an error? Report bugs to{" "}
                 <a
