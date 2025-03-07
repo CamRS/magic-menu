@@ -106,7 +106,7 @@ const MenuItemCard = ({ item, selectedItems, handleStatusChange, handleEdit, han
         <Checkbox
           checked={selectedItems.includes(item.id)}
           onCheckedChange={() => toggleItemSelection(item.id)}
-          className="mt-1 w-5 h-5" // Increased size from default
+          className="mt-1 w-5 h-5"
         />
 
         <div
@@ -938,7 +938,7 @@ function HomePage() {
                     </Button>
                     <Button
                       variant="ghost"
-                      className="w-full justify-start gap-3"
+                                            className="w-full justify-start gap-3"
                       onClick={() => csvFileInputRef.current?.click()}
                     >
                       <Download className="h-5 w-5" />
@@ -999,65 +999,65 @@ function HomePage() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-6">
-            <div className="flex items-center justify-between mb-6">
-              <div className="relative flex-1 max-w-xl">
-                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-custom-gray-400" />
-                <Input
-                  placeholder="Search menu items..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-12 h-12 rounded-3xl border-custom-gray-200 bg-white shadow-sm w-full"
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant={selectedStatus === null ? "default" : "outline"}
-                  onClick={() => setSelectedStatus(null)}
-                  className={`${selectedStatus === null ? 'bg-primary text-white' : 'bg-white text-gray-700'}`}
-                >
-                  All Items ({statusCounts.all})
-                </Button>
-                <Button
-                  variant={selectedStatus === "draft" ? "default" : "outline"}
-                  onClick={() => setSelectedStatus("draft")}
-                  className={`${selectedStatus === "draft" ? 'bg-primary text-white' : 'bg-white text-gray-700'}`}
-                >
-                  Drafts ({statusCounts.draft})
-                </Button>
-                <Button
-                  variant={selectedStatus === "live" ? "default" : "outline"}
-                  onClick={() => setSelectedStatus("live")}
-                  className={`${selectedStatus === "live" ? 'bg-primary text-white' : 'bg-white text-gray-700'}`}
-                >
-                  Live ({statusCounts.live})
-                </Button>
-                {selectedItems.length > 0 && (
-                  <Button
-                    variant="destructive"
-                    onClick={handleDeleteSelected}
-                    className="ml-2"
-                  >
-                    Delete Selected ({selectedItems.length})
-                  </Button>
-                )}
-              </div>
-            </div>
+        <div className="flex items-center justify-between mb-6">
+          <div className="relative flex-1 max-w-xl">
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-custom-gray-400" />
+            <Input
+              placeholder="Search menu items..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-12 h-12 rounded-3xl border-custom-gray-200 bg-white shadow-sm w-full"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant={selectedStatus === null ? "default" : "outline"}
+              onClick={() => setSelectedStatus(null)}
+              className={`${selectedStatus === null ? 'bg-primary text-white' : 'bg-white text-gray-700'}`}
+            >
+              All Items ({statusCounts.all})
+            </Button>
+            <Button
+              variant={selectedStatus === "draft" ? "default" : "outline"}
+              onClick={() => setSelectedStatus("draft")}
+              className={`${selectedStatus === "draft" ? 'bg-primary text-white' : 'bg-white text-gray-700'}`}
+            >
+              Drafts ({statusCounts.draft})
+            </Button>
+            <Button
+              variant={selectedStatus === "live" ? "default" : "outline"}
+              onClick={() => setSelectedStatus("live")}
+              className={`${selectedStatus === "live" ? 'bg-primary text-white' : 'bg-white text-gray-700'}`}
+            >
+              Live ({statusCounts.live})
+            </Button>
+            {selectedItems.length > 0 && (
+              <Button
+                variant="destructive"
+                onClick={handleDeleteSelected}
+                className="ml-2"
+              >
+                Delete Selected ({selectedItems.length})
+              </Button>
+            )}
+          </div>
+        </div>
 
-            {Array.from(groupedByCourse.entries()).map(([section, items]) => (
-              <MenuSection
-                key={section}
-                section={section}
-                items={items}
-                selectedItems={selectedItems}
-                handleStatusChange={handleStatusChange}
-                handleEdit={handleEdit}
-                handleDelete={handleDelete}
-                handleImageDrop={handleImageDrop}
-                handleImageDelete={handleImageDelete}
-                toggleItemSelection={toggleItemSelection}
-              />
-            ))}
-          </main>
+        {Array.from(groupedByCourse.entries()).map(([section, items]) => (
+          <MenuSection
+            key={section}
+            section={section}
+            items={items}
+            selectedItems={selectedItems}
+            handleStatusChange={handleStatusChange}
+            handleEdit={handleEdit}
+            handleDelete={handleDelete}
+            handleImageDrop={handleImageDrop}
+            handleImageDelete={handleImageDelete}
+            toggleItemSelection={toggleItemSelection}
+          />
+        ))}
+      </main>
 
       <Dialog
         open={isCreateMenuItemOpen}
@@ -1271,128 +1271,21 @@ function HomePage() {
       </Dialog>
 
       <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
-        <DialogContent className="bg-white">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Settings</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 pt-4">
             <div className="space-y-2">
-              <h3 className="text-sm font-medium text-gray-900">Account settings</h3>
+              <h3 className="text-sm font-medium">Account settings</h3>
               <div className="space-y-1">
                 <p className="text-xs text-gray-500">Email address</p>
-                <p className="text-sm text-gray-700">{user?.email}</p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-xs text-gray-500">Password</p>
-                <p className="text-sm text-gray-700">****************</p>
+                <p className="text-sm">{user?.email}</p>
               </div>
               <Button variant="link" className="text-primary p-0 h-auto text-xs" onClick={() => setIsUpdateLoginOpen(true)}>
                 Update login details
               </Button>
             </div>
-
-            <div className="border-t border-gray-100 pt-4">
-              <h3 className="text-sm font-medium text-gray-900">Your Restaurants</h3>
-              <div className="mt-2 space-y-2">
-                {restaurants?.map((restaurant) => (
-                  <div key={restaurant.id} className="flex items-center justify-between">
-                    <span className="text-sm text-gray-700">{restaurant.name}</span>
-                    {restaurants.length > 1 && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-red-500 hover:text-red-600"
-                        onClick={() => {
-                          if (confirm(`Are you sure you want to delete ${restaurant.name}?`)) {
-                            apiRequest("DELETE", `/api/restaurants/${restaurant.id}`)
-                              .then(() => {
-                                queryClient.invalidateQueries({ queryKey: ["/api/restaurants"] });
-                                toast({
-                                  title: "Success",
-                                  description: "Restaurant deleted successfully",
-                                });
-                              })
-                              .catch(() => {
-                                toast({
-                                  title: "Error",
-                                  description: "Failed to delete restaurant",
-                                  variant: "destructive",
-                                });
-                              });
-                          }
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="border-t border-gray-100 pt-4">
-              <h3 className="text-sm font-medium text-gray-900">Background Image</h3>
-              <div
-                className="mt-2 border-2 border-dashed border-gray-300 rounded-lg p-6 cursor-pointer hover:border-primary transition-colors relative"
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                }}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  const file = e.dataTransfer.files[0];
-                  if (file && file.type.startsWith("image/")) {
-                    const reader = new FileReader();
-                    reader.onloadend = () => {
-                      setBackgroundImage(reader.result as string);
-                    };
-                    reader.readAsDataURL(file);
-                  }
-                }}
-              >
-                <div className="text-center">
-                  <Upload className="mx-auto h-12 w-12 text-gray-400" />
-                  <p className="mt-2 text-sm text-gray-500">
-                    Drag and drop an image here, or click to select
-                  </p>
-                </div>
-                {backgroundImage && (
-                  <div className="relative mt-4">
-                    <img src={backgroundImage} alt="Background Preview" className="max-h-40 rounded-lg" />
-                    <Button
-                      variant="destructive"
-                      size="icon"
-                      className="absolute top-2 right-2"
-                      onClick={() => setBackgroundImage(null)}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="border-t border-gray-100 pt-4">
-              <p className="text-sm text-gray-500">
-                Found an error? Report bugs to{" "}
-                <a
-                  href="mailto:stevelucasroberts@gmail.com"
-                  className="text-primary hover:underline"
-                >
-                  stevelucasroberts@gmail.com
-                </a>
-              </p>
-            </div>
-
-            <Button
-              variant="ghost"
-              className="w-full text-red-500 hover:text-red-600 hover:bg-red-50 text-sm gap-2 justify-center"
-              onClick={() => logoutMutation.mutate()}
-            >
-              <LogOut className="h-4 w-4" />
-              Sign out
-            </Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -1471,7 +1364,7 @@ function HomePage() {
         type="file"
         accept="image/*"
         ref={fileInputRef}
-        onChange={handleBackgroundImageUpload}
+        onChange={handleImageUpload}
         className="hidden"
       />
     </div>
