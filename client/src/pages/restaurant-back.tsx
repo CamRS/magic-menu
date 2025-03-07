@@ -90,7 +90,132 @@ const defaultFormValues: InsertMenuItem = {
   },
 };
 
-function MenuSection({ section, items }: { section: string; items: MenuItem[] }) {
+const MenuItemCard = ({ item, selectedItems, handleStatusChange, handleEdit, handleDelete, handleImageDrop, handleImageDelete, toggleItemSelection }: {
+  item: MenuItem;
+  selectedItems: number[];
+  handleStatusChange: (item: MenuItem) => void;
+  handleEdit: (item: MenuItem) => void;
+  handleDelete: (id: number) => void;
+  handleImageDrop: (e: React.DragEvent<HTMLDivElement>, id?: number) => void;
+  handleImageDelete: (id: number) => void;
+  toggleItemSelection: (id: number) => void;
+}) => (
+  <Card key={item.id} className="menu-card">
+    <CardContent className="p-4">
+      <div className="flex items-start gap-6">
+        <Checkbox
+          checked={selectedItems.includes(item.id)}
+          onCheckedChange={() => toggleItemSelection(item.id)}
+          className="mt-1"
+        />
+
+        <div
+          className="w-32 h-32 flex-shrink-0 bg-custom-gray-100 rounded-lg flex items-center justify-center overflow-hidden transition-all duration-200 relative group"
+          onDragOver={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            e.currentTarget.classList.add('border-2', 'border-primary', 'border-dashed');
+          }}
+          onDragLeave={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            e.currentTarget.classList.remove('border-2', 'border-primary', 'border-dashed');
+          }}
+          onDrop={(e) => handleImageDrop(e, item.id)}
+        >
+          {item.image ? (
+            <>
+              <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+              <Button
+                variant="destructive"
+                size="icon"
+                className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleImageDelete(item.id);
+                }}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </>
+          ) : (
+            <div className="text-center text-custom-gray-400 text-sm">
+              <Upload className="h-6 w-6 mx-auto mb-1" />
+              <span>Upload Image</span>
+            </div>
+          )}
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <div className="flex justify-between items-start">
+            <div className="flex-1 mr-4">
+              <h3 className="text-lg font-medium text-custom-gray-500">
+                {item.name}
+              </h3>
+              <p className="text-custom-gray-400 mt-1">
+                {item.description}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <span className="text-lg font-medium text-custom-gray-500 mr-4">
+                {item.price ? `$${parseFloat(item.price).toFixed(2)}` : ""}
+              </span>
+              <Badge variant={item.status === "live" ? "default" : "secondary"} className="rounded-full px-3 py-1">
+                {item.status}
+              </Badge>
+              <TooltipProvider>
+                {[
+                  {
+                    icon: item.status === "draft" ? Eye : EyeOff,
+                    label: item.status === "draft" ? "Make Live" : "Make Draft",
+                    onClick: () => handleStatusChange(item),
+                  },
+                  { icon: Pencil, label: "Edit", onClick: () => handleEdit(item) },
+                  { icon: Trash2, label: "Delete", onClick: () => handleDelete(item.id) },
+                ].map(({ icon: Icon, label, onClick }) => (
+                  <Tooltip key={label}>
+                    <TooltipTrigger asChild>
+                      <Button variant="ghost" size="sm" className="rounded-full" onClick={onClick}>
+                        <Icon className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{label}</TooltipContent>
+                  </Tooltip>
+                ))}
+              </TooltipProvider>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-2 mt-4">
+            {Object.entries(item.allergens)
+              .filter(([_, value]) => value)
+              .map(([key]) => (
+                <Badge
+                  key={key}
+                  variant="outline"
+                  className="rounded-full bg-custom-gray-100 text-custom-gray-400 border-none px-3"
+                >
+                  Contains {key}
+                </Badge>
+              ))}
+          </div>
+        </div>
+      </div>
+    </CardContent>
+  </Card>
+);
+
+function MenuSection({ section, items, selectedItems, handleStatusChange, handleEdit, handleDelete, handleImageDrop, handleImageDelete, toggleItemSelection }: {
+  section: string;
+  items: MenuItem[];
+  selectedItems: number[];
+  handleStatusChange: (item: MenuItem) => void;
+  handleEdit: (item: MenuItem) => void;
+  handleDelete: (id: number) => void;
+  handleImageDrop: (e: React.DragEvent<HTMLDivElement>, id?: number) => void;
+  handleImageDelete: (id: number) => void;
+  toggleItemSelection: (id: number) => void;
+}) {
   const [isExpanded, setIsExpanded] = useState(true);
 
   return (
@@ -144,7 +269,16 @@ function MenuSection({ section, items }: { section: string; items: MenuItem[] })
                     damping: 20
                   }}
                 >
-                  <MenuItemCard item={item} />
+                  <MenuItemCard
+                    item={item}
+                    selectedItems={selectedItems}
+                    handleStatusChange={handleStatusChange}
+                    handleEdit={handleEdit}
+                    handleDelete={handleDelete}
+                    handleImageDrop={handleImageDrop}
+                    handleImageDelete={handleImageDelete}
+                    toggleItemSelection={toggleItemSelection}
+                  />
                 </Reorder.Item>
               ))}
             </Reorder.Group>
@@ -155,7 +289,7 @@ function MenuSection({ section, items }: { section: string; items: MenuItem[] })
   );
 }
 
-export default function HomePage() {
+function HomePage() {
   const { user, logoutMutation } = useAuth();
   const { toast } = useToast();
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
@@ -567,111 +701,6 @@ export default function HomePage() {
     }
   };
 
-  const MenuItemCard = ({ item }: { item: MenuItem }) => (
-    <Card key={item.id} className="menu-card">
-      <CardContent className="p-4">
-        <div className="flex items-start gap-6">
-          <Checkbox
-            checked={selectedItems.includes(item.id)}
-            onCheckedChange={() => toggleItemSelection(item.id)}
-            className="mt-1"
-          />
-
-          <div
-            className="w-32 h-32 flex-shrink-0 bg-custom-gray-100 rounded-lg flex items-center justify-center overflow-hidden transition-all duration-200 relative group"
-            onDragOver={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              e.currentTarget.classList.add('border-2', 'border-primary', 'border-dashed');
-            }}
-            onDragLeave={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              e.currentTarget.classList.remove('border-2', 'border-primary', 'border-dashed');
-            }}
-            onDrop={(e) => handleImageDrop(e, item.id)}
-          >
-            {item.image ? (
-              <>
-                <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
-                <Button
-                  variant="destructive"
-                  size="icon"
-                  className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleImageDelete(item.id);
-                  }}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </>
-            ) : (
-              <div className="text-center text-custom-gray-400 text-sm">
-                <Upload className="h-6 w-6 mx-auto mb-1" />
-                <span>Upload Image</span>
-              </div>
-            )}
-          </div>
-
-          <div className="flex-1 min-w-0">
-            <div className="flex justify-between items-start">
-              <div className="flex-1 mr-4">
-                <h3 className="text-lg font-medium text-custom-gray-500">
-                  {item.name}
-                </h3>
-                <p className="text-custom-gray-400 mt-1">
-                  {item.description}
-                </p>
-              </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <span className="text-lg font-medium text-custom-gray-500 mr-4">
-                  {item.price ? `$${parseFloat(item.price).toFixed(2)}` : ""}
-                </span>
-                <Badge variant={item.status === "live" ? "default" : "secondary"} className="rounded-full px-3 py-1">
-                  {item.status}
-                </Badge>
-                <TooltipProvider>
-                  {[
-                    {
-                      icon: item.status === "draft" ? Eye : EyeOff,
-                      label: item.status === "draft" ? "Make Live" : "Make Draft",
-                      onClick: () => handleStatusChange(item),
-                    },
-                    { icon: Pencil, label: "Edit", onClick: () => handleEdit(item) },
-                    { icon: Trash2, label: "Delete", onClick: () => handleDelete(item.id) },
-                  ].map(({ icon: Icon, label, onClick }) => (
-                    <Tooltip key={label}>
-                      <TooltipTrigger asChild>
-                        <Button variant="ghost" size="sm" className="rounded-full" onClick={onClick}>
-                          <Icon className="h-4 w-4" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>{label}</TooltipContent>
-                    </Tooltip>
-                  ))}
-                </TooltipProvider>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap gap-2 mt-4">
-              {Object.entries(item.allergens)
-                .filter(([_, value]) => value)
-                .map(([key]) => (
-                  <Badge
-                    key={key}
-                    variant="outline"
-                    className="rounded-full bg-custom-gray-100 text-custom-gray-400 border-none px-3"
-                  >
-                    Contains {key}
-                  </Badge>
-                ))}
-            </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
 
   const groupedByCourse = menuItems ? (
     (menuItems.reduce((acc, item) => {
@@ -989,7 +1018,7 @@ export default function HomePage() {
         {/* Menu Items Grid */}
         <motion.div layout className="space-y-6">
           {Array.from(groupedByCourse.entries()).map(([section, items]) => (
-            <MenuSection key={section} section={section} items={items} />
+            <MenuSection key={section} section={section} items={items} selectedItems={selectedItems} handleStatusChange={handleStatusChange} handleEdit={handleEdit} handleDelete={handleDelete} handleImageDrop={handleImageDrop} handleImageDelete={handleImageDelete} toggleItemSelection={toggleItemSelection} />
           ))}
         </motion.div>
 
@@ -1414,3 +1443,5 @@ export default function HomePage() {
     </div>
   );
 }
+
+export default HomePage;
