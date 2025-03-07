@@ -38,6 +38,7 @@ import {
   X,
   LogOut,
 } from "lucide-react";
+
 import { useQuery, useMutation } from "@tanstack/react-query";
 import {
   type Restaurant,
@@ -610,6 +611,43 @@ function HomePage() {
     </Card>
   );
 
+  const groupedByCourse = useMemo(() => {
+    if (!filteredItems?.length) return new Map();
+
+    const grouped = new Map<string, MenuItem[]>();
+
+    // Group all items that don't have course tags under "Uncategorized"
+    filteredItems.forEach(item => {
+      if (!item.courseTags?.length) {
+        const items = grouped.get("Uncategorized") || [];
+        grouped.set("Uncategorized", [...items, item]);
+        return;
+      }
+
+      // Group items by their course tags
+      item.courseTags.forEach(tag => {
+        const items = grouped.get(tag) || [];
+        grouped.set(tag, [...items, item]);
+      });
+    });
+
+    return grouped;
+  }, [filteredItems]);
+
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(Array.from(groupedByCourse.keys())));
+
+  const toggleSection = (section: string) => {
+    setExpandedSections(prev => {
+      const next = new Set(prev);
+      if (next.has(section)) {
+        next.delete(section);
+      } else {
+        next.add(section);
+      }
+      return next;
+    });
+  };
+
   return (
     <div
       className="min-h-screen bg-custom-gray-100"
@@ -758,11 +796,36 @@ function HomePage() {
           </Button>
         )}
 
-        <div className="space-y-4">
-          {filteredItems.map((item) => (
-            <MenuItemCard item={item} />
+        {/* Menu Items Grid */}
+        <div className="space-y-6">
+          {Array.from(groupedByCourse.entries()).map(([courseType, items]) => (
+            <div key={courseType} className="bg-white rounded-lg shadow-sm overflow-hidden">
+              <button
+                className="w-full px-6 py-4 flex items-center justify-between bg-gray-50 hover:bg-gray-100 transition-colors"
+                onClick={() => toggleSection(courseType)}
+              >
+                <h2 className="text-lg font-semibold text-gray-900">
+                  {courseType} ({items.length})
+                </h2>
+                <ChevronDown
+                  className={`h-5 w-5 text-gray-500 transition-transform ${
+                    expandedSections.has(courseType) ? "transform rotate-180" : ""
+                  }`}
+                />
+              </button>
+
+              {expandedSections.has(courseType) && (
+                <div className="p-4 space-y-4">
+                  {items.map((item) => (
+                    <MenuItemCard key={item.id} item={item} />
+                  ))}
+                </div>
+              )}
+            </div>
           ))}
         </div>
+
+
       </main>
 
       <Dialog
@@ -785,8 +848,8 @@ function HomePage() {
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
             <div>
               <Label htmlFor="name">Name</Label>
-              <Input 
-                {...form.register("name")} 
+              <Input
+                {...form.register("name")}
                 className="border border-input bg-background"
               />
               {form.formState.errors.name && (
@@ -797,8 +860,8 @@ function HomePage() {
             </div>
             <div>
               <Label htmlFor="description">Description</Label>
-              <Textarea 
-                {...form.register("description")} 
+              <Textarea
+                {...form.register("description")}
                 className="border border-input bg-background"
               />
               {form.formState.errors.description && (
@@ -809,8 +872,8 @@ function HomePage() {
             </div>
             <div>
               <Label htmlFor="price">Price</Label>
-              <Input 
-                {...form.register("price")} 
+              <Input
+                {...form.register("price")}
                 className="border border-input bg-background"
               />
               {form.formState.errors.price && (
