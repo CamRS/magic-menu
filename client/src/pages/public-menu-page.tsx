@@ -358,10 +358,10 @@ export default function PublicMenuPage() {
                         <Button
                           key={allergen}
                           variant="outline"
-                          className={`justify-start gap-2 h-12 ${
+                          className={`justify-start gap-2 h-12 border-2 border-gray-200 ${
                             selectedAllergens.includes(allergen)
                               ? "bg-blue-50 text-blue-700 border-blue-200"
-                              : "hover:bg-gray-50"
+                              : "hover:bg-gray-50 hover:border-gray-300"
                           }`}
                           onClick={() => {
                             setSelectedAllergens((prev) =>
@@ -384,10 +384,10 @@ export default function PublicMenuPage() {
                         <Button
                           key={pref}
                           variant="outline"
-                          className={`justify-start gap-2 h-12 ${
+                          className={`justify-start gap-2 h-12 border-2 border-gray-200 ${
                             selectedDietary.includes(pref)
                               ? "bg-green-50 text-green-700 border-green-200"
-                              : "hover:bg-gray-50"
+                              : "hover:bg-gray-50 hover:border-gray-300"
                           }`}
                           onClick={() => {
                             setSelectedDietary((prev) =>
