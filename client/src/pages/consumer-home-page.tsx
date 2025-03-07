@@ -99,13 +99,13 @@ const MenuCard = ({ item }: { item: ConsumerMenuItem }) => {
         )}
 
         <div>
-        <div className="text-sm text-gray-300"> Common description
-        </div>
-        {item.description && (
-          <p className="text-gray-900 text-md leading-relaxed mt-1">
-            {item.description}
-          </p>
-        )}
+          <div className="text-sm text-gray-300"> Common description
+          </div>
+          {item.description && (
+            <p className="text-gray-900 text-md leading-relaxed mt-1">
+              {item.description}
+            </p>
+          )}
         </div>
 
         <div>
@@ -129,6 +129,7 @@ export default function ConsumerHomePage() {
   const [isCoursesOpen, setIsCoursesOpen] = useState(false);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [page, setPage] = useState(1);
+  const [selectedStatus, setSelectedStatus] = useState<'live' | 'draft' | null>(null);
 
   const [emblaRef, emblaApi] = useEmblaCarousel({
     align: 'start',
@@ -143,7 +144,6 @@ export default function ConsumerHomePage() {
     }
   }, [emblaApi]);
 
-  // Fix query options and type annotations
   const { data: allMenuItems, isLoading } = useQuery<ConsumerMenuItem[]>({
     queryKey: ["/api/consumer-menu-items", user?.id],
     queryFn: async () => {
@@ -163,21 +163,22 @@ export default function ConsumerHomePage() {
     },
     enabled: !!user?.id,
     staleTime: 30000,
-    gcTime: 5 * 60 * 1000, // Replace cacheTime with gcTime
+    gcTime: 5 * 60 * 1000, 
   });
 
-  // Client-side filtering with proper type annotations
   const filteredItems = useMemo(() => {
     if (!allMenuItems) return [];
 
     return allMenuItems.filter((item: ConsumerMenuItem) => {
-      // Search term filter
       if (searchTerm && !item.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
-          !item.description.toLowerCase().includes(searchTerm.toLowerCase())) {
+          !item.description?.toLowerCase().includes(searchTerm.toLowerCase())) {
         return false;
       }
 
-      // Allergens filter
+      if (selectedStatus && item.status !== selectedStatus) {
+        return false;
+      }
+
       if (selectedAllergens.length > 0) {
         const hasSelectedAllergen = selectedAllergens.some(
           allergen => !item.allergens[allergen]
@@ -185,7 +186,6 @@ export default function ConsumerHomePage() {
         if (!hasSelectedAllergen) return false;
       }
 
-      // Course tags filter
       if (selectedTags.length > 0) {
         if (!item.courseTags?.some((tag: string) => selectedTags.includes(tag))) {
           return false;
@@ -194,9 +194,8 @@ export default function ConsumerHomePage() {
 
       return true;
     });
-  }, [allMenuItems, searchTerm, selectedAllergens, selectedTags]);
+  }, [allMenuItems, searchTerm, selectedAllergens, selectedTags, selectedStatus]);
 
-  // Pagination
   const paginatedItems = useMemo(() => {
     const start = (page - 1) * ITEMS_PER_PAGE;
     const end = start + ITEMS_PER_PAGE;
@@ -251,7 +250,6 @@ export default function ConsumerHomePage() {
     }
   };
 
-  // Fix uniqueTags type annotations
   const uniqueTags = useMemo(() => {
     if (!allMenuItems) return new Set<string>();
     return allMenuItems.reduce((tags: Set<string>, item: ConsumerMenuItem) => {
@@ -310,6 +308,29 @@ export default function ConsumerHomePage() {
     <div className="min-h-screen bg-gray-50">
       <header className="fixed top-0 left-0 right-0 bg-white border-b z-50">
         <div className="max-w-4xl mx-auto px-4 py-4">
+          <div className="flex gap-2 mb-3">
+            <Button
+              variant={selectedStatus === null ? "secondary" : "outline"}
+              onClick={() => setSelectedStatus(null)}
+              className="flex-1"
+            >
+              All Items ({allMenuItems?.length || 0})
+            </Button>
+            <Button
+              variant={selectedStatus === "draft" ? "secondary" : "outline"}
+              onClick={() => setSelectedStatus("draft")}
+              className="flex-1"
+            >
+              Drafts ({allMenuItems?.filter(item => item.status === "draft").length || 0})
+            </Button>
+            <Button
+              variant={selectedStatus === "live" ? "secondary" : "outline"}
+              onClick={() => setSelectedStatus("live")}
+              className="flex-1"
+            >
+              Live ({allMenuItems?.filter(item => item.status === "live").length || 0})
+            </Button>
+          </div>
           <div className="relative">
             <Input
               placeholder="Search menu..."
