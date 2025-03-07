@@ -163,22 +163,25 @@ export default function ConsumerHomePage() {
     },
     enabled: !!user?.id,
     staleTime: 30000,
-    gcTime: 5 * 60 * 1000, 
+    gcTime: 5 * 60 * 1000,
   });
 
   const filteredItems = useMemo(() => {
     if (!allMenuItems) return [];
 
     return allMenuItems.filter((item: ConsumerMenuItem) => {
+      // Check search term
       if (searchTerm && !item.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
           !item.description?.toLowerCase().includes(searchTerm.toLowerCase())) {
         return false;
       }
 
-      if (selectedStatus && item.status !== selectedStatus) {
+      // Check status filter
+      if (selectedStatus !== null && item.status !== selectedStatus) {
         return false;
       }
 
+      // Check allergen filters
       if (selectedAllergens.length > 0) {
         const hasSelectedAllergen = selectedAllergens.some(
           allergen => !item.allergens[allergen]
@@ -186,6 +189,7 @@ export default function ConsumerHomePage() {
         if (!hasSelectedAllergen) return false;
       }
 
+      // Check tag filters
       if (selectedTags.length > 0) {
         if (!item.courseTags?.some((tag: string) => selectedTags.includes(tag))) {
           return false;
@@ -310,21 +314,21 @@ export default function ConsumerHomePage() {
         <div className="max-w-4xl mx-auto px-4 py-4">
           <div className="flex gap-2 mb-3">
             <Button
-              variant={selectedStatus === null ? "secondary" : "outline"}
+              variant={selectedStatus === null ? "default" : "outline"}
               onClick={() => setSelectedStatus(null)}
               className="flex-1"
             >
               All Items ({allMenuItems?.length || 0})
             </Button>
             <Button
-              variant={selectedStatus === "draft" ? "secondary" : "outline"}
+              variant={selectedStatus === "draft" ? "default" : "outline"}
               onClick={() => setSelectedStatus("draft")}
               className="flex-1"
             >
               Drafts ({allMenuItems?.filter(item => item.status === "draft").length || 0})
             </Button>
             <Button
-              variant={selectedStatus === "live" ? "secondary" : "outline"}
+              variant={selectedStatus === "live" ? "default" : "outline"}
               onClick={() => setSelectedStatus("live")}
               className="flex-1"
             >

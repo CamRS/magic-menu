@@ -84,6 +84,7 @@ export const consumerMenuItems = pgTable("consumer_menu_items", {
   courseTags: text("course_type").array().default([]).notNull(),
   course_original: text("course_original").default(""),
   displayOrder: integer("display_order").default(0),
+  status: text("status").notNull().default("draft"),
   allergens: jsonb("allergens").$type<{
     milk: boolean;
     eggs: boolean;
@@ -104,7 +105,7 @@ export const consumerMenuItems = pgTable("consumer_menu_items", {
     gluten: false,
   }),
   createdAt: text("created_at").notNull().default(new Date().toISOString()),
-  source: text("source").notNull().default("upload"), // To track if it's from image upload, manual entry, etc.
+  source: text("source").notNull().default("upload"),
 });
 
 export const insertUserSchema = createInsertSchema(users).extend({
@@ -166,6 +167,7 @@ export const insertConsumerMenuItemSchema = createInsertSchema(consumerMenuItems
   course_original: z.string().optional().default(""),
   courseTags: z.array(z.string()).default([]),
   displayOrder: z.number().optional().default(0),
+  status: z.enum(["draft", "live"]).default("draft"),
   source: z.string().default("upload"),
   allergens: z.object({
     milk: z.boolean().default(false),
