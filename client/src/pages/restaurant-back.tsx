@@ -39,7 +39,7 @@ import {
   X,
   LogOut,
 } from "lucide-react";
-
+import { Reorder, motion, AnimatePresence } from "framer-motion";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import {
   type Restaurant,
@@ -58,7 +58,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { QRCodeSVG } from "qrcode.react";
 import {Tooltip, TooltipContent, TooltipProvider, TooltipTrigger} from "@/components/ui/tooltip";
-import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 
 type MenuItemStatus = "draft" | "live";
 
@@ -106,10 +105,10 @@ function HomePage() {
   const [showLabels, setShowLabels] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
-  const [isUpdateLoginOpen, setIsUpdateLoginOpen] = useState(false); // Added state for login update dialog
-  const [newEmail, setNewEmail] = useState(""); // Added state for new email
-  const [currentPassword, setCurrentPassword] = useState(""); // Added state for current password
-  const [newPassword, setNewPassword] = useState(""); // Added state for new password
+  const [isUpdateLoginOpen, setIsUpdateLoginOpen] = useState(false); 
+  const [newEmail, setNewEmail] = useState(""); 
+  const [currentPassword, setCurrentPassword] = useState(""); 
+  const [newPassword, setNewPassword] = useState(""); 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const qrCodeRef = useRef<HTMLDivElement>(null);
   const csvFileInputRef = useRef<HTMLInputElement>(null);
@@ -439,7 +438,6 @@ function HomePage() {
     }
   };
 
-  // Fix the handleImageDrop function to work with direct drag and drop
   const handleImageDrop = async (e: React.DragEvent<HTMLDivElement>, itemId?: number) => {
     e.preventDefault();
     e.stopPropagation();
@@ -624,7 +622,7 @@ function HomePage() {
 
     const grouped = new Map<string, MenuItem[]>();
 
-    // Group all items that don't have course tags under "Uncategorized"
+    
     [...groupedItems.draft, ...groupedItems.live]
       .sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0))
       .forEach(item => {
@@ -634,7 +632,6 @@ function HomePage() {
           return;
         }
 
-        // Group items by their course tags
         item.courseTags.forEach(tag => {
           const items = grouped.get(tag) || [];
           grouped.set(tag, [...items, item]);
@@ -665,37 +662,75 @@ function HomePage() {
     },
   });
 
-  const handleDragEnd = (result: any) => {
-    if (!result.destination) return;
 
-    const sourceSection = result.source.droppableId;
-    const destinationSection = result.destination.droppableId;
+  const MenuSection = ({ section, items }: { section: string; items: MenuItem[] }) => {
+    const [isExpanded, setIsExpanded] = useState(true);
 
-    if (sourceSection === destinationSection) {
-      const items = Array.from(groupedByCourse.get(sourceSection) || []) as MenuItem[];
-      const [reorderedItem] = items.splice(result.source.index, 1);
-      items.splice(result.destination.index, 0, reorderedItem);
-
-      // Update display order for affected items
-      items.forEach((item: MenuItem, index: number) => {
+    const handleReorder = async (reorderedItems: MenuItem[]) => {
+      reorderedItems.forEach((item, index) => {
         reorderMutation.mutate({ id: item.id, displayOrder: index });
       });
-    }
-  };
+    };
 
+    return (
+      <motion.div layout className="mb-8">
+        <div
+          className="flex items-center gap-2 mb-4 cursor-pointer"
+          onClick={() => setIsExpanded(!isExpanded)}
+        >
+          <motion.div
+            animate={{ rotate: isExpanded ? 90 : 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <ChevronRight className="h-5 w-5" />
+          </motion.div>
+          <h2 className="text-xl font-semibold">{section}</h2>
+          <span className="text-custom-gray-400">({items.length})</span>
+        </div>
 
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(Array.from(groupedByCourse.keys())));
-
-  const toggleSection = (section: string) => {
-    setExpandedSections(prev => {
-      const next = new Set(prev);
-      if (next.has(section)) {
-        next.delete(section);
-      } else {
-        next.add(section);
-      }
-      return next;
-    });
+        <AnimatePresence>
+          {isExpanded && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              <Reorder.Group
+                axis="y"
+                values={items}
+                onReorder={handleReorder}
+                className="space-y-4"
+              >
+                {items.map((item) => (
+                  <Reorder.Item
+                    key={item.id}
+                    value={item}
+                    className="cursor-move touch-none"
+                    dragListener
+                    whileDrag={{
+                      scale: 1.1,
+                      boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)",
+                      zIndex: 50,
+                    }}
+                    dragTransition={{
+                      bounceStiffness: 300,
+                      bounceDamping: 20
+                    }}
+                    transition={{
+                      duration: 0.2,
+                      ease: [0.43, 0.13, 0.23, 0.96]
+                    }}
+                  >
+                    <MenuItemCard item={item} />
+                  </Reorder.Item>
+                ))}
+              </Reorder.Group>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
+    );
   };
 
   const handleUpdateLogin = async () => {
@@ -718,36 +753,6 @@ function HomePage() {
       toast({
         title: "Error",
         description: "Failed to update account details. Please check your current password.",
-        variant: "destructive",
-      });
-    }
-  };
-
-
-  const handleUpdateLoginOld = async () => {
-    try {
-      const response = await apiRequest("PATCH", "/api/auth/update", {
-        email: newEmail,
-        currentPassword,
-        newPassword,
-      });
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to update login details");
-      }
-
-      toast({
-        title: "Success",
-        description: "Login details updated successfully",
-      });
-      setIsUpdateLoginOpen(false);
-      setNewEmail("");
-      setCurrentPassword("");
-      setNewPassword("");
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
         variant: "destructive",
       });
     }
@@ -798,7 +803,6 @@ function HomePage() {
 
             <div className="flex-1 flex items-center justify-center">
               <div className="relative">
-                {/* Condensed view - horizontal icons */}
                 <div className="flex items-center gap-6">
                   <TooltipProvider>
                     <Tooltip>
@@ -887,7 +891,6 @@ function HomePage() {
                   </TooltipProvider>
                 </div>
 
-                {/* Expanded menu */}
                 {showLabels && (
                   <div className="absolute top-full mt-2 bg-white rounded-lg shadow-lg p-4 space-y-3 w-64 z-50">
                     <Button
@@ -949,7 +952,7 @@ function HomePage() {
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button variant="outline" size="icon" className="rounded-full" onClick={() => logoutMutation.mutate()}>
-                      <LogOut className="h-5 w-5" />
+                      <LogOut className="h5 w-5" />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>Sign Out</TooltipContent>
@@ -1008,70 +1011,11 @@ function HomePage() {
         )}
 
         {/* Menu Items Grid */}
-        <DragDropContext onDragEnd={handleDragEnd}>
-          <div className="space-y-6">
-            {Array.from(groupedByCourse.entries()).map(([section, items]) => (
-              <div key={section} className="mb-8">
-                <div
-                  className="flex items-center gap-2 mb-4 cursor-pointer"
-                  onClick={() => toggleSection(section)}
-                >
-                  <ChevronRight
-                    className={`h-5 w-5 transition-transform ${
-                      expandedSections.has(section) ? "rotate-90" : ""
-                    }`}
-                  />
-                  <h2 className="text-xl font-semibold">{section}</h2>
-                  <span className="text-custom-gray-400">({items.length})</span>
-                </div>
-
-                {expandedSections.has(section) && (
-                  <Droppable droppableId={section}>
-                    {(provided, snapshot) => (
-                      <div
-                        ref={provided.innerRef}
-                        {...provided.droppableProps}
-                        className={`space-y-4 transition-all duration-200 ${
-                          snapshot.isDraggingOver ? "bg-gray-50/50 rounded-lg p-4" : ""
-                        }`}
-                      >
-                        {items.map((item, index) => (
-                          <Draggable
-                            key={item.id}
-                            draggableId={`item-${item.id}`}
-                            index={index}
-                          >
-                            {(provided, snapshot) => (
-                              <div
-                                ref={provided.innerRef}
-                                {...provided.draggableProps}
-                                {...provided.dragHandleProps}
-                                className={`transition-all duration-300 ease-in-out ${
-                                  snapshot.isDragging ? "shadow-lg ring-2 ring-primary/20" : ""
-                                }`}
-                                style={{
-                                  ...provided.draggableProps.style,
-                                  transform: snapshot.isDragging
-                                    ? `${provided.draggableProps.style?.transform} scale(1.1)`
-                                    : provided.draggableProps.style?.transform || 'none',
-                                  zIndex: snapshot.isDragging ? 100 : 'auto',
-                                  transformOrigin: 'center',
-                                }}
-                              >
-                                <MenuItemCard item={item} />
-                              </div>
-                            )}
-                          </Draggable>
-                        ))}
-                        {provided.placeholder}
-                      </div>
-                    )}
-                  </Droppable>
-                )}
-              </div>
-            ))}
-          </div>
-        </DragDropContext>
+        <motion.div layout className="space-y-6">
+          {Array.from(groupedByCourse.entries()).map(([section, items]) => (
+            <MenuSection key={section} section={section} items={items} />
+          ))}
+        </motion.div>
 
 
       </main>
@@ -1083,7 +1027,6 @@ function HomePage() {
           if (!isOpen) {
             setEditingItem(null);
           }
-          // Reset form with clean default values when opening for new item
           if (isOpen && !editingItem) {
             form.reset(defaultFormValues);
           }
@@ -1165,11 +1108,12 @@ function HomePage() {
                     }
                   }}
                 />
-                <Button                  type="button"
+                <Button type="button"
                   onClick={() => {
                     const value = newTag.trim();
                     if (value && !form.getValues("courseTags").includes(value)) {
-                      form.setValue("courseTags", [...form.getValues("courseTags"), value]);                      setNewTag("");
+                      form.setValue("courseTags", [...form.getValues("courseTags"), value]);
+                      setNewTag("");
                     }
                   }}
                 >
