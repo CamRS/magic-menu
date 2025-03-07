@@ -15,9 +15,41 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Copy, Store, PlusCircle, ChevronDown, Loader2, Download, Upload, Trash2, MoreVertical, Pencil, Globe, Image as ImageIcon, QrCode, Search, Eye, EyeOff, X } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  Share2,
+  Download,
+  Upload,
+  Filter,
+  Settings,
+  Maximize2,
+  ChevronRight,
+  Search,
+  Eye,
+  EyeOff,
+  Trash2,
+  Pencil,
+  Store,
+  PlusCircle,
+  ChevronDown,
+  Loader2,
+  Globe,
+  Image as ImageIcon,
+  QrCode,
+  X,
+} from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { type Restaurant, type MenuItem, type InsertMenuItem, insertMenuItemSchema } from "@shared/schema";
+import {
+  type Restaurant,
+  type MenuItem,
+  type InsertMenuItem,
+  insertMenuItemSchema,
+} from "@shared/schema";
 import { useState, useRef, useMemo, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -28,7 +60,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
-import { QRCodeSVG } from 'qrcode.react';
+import { QRCodeSVG } from "qrcode.react";
 
 type MenuItemStatus = "draft" | "live";
 
@@ -41,12 +73,14 @@ export default function HomePage() {
   const [selectedItems, setSelectedItems] = useState<number[]>([]);
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
   const [showQrCode, setShowQrCode] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<MenuItemStatus | null>(null);
-  const [newTag, setNewTag] = useState('');
-  const [isImageUploadDialogOpen, setIsImageUploadDialogOpen] = useState(false);
-  const qrCodeRef = useRef<HTMLDivElement>(null);
+  const [newTag, setNewTag] = useState("");
+  const [showLabels, setShowLabels] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const qrCodeRef = useRef<HTMLDivElement>(null);
 
   const form = useForm<InsertMenuItem>({
     resolver: zodResolver(insertMenuItemSchema),
@@ -72,8 +106,8 @@ export default function HomePage() {
         vegan: false,
         vegetarian: false,
         kosher: false,
-        halal: false
-      }
+        halal: false,
+      },
     },
   });
 
@@ -97,11 +131,11 @@ export default function HomePage() {
       if (!selectedRestaurant?.id) return [];
       console.log("Fetching menu items for restaurant:", selectedRestaurant.id);
       const params = new URLSearchParams({
-        restaurantId: selectedRestaurant.id.toString()
+        restaurantId: selectedRestaurant.id.toString(),
       });
       // Only add status if filtering is active
       if (statusFilter) {
-        params.append('status', statusFilter);
+        params.append("status", statusFilter);
       }
 
       const response = await apiRequest("GET", `/api/menu-items?${params}`);
@@ -121,7 +155,7 @@ export default function HomePage() {
     if (!menuItems) return { draft: [], live: [] };
     return menuItems.reduce(
       (acc, item) => {
-        const status = item.status || 'draft'; // Default to draft if no status
+        const status = item.status || "draft"; // Default to draft if no status
         acc[status as MenuItemStatus].push(item);
         return acc;
       },
@@ -133,14 +167,14 @@ export default function HomePage() {
     let items = menuItems || [];
 
     if (searchTerm) {
-      items = items.filter(item =>
+      items = items.filter((item) =>
         item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.description.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
     if (statusFilter) {
-      items = items.filter(item => item.status === statusFilter);
+      items = items.filter((item) => item.status === statusFilter);
     }
 
     return items;
@@ -250,9 +284,9 @@ export default function HomePage() {
     form.reset({
       name: item.name,
       description: item.description,
-      price: item.price || '', // Handle potential null price
+      price: item.price || "", // Handle potential null price
       courseTags: item.courseTags,
-      image: item.image || '', // Handle potential null image
+      image: item.image || "", // Handle potential null image
       status: item.status as MenuItemStatus,
       allergens: item.allergens,
       restaurantId: item.restaurantId,
@@ -267,9 +301,7 @@ export default function HomePage() {
 
   const deleteMutation = useMutation({
     mutationFn: async (ids: number[]) => {
-      const results = await Promise.all(
-        ids.map((id) => apiRequest("DELETE", `/api/menu-items/${id}`))
-      );
+      const results = await Promise.all(ids.map((id) => apiRequest("DELETE", `/api/menu-items/${id}`)));
       const errors = results.filter((res) => !res.ok);
       if (errors.length > 0) {
         throw new Error(`Failed to delete ${errors.length} items`);
@@ -293,9 +325,7 @@ export default function HomePage() {
   });
 
   const toggleItemSelection = (id: number) => {
-    setSelectedItems(prev =>
-      prev.includes(id) ? prev.filter(itemId => itemId !== id) : [...prev, id]
-    );
+    setSelectedItems((prev) => (prev.includes(id) ? prev.filter((itemId) => itemId !== id) : [...prev, id]));
   };
 
   const handleDeleteSelected = () => {
@@ -330,13 +360,13 @@ export default function HomePage() {
 
     try {
       const response = await fetch(`/api/restaurants/${selectedRestaurant.id}/menu/export`);
-      if (!response.ok) throw new Error('Failed to export menu');
+      if (!response.ok) throw new Error("Failed to export menu");
 
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
+      const a = document.createElement("a");
       a.href = url;
-      a.download = `${selectedRestaurant.name.toLowerCase().replace(/[^a-z0-9]/gi, '_')}_menu.csv`;
+      a.download = `${selectedRestaurant.name.toLowerCase().replace(/[^a-z0-9]/gi, "_")}_menu.csv`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -357,15 +387,15 @@ export default function HomePage() {
 
     try {
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append("file", file);
 
       const response = await fetch(`/api/restaurants/${selectedRestaurant.id}/menu/import`, {
-        method: 'POST',
+        method: "POST",
         body: formData,
       });
 
       if (!response.ok) {
-        throw new Error('Failed to import menu items');
+        throw new Error("Failed to import menu items");
       }
 
       queryClient.invalidateQueries({ queryKey: ["/api/menu-items", selectedRestaurant.id] });
@@ -387,7 +417,7 @@ export default function HomePage() {
     e.stopPropagation();
 
     const file = e.dataTransfer.files[0];
-    if (file && file.type.startsWith('image/')) {
+    if (file && file.type.startsWith("image/")) {
       const reader = new FileReader();
       reader.onloadend = () => {
         form.setValue("image", reader.result as string);
@@ -409,82 +439,84 @@ export default function HomePage() {
 
   const MenuItemCard = ({ item }: { item: MenuItem }) => {
     return (
-      <Card className="bg-white shadow-sm">
+      <Card key={item.id} className="menu-card">
         <CardContent className="p-4">
-          <div className="flex justify-between items-start">
-            <div className="flex items-center gap-2">
-              <Checkbox
-                checked={selectedItems.includes(item.id)}
-                onCheckedChange={() => toggleItemSelection(item.id)}
-              />
-              <div>
-                <h3 className="font-semibold">{item.name}</h3>
-                <p className="text-sm text-gray-600">{item.description}</p>
+          <div className="flex items-start gap-6">
+            <Checkbox
+              checked={selectedItems.includes(item.id)}
+              onCheckedChange={() => toggleItemSelection(item.id)}
+              className="mt-1"
+            />
+
+            {/* Image Section */}
+            <div className="w-32 h-32 flex-shrink-0 bg-custom-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
+              {item.image ? (
+                <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+              ) : (
+                <div className="text-center text-custom-gray-400 text-sm">
+                  <Upload className="h-6 w-6 mx-auto mb-1" />
+                  <span>Upload Image</span>
+                </div>
+              )}
+            </div>
+
+            {/* Content Section */}
+            <div className="flex-1 min-w-0">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="text-lg font-medium text-custom-gray-500 line-clamp-1">
+                    {item.name}
+                  </h3>
+                  <p className="text-custom-gray-400 mt-1 line-clamp-2">
+                    {item.description}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <Badge variant={item.status === "live" ? "default" : "secondary"} className="rounded-full px-3 py-1">
+                    {item.status}
+                  </Badge>
+                  <TooltipProvider>
+                    {[
+                      {
+                        icon: item.status === "draft" ? Eye : EyeOff,
+                        label: item.status === "draft" ? "Make Live" : "Make Draft",
+                        onClick: () => handleStatusChange(item),
+                      },
+                      { icon: Pencil, label: "Edit", onClick: () => handleEdit(item) },
+                      { icon: Trash2, label: "Delete", onClick: () => handleDelete(item.id) },
+                    ].map(({ icon: Icon, label, onClick }) => (
+                      <Tooltip key={label}>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="sm" className="rounded-full" onClick={onClick}>
+                            <Icon className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>{label}</TooltipContent>
+                      </Tooltip>
+                    ))}
+                  </TooltipProvider>
+                </div>
+              </div>
+
+              <div className="flex justify-between items-center mt-4">
+                <div className="flex flex-wrap gap-2">
+                  {Object.entries(item.allergens)
+                    .filter(([_, value]) => value)
+                    .map(([key]) => (
+                      <Badge
+                        key={key}
+                        variant="outline"
+                        className="rounded-full bg-custom-gray-100 text-custom-gray-400 border-none px-3"
+                      >
+                        Contains {key}
+                      </Badge>
+                    ))}
+                </div>
+                <span className="text-lg font-medium text-custom-gray-500">
+                  {item.price ? `$${parseFloat(item.price).toFixed(2)}` : ""}
+                </span>
               </div>
             </div>
-
-            <div className="flex items-center gap-2">
-              <Badge variant={item.status === "live" ? "default" : "secondary"}>
-                {item.status}
-              </Badge>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => handleStatusChange(item)}
-                disabled={updateStatusMutation.isPending}
-              >
-                {item.status === "draft" ? (
-                  <Eye className="h-4 w-4" />
-                ) : (
-                  <EyeOff className="h-4 w-4" />
-                )}
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => handleEdit(item)}
-              >
-                <Pencil className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => handleDelete(item.id)}
-                disabled={deleteMutation.isPending}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-
-          {item.image && (
-            <img
-              src={item.image}
-              alt={item.name}
-              className="mt-4 w-full h-48 object-cover rounded-lg"
-            />
-          )}
-
-          <div className="mt-4 flex justify-between items-center">
-            <div className="flex flex-wrap gap-2">
-              {Object.entries(item.allergens)
-                .filter(([_, value]) => value)
-                .map(([key]) => (
-                  <Badge key={key} variant="outline" className="capitalize">
-                    {key}
-                  </Badge>
-                ))}
-              {Object.entries(item.dietary_preferences)
-                .filter(([_, value]) => value)
-                .map(([key]) => (
-                  <Badge key={key} variant="default" className="capitalize bg-green-600">
-                    {key}
-                  </Badge>
-                ))}
-            </div>
-            <span className="font-semibold">
-              {item.price ? `$${parseFloat(item.price).toFixed(2)}` : ''}
-            </span>
           </div>
         </CardContent>
       </Card>
@@ -492,304 +524,315 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-4xl mx-auto p-4">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <div className="flex items-center gap-4">
-            {isLoadingRestaurants ? (
-              <div className="flex items-center gap-2">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <h1 className="text-2xl font-bold text-gray-400">Loading...</h1>
-              </div>
-            ) : (
-              <h1 className="text-2xl font-bold">
-                {selectedRestaurant?.name || "No restaurants found"}
-              </h1>
-            )}
-          </div>
+    <div
+      className="min-h-screen bg-custom-gray-100"
+      style={backgroundImage ? { backgroundImage: `url(${backgroundImage})`, backgroundSize: "cover", backgroundPosition: "center" } : {}}
+    >
+      {/* Top Navigation */}
+      <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-sm border-b border-custom-gray-200">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="flex items-center justify-between h-16">
+            {/* Left Section */}
+            <div className="flex items-center space-x-2">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="rounded-full"
+                      onClick={() => setShowLabels(!showLabels)}
+                    >
+                      <ChevronRight className={`h-5 w-5 transition-transform ${showLabels ? "rotate-180" : ""}`} />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Toggle Labels</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
 
-          <div className="flex items-center gap-4">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline">
-                  <Store className="mr-2 h-4 w-4" />
-                  {selectedRestaurant?.name || "Select Restaurant"}
-                  <ChevronDown className="ml-2 h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                {restaurants?.map((restaurant) => (
-                  <DropdownMenuItem
-                    key={restaurant.id}
-                    onClick={() => setSelectedRestaurant(restaurant)}
-                  >
-                    {restaurant.name}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="rounded-pill">
+                    <Store className="mr-2 h-4 w-4" />
+                    {selectedRestaurant?.name || "Select Restaurant"}
+                    <ChevronDown className="ml-2 h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  {restaurants?.map((restaurant) => (
+                    <DropdownMenuItem key={restaurant.id} onClick={() => setSelectedRestaurant(restaurant)}>
+                      {restaurant.name}
+                    </DropdownMenuItem>
+                  ))}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => setCreateRestaurantOpen(true)}>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Add New Restaurant
                   </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+
+            {/* Center Icons */}
+            <div className="flex items-center space-x-4">
+              <TooltipProvider>
+                {[
+                  { icon: Share2, label: "Share Menu", onClick: () => copyMenuUrl(selectedRestaurant?.id || 0) },
+                  { icon: Download, label: "Export CSV", onClick: handleExportCSV },
+                  { icon: Upload, label: "Import CSV", onClick: () => fileInputRef.current?.click() },
+                  { icon: Filter, label: "Filter Menu" },
+                  { icon: QrCode, label: "Show QR Code", onClick: () => setShowQrCode(true) },
+                ].map(({ icon: Icon, label, onClick }) => (
+                  <Tooltip key={label}>
+                    <TooltipTrigger asChild>
+                      <Button variant="ghost" size="icon" className="rounded-full" onClick={onClick}>
+                        <Icon className="h-5 w-5" />
+                        {showLabels && <span className="ml-2 text-sm">{label}</span>}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{label}</TooltipContent>
+                  </Tooltip>
                 ))}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => setCreateRestaurantOpen(true)}>
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Add New Restaurant
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+              </TooltipProvider>
+            </div>
 
-            <Button
-              variant="outline"
-              onClick={() => logoutMutation.mutate()}
-            >
-              Sign Out
-            </Button>
+            {/* Right Icons */}
+            <div className="flex items-center space-x-2">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="icon" className="rounded-full" onClick={() => setSettingsOpen(true)}>
+                      <Settings className="h-5 w-5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Settings</TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="outline" size="icon" className="rounded-full" onClick={() => logoutMutation.mutate()}>
+                      <Maximize2 className="h-5 w-5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Sign Out</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
           </div>
         </div>
+      </header>
 
-        <div className="mb-6">
-          <div className="flex gap-4 items-center mb-4">
-            <Input
-              type="search"
-              placeholder="Search menu items..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="max-w-sm"
-            />
-
-            <Button
-              onClick={() => {
-                setCreateMenuItemOpen(true);
-                form.setValue("restaurantId", selectedRestaurant?.id || 0);
-              }}
-            >
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Add Item
-            </Button>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline">
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem onClick={() => setIsImageUploadDialogOpen(true)}>
-                  <ImageIcon className="mr-2 h-4 w-4" />
-                  Upload Menu Image
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleExportCSV}>
-                  <Download className="mr-2 h-4 w-4" />
-                  Export CSV
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
-                  <Upload className="mr-2 h-4 w-4" />
-                  Import CSV
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setShowQrCode(true)}>
-                  <QrCode className="mr-2 h-4 w-4" />
-                  Show QR Code
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => selectedRestaurant && copyMenuUrl(selectedRestaurant.id)}
-                >
-                  <Globe className="mr-2 h-4 w-4" />
-                  Copy Menu URL
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-
-          <div className="flex gap-2">
-            <Button
-              variant={statusFilter === null ? "default" : "outline"}
-              onClick={() => setStatusFilter(null)}
-            >
-              All Items
-            </Button>
-            <Button
-              variant={statusFilter === "draft" ? "default" : "outline"}
-              onClick={() => setStatusFilter("draft")}
-            >
-              Drafts ({groupedItems.draft?.length || 0})
-            </Button>
-            <Button
-              variant={statusFilter === "live" ? "default" : "outline"}
-              onClick={() => setStatusFilter("live")}
-            >
-              Live ({groupedItems.live?.length || 0})
-            </Button>
-          </div>
+      <main className="max-w-7xl mx-auto px-4 py-6">
+        {/* Search Bar */}
+        <div className="relative mb-6">
+          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-custom-gray-400" />
+          <Input
+            placeholder="Search menu items..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-12 h-12 rounded-3xl border-custom-gray-200 bg-white shadow-sm w-full"
+          />
         </div>
 
+        {/* Filter Tabs */}
+        <div className="flex gap-3 mb-6">
+          <Button
+            variant={statusFilter === null ? "default" : "outline"}
+            className={`filter-tab ${statusFilter === null ? "filter-tab-active" : "filter-tab-inactive"}`}
+            onClick={() => setStatusFilter(null)}
+          >
+            All Items ({filteredItems.length})
+          </Button>
+          <Button
+            variant={statusFilter === "draft" ? "default" : "outline"}
+            className={`filter-tab ${statusFilter === "draft" ? "filter-tab-active" : "filter-tab-inactive"}`}
+            onClick={() => setStatusFilter("draft")}
+          >
+            Drafts ({groupedItems.draft?.length || 0})
+          </Button>
+          <Button
+            variant={statusFilter === "live" ? "default" : "outline"}
+            className={`filter-tab ${statusFilter === "live" ? "filter-tab-active" : "filter-tab-inactive"}`}
+            onClick={() => setStatusFilter("live")}
+          >
+            Live ({groupedItems.live?.length || 0})
+          </Button>
+
+          <Button
+            className="filter-tab filter-tab-active ml-auto"
+            onClick={() => {
+              setCreateMenuItemOpen(true);
+              form.setValue("restaurantId", selectedRestaurant?.id || 0);
+            }}
+          >
+            Add Item
+          </Button>
+        </div>
+
+        {/* Selected Items Actions */}
         {selectedItems.length > 0 && (
           <Button
             variant="destructive"
             onClick={handleDeleteSelected}
             disabled={deleteMutation.isPending}
-            className="mb-4"
+            className="mb-6 rounded-full"
           >
             {deleteMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Delete Selected ({selectedItems.length})
           </Button>
         )}
 
+        {/* Menu Items Grid */}
         <div className="space-y-4">
           {filteredItems.map((item) => (
-            <MenuItemCard key={item.id} item={item} />
+            <MenuItemCard item={item} />
           ))}
         </div>
+      </main>
 
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".csv"
-          onChange={handleImportCSV}
-          className="hidden"
-        />
+      {/* Keep existing dialogs */}
+      <Dialog
+        open={isCreateMenuItemOpen}
+        onOpenChange={(isOpen) => {
+          setCreateMenuItemOpen(isOpen);
+          if (!isOpen) {
+            setEditingItem(null);
+            form.reset();
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingItem ? "Edit Menu Item" : "Add Menu Item"}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+            <div>
+              <Label htmlFor="name">Name</Label>
+              <Input {...form.register("name")} />
+              {form.formState.errors.name && (
+                <p className="text-sm text-destructive mt-1">
+                  {form.formState.errors.name.message}
+                </p>
+              )}
+            </div>
+            <div>
+              <Label htmlFor="description">Description</Label>
+              <Textarea {...form.register("description")} />
+              {form.formState.errors.description && (
+                <p className="text-sm text-destructive mt-1">
+                  {form.formState.errors.description.message}
+                </p>
+              )}
+            </div>
+            <div>
+              <Label htmlFor="price">Price</Label>
+              <Input {...form.register("price")} />
+              {form.formState.errors.price && (
+                <p className="text-sm text-destructive mt-1">
+                  {form.formState.errors.price.message}
+                </p>
+              )}
+            </div>
 
-        <Dialog
-          open={isCreateMenuItemOpen}
-          onOpenChange={(isOpen) => {
-            setCreateMenuItemOpen(isOpen);
-            if (!isOpen) {
-              setEditingItem(null);
-              form.reset();
-            }
-          }}
-        >
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{editingItem ? 'Edit Menu Item' : 'Add Menu Item'}</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-              <div>
-                <Label htmlFor="name">Name</Label>
-                <Input {...form.register("name")} />
-                {form.formState.errors.name && (
-                  <p className="text-sm text-destructive mt-1">
-                    {form.formState.errors.name.message}
-                  </p>
-                )}
+            <div>
+              <Label>Course Tags</Label>
+              <div className="flex flex-wrap gap-2 mb-2">
+                {form.watch("courseTags").map((tag, index) => (
+                  <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                    {tag}
+                    <X
+                      className="h-3 w-3 cursor-pointer"
+                      onClick={() => {
+                        const newTags = [...form.getValues("courseTags")];
+                        newTags.splice(index, 1);
+                        form.setValue("courseTags", newTags);
+                      }}
+                    />
+                  </Badge>
+                ))}
               </div>
-              <div>
-                <Label htmlFor="description">Description</Label>
-                <Textarea {...form.register("description")} />
-                {form.formState.errors.description && (
-                  <p className="text-sm text-destructive mt-1">
-                    {form.formState.errors.description.message}
-                  </p>
-                )}
-              </div>
-              <div>
-                <Label htmlFor="price">Price</Label>
-                <Input {...form.register("price")} />
-                {form.formState.errors.price && (
-                  <p className="text-sm text-destructive mt-1">
-                    {form.formState.errors.price.message}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <Label>Course Tags</Label>
-                <div className="flex flex-wrap gap-2 mb-2">
-                  {form.watch("courseTags").map((tag, index) => (
-                    <Badge key={index} variant="secondary" className="flex items-center gap-1">
-                      {tag}
-                      <X
-                        className="h-3 w-3 cursor-pointer"
-                        onClick={() => {
-                          const newTags = [...form.getValues("courseTags")];
-                          newTags.splice(index, 1);
-                          form.setValue("courseTags", newTags);
-                        }}
-                      />
-                    </Badge>
-                  ))}
-                </div>
-                <div className="flex gap-2">
-                  <Input
-                    value={newTag}
-                    onChange={(e) => setNewTag(e.target.value)}
-                    placeholder="Add a new tag"
-                    onKeyPress={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        const value = newTag.trim();
-                        if (value && !form.getValues("courseTags").includes(value)) {
-                          form.setValue("courseTags", [...form.getValues("courseTags"), value]);
-                          setNewTag("");
-                        }
-                      }
-                    }}
-                  />
-                  <Button
-                    type="button"
-                    onClick={() => {
+              <div className="flex gap-2">
+                <Input
+                  value={newTag}
+                  onChange={(e) => setNewTag(e.target.value)}
+                  placeholder="Add a new tag"
+                  onKeyPress={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
                       const value = newTag.trim();
                       if (value && !form.getValues("courseTags").includes(value)) {
                         form.setValue("courseTags", [...form.getValues("courseTags"), value]);
                         setNewTag("");
                       }
-                    }}
-                  >
-                    Add Tag
-                  </Button>
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="image">Image</Label>
-                <div
-                  className="border-2 border-dashed border-gray-300 rounded-lg p-6 cursor-pointer hover:border-primary transition-colors"
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
+                    }
                   }}
-                  onDrop={handleImageDrop}
+                />
+                <Button
+                  type="button"
+                  onClick={() => {
+                    const value = newTag.trim();
+                    if (value && !form.getValues("courseTags").includes(value)) {
+                      form.setValue("courseTags", [...form.getValues("courseTags"), value]);
+                      setNewTag("");
+                    }
+                  }}
                 >
-                  <Input
-                    id="image"
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
-                  />
-                  <p className="text-sm text-muted-foreground mt-2">
-                    Drag and drop an image here or click to select
-                  </p>
-                  {form.watch("image") && (
-                    <img
-                      src={form.watch("image")}
-                      alt="Preview"
-                      className="mt-4 max-h-40 rounded-lg"
+                  Add Tag
+                </Button>
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="image">Image</Label>
+              <div
+                className="border-2 border-dashed border-gray-300 rounded-lg p-6 cursor-pointer hover:border-primary transition-colors"
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+                onDrop={handleImageDrop}
+              >
+                <Input
+                  id="image"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+                />
+                <p className="text-sm text-muted-foreground mt-2">
+                  Drag and drop an image here or click to select
+                </p>
+                {form.watch("image") && (
+                  <img src={form.watch("image")} alt="Preview" className="mt-4 max-h-40 rounded-lg" />
+                )}
+              </div>
+            </div>
+
+            <div>
+              <Label>Allergens</Label>
+              <div className="grid grid-cols-2 gap-4 mt-2">
+                {(Object.keys(form.getValues().allergens) as Array<keyof InsertMenuItem["allergens"]>).map((key) => (
+                  <div key={key} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={key}
+                      checked={form.watch(`allergens.${key}`)}
+                      onCheckedChange={(checked) => {
+                        form.setValue(`allergens.${key}`, checked as boolean);
+                      }}
                     />
-                  )}
-                </div>
+                    <Label htmlFor={key} className="capitalize">
+                      {key}
+                    </Label>
+                  </div>
+                ))}
               </div>
+            </div>
 
-              <div>
-                <Label>Allergens</Label>
-                <div className="grid grid-cols-2 gap-4 mt-2">
-                  {(Object.keys(form.getValues().allergens) as Array<keyof InsertMenuItem['allergens']>).map((key) => (
-                    <div key={key} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={key}
-                        checked={form.watch(`allergens.${key}`)}
-                        onCheckedChange={(checked) => {
-                          form.setValue(`allergens.${key}`, checked as boolean);
-                        }}
-                      />
-                      <Label htmlFor={key} className="capitalize">
-                        {key}
-                      </Label>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <Label>Dietary Preferences</Label>
-                <div className="grid grid-cols-2 gap-4 mt-2">
-                  {(Object.keys(form.getValues().dietary_preferences) as Array<keyof InsertMenuItem['dietary_preferences']>).map((key) => (
+            <div>
+              <Label>Dietary Preferences</Label>
+              <div className="grid grid-cols-2 gap-4 mt-2">
+                {(Object.keys(form.getValues().dietary_preferences) as Array<keyof InsertMenuItem["dietary_preferences"]>).map(
+                  (key) => (
                     <div key={key} className="flex items-center space-x-2">
                       <Checkbox
                         id={key}
@@ -802,87 +845,105 @@ export default function HomePage() {
                         {key}
                       </Label>
                     </div>
-                  ))}
-                </div>
+                  )
+                )}
               </div>
+            </div>
 
-              <div>
-                <Label htmlFor="status">Status</Label>
-                <select {...form.register("status")} className="w-full p-2 border rounded-md">
-                  <option value="draft">Draft</option>
-                  <option value="live">Live</option>
-                </select>
-              </div>
+            <div>
+              <Label htmlFor="status">Status</Label>
+              <select {...form.register("status")} className="w-full p-2 border rounded-md">
+                <option value="draft">Draft</option>
+                <option value="live">Live</option>
+              </select>
+            </div>
 
-              <Button type="submit" className="w-full">
-                {editingItem ? "Update Item" : "Add Item"}
-              </Button>
-            </form>
-          </DialogContent>
-        </Dialog>
+            <Button type="submit" className="w-full">
+              {editingItem ? "Update Item" : "Add Item"}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
 
-        {selectedRestaurant && (
-          <Dialog open={showQrCode} onOpenChange={setShowQrCode}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Menu QR Code</DialogTitle>
-              </DialogHeader>
-              <div ref={qrCodeRef} className="flex flex-col items-center justify-center p-4">
-                <QRCodeSVG
-                  value={getPublicMenuUrl(selectedRestaurant.id)}
-                  size={200}
-                  className="mb-4"
-                />
-                <p className="text-sm text-gray-500 break-all">
-                  {getPublicMenuUrl(selectedRestaurant.id)}
-                </p>
-              </div>
-              <DialogFooter>
-                <Button onClick={() => setShowQrCode(false)}>Close</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        )}
-
-        <Dialog open={isImageUploadDialogOpen} onOpenChange={setIsImageUploadDialogOpen}>
+      {selectedRestaurant && (
+        <Dialog open={showQrCode} onOpenChange={setShowQrCode}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Upload Menu Image</DialogTitle>
+              <DialogTitle>Menu QR Code</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4">
+            <div ref={qrCodeRef} className="flex flex-col items-center justify-center p-4">
+              <QRCodeSVG value={getPublicMenuUrl(selectedRestaurant.id)} size={200} className="mb-4" />
+              <p className="text-sm text-gray-500 break-all">
+                {getPublicMenuUrl(selectedRestaurant.id)}
+              </p>
+            </div>
+            <DialogFooter>
+              <Button onClick={() => setShowQrCode(false)}>Close</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Settings</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Background Image</Label>
               <div
-                className="border-2 border-dashed border-gray-300 rounded-lg p-6 cursor-pointer hover:border-primary transition-colors"
+                className="mt-2 border-2 border-dashed border-gray-300 rounded-lg p-6 cursor-pointer hover:border-primary transition-colors"
                 onDragOver={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
                 }}
-                onDrop={handleImageDrop}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  const file = e.dataTransfer.files[0];
+                  if (file && file.type.startsWith("image/")) {
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                      setBackgroundImage(reader.result as string);
+                    };
+                    reader.readAsDataURL(file);
+                  }
+                }}
               >
                 <Input
                   type="file"
                   accept="image/*"
-                  onChange={handleImageUpload}
-                  className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onloadend = () => {
+                        setBackgroundImage(reader.result as string);
+                      };
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                  className="hidden"
                 />
-                <p className="text-sm text-muted-foreground mt-2">
-                  Drag and drop an image here or click to select
-                </p>
+                <div className="text-center">
+                  <Upload className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                  <p className="text-sm text-gray-600">
+                    Drag and drop an image here or click to select
+                  </p>
+                </div>
               </div>
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsImageUploadDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={() => {
-                // Handle image upload,  This is a placeholder.  Needs actual upload logic.
-                setIsImageUploadDialogOpen(false);
-              }}>
-                Upload
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".csv"
+        onChange={handleImportCSV}
+        className="hidden"
+      />
     </div>
   );
 }
