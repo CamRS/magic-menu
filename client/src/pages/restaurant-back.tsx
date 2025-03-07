@@ -106,7 +106,7 @@ const MenuItemCard = ({ item, selectedItems, handleStatusChange, handleEdit, han
         <Checkbox
           checked={selectedItems.includes(item.id)}
           onCheckedChange={() => toggleItemSelection(item.id)}
-          className="mt-1"
+          className="mt-1 w-5 h-5" // Increased size from default
         />
 
         <div
@@ -193,9 +193,9 @@ const MenuItemCard = ({ item, selectedItems, handleStatusChange, handleEdit, han
                 <Badge
                   key={key}
                   variant="outline"
-                  className="rounded-full bg-custom-gray-100 text-custom-gray-400 border-none px-3"
+                  className="rounded-full bg-blue-100 text-blue-700 border-none px-3 capitalize"
                 >
-                  Contains {key}
+                  {key}
                 </Badge>
               ))}
           </div>
@@ -936,7 +936,7 @@ function HomePage() {
 
                 {showLabels && (
                   <div className="absolute top-full mt-2 bg-white rounded-lg shadow-lg p-4 space-y-3 w-64 z-50">
-                    <Button variant="ghost"
+                    <Button                    variant="ghost"
                       className="w-full justify-start gap-3"
                       onClick={() => fileInputRef.current?.click()}
                     >
