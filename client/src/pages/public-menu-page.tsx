@@ -176,8 +176,8 @@ export default function PublicMenuPage() {
         throw new Error('Failed to fetch menu items');
       }
 
-      const items = await response.json();
-      return items;
+      const data = await response.json();
+      return data.items || []; // Extract items from response
     },
     enabled: !!restaurantId,
     retry: 2,
