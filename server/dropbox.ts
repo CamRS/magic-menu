@@ -36,13 +36,11 @@ export class DropboxService {
       throw error;
     }
 
-    const auth = Buffer.from(`${appKey}:${appSecret}`).toString('base64');
-
     try {
       const response = await fetch('https://api.dropbox.com/oauth2/token', {
         method: 'POST',
         headers: {
-          'Authorization': `Basic ${auth}`,
+          'Authorization': `Basic ${Buffer.from(`${appKey}:${appSecret}`).toString('base64')}`,
           'Content-Type': 'application/x-www-form-urlencoded',
         },
         body: `grant_type=refresh_token&refresh_token=${refreshToken}`,
@@ -73,7 +71,7 @@ export class DropboxService {
     }
   }
 
-  async uploadImage(imageData: string, fileName: string): Promise<string> {
+  async uploadImage(imageData: string, fileName: string, isConsumerUpload: boolean = false): Promise<string> {
     try {
       logger.info('Starting Dropbox upload process', { fileName });
 
@@ -83,7 +81,9 @@ export class DropboxService {
         'base64'
       );
 
-      const path = `/Magic Menu/${fileName}`;
+      const path = isConsumerUpload 
+        ? `/translate - magic menu/${fileName}`
+        : `/Magic Menu/${fileName}`;
       logger.info('Uploading to Dropbox path', { path });
 
       try {

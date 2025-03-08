@@ -342,7 +342,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         logger.info('Attempting to upload to Dropbox', { fileName });
 
-        const imageUrl = await dropboxService.uploadImage(imageData, fileName);
+        const imageUrl = await dropboxService.uploadImage(imageData, fileName, true); // Set isConsumerUpload to true
         logger.info('Successfully uploaded to Dropbox', { imageUrl });
 
         // Create menu item with Dropbox URL
