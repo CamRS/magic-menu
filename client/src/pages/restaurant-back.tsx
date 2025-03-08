@@ -966,7 +966,10 @@ function HomePage() {
                     <Button
                       variant="ghost"
                       className="w-full justify-start gap-3"
-                      onClick={() => fileInputRef.current?.click()}
+                      onClick={() => {
+                        fileInputRef.current?.click();
+                        setShowLabels(false);
+                      }}
                     >
                       <ImageIcon className="h-5 w-5" />
                       <span>Upload menu image</span>
