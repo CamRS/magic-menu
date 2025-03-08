@@ -747,36 +747,37 @@ function HomePage() {
     }
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        try {
-          const formData = new FormData();
-          formData.append('file', file);
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
 
-          const response = await fetch('/api/menu-items/upload', {
-            method: 'POST',
-            body: formData,
-            credentials: 'include'
-          });
+        const response = await fetch('/api/menu-items/upload', {
+          method: 'POST',
+          body: formData,
+          credentials: 'include'
+        });
 
-          if (!response.ok) {
-            throw new Error('Failed to upload image');
-          }
-
-          const { image } = await response.json();
-          form.setValue("image", image);
-        } catch (error) {
-          toast({
-            title: "Error",
-            description: "Failed to upload image",
-            variant: "destructive",
-          });
+        if (!response.ok) {
+          throw new Error('Failed to upload image');
         }
-      };
-      reader.readAsDataURL(file);
+
+        const { image } = await response.json();
+        form.setValue("image", image);
+
+        toast({
+          title: "Success",
+          description: "Image uploaded successfully",
+        });
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to upload image",
+          variant: "destructive",
+        });
+      }
     }
   };
 
