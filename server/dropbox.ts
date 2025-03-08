@@ -1,5 +1,6 @@
 import { Dropbox } from 'dropbox';
 import fetch from 'node-fetch';
+import { logger } from './logger';
 
 interface RefreshTokenResponse {
   access_token: string;
@@ -12,14 +13,14 @@ export class DropboxService {
   private accessToken: string;
 
   constructor() {
-    console.log('Initializing DropboxService...');
+    logger.info('Initializing DropboxService...');
     this.accessToken = process.env.VITE_DROPBOX_ACCESS_TOKEN || '';
     if (!this.accessToken) {
-      console.error('No Dropbox access token found in environment variables');
+      logger.error('No Dropbox access token found in environment variables');
       throw new Error('Missing Dropbox access token');
     }
     this.dbx = new Dropbox({ accessToken: this.accessToken });
-    console.log('DropboxService initialized with token length:', this.accessToken.length);
+    logger.info('DropboxService initialized', { tokenLength: this.accessToken.length });
   }
 
   private async refreshToken(): Promise<string> {
@@ -27,11 +28,11 @@ export class DropboxService {
     const appSecret = process.env.VITE_DROPBOX_APP_SECRET;
     const refreshToken = process.env.VITE_DROPBOX_REFRESH_TOKEN;
 
-    console.log('Attempting to refresh Dropbox token');
+    logger.info('Attempting to refresh Dropbox token');
 
     if (!appKey || !appSecret || !refreshToken) {
       const error = new Error('Missing required environment variables for token refresh');
-      console.error('Token refresh failed:', error);
+      logger.error('Token refresh failed', error);
       throw error;
     }
 
@@ -47,11 +48,11 @@ export class DropboxService {
         body: `grant_type=refresh_token&refresh_token=${refreshToken}`,
       });
 
-      console.log('Token refresh response status:', response.status);
+      logger.info('Token refresh response received', { status: response.status });
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Token refresh failed:', {
+        logger.error('Token refresh failed', {
           status: response.status,
           statusText: response.statusText,
           error: errorText
@@ -60,21 +61,21 @@ export class DropboxService {
       }
 
       const data = await response.json() as RefreshTokenResponse;
-      console.log('Token refreshed successfully');
+      logger.info('Token refreshed successfully');
 
       this.accessToken = data.access_token;
       this.dbx = new Dropbox({ accessToken: this.accessToken });
 
       return this.accessToken;
     } catch (error) {
-      console.error('Error during token refresh:', error);
+      logger.error('Error during token refresh', error);
       throw error;
     }
   }
 
   async uploadImage(imageData: string, fileName: string): Promise<string> {
     try {
-      console.log('Starting Dropbox upload process for:', fileName);
+      logger.info('Starting Dropbox upload process', { fileName });
 
       // Remove data URL prefix if present
       const buffer = Buffer.from(
@@ -83,21 +84,21 @@ export class DropboxService {
       );
 
       const path = `/Magic Menu/${fileName}`;
-      console.log('Uploading to Dropbox path:', path);
+      logger.info('Uploading to Dropbox path', { path });
 
       try {
-        console.log('Attempting file upload...');
+        logger.debug('Attempting file upload...');
         const response = await this.dbx.filesUpload({
           path,
           contents: buffer,
         });
-        console.log('Upload successful:', response.result);
+        logger.info('Upload successful', response.result);
 
         // Return the path of the uploaded file
         return response.result.path_display || path;
 
       } catch (error: any) {
-        console.error('Dropbox API error:', {
+        logger.error('Dropbox API error', {
           status: error?.status,
           error: error?.error,
           message: error?.message,
@@ -105,28 +106,22 @@ export class DropboxService {
         });
 
         if (error?.status === 401) {
-          console.log('Token expired, attempting refresh...');
+          logger.info('Token expired, attempting refresh...');
           await this.refreshToken();
 
-          console.log('Retrying upload after token refresh...');
+          logger.info('Retrying upload after token refresh...');
           const response = await this.dbx.filesUpload({
             path,
             contents: buffer,
           });
-          console.log('Retry upload successful:', response.result);
+          logger.info('Retry upload successful', response.result);
 
           return response.result.path_display || path;
         }
         throw error;
       }
     } catch (error) {
-      console.error('Error in uploadImage:', {
-        error: error instanceof Error ? {
-          message: error.message,
-          stack: error.stack,
-          name: error.name
-        } : error
-      });
+      logger.error('Error in uploadImage', error);
       throw error;
     }
   }
