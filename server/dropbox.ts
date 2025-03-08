@@ -93,20 +93,9 @@ export class DropboxService {
         });
         console.log('Upload successful:', response.result);
 
-        // Get a shared link
-        console.log('Creating shared link...');
-        const shareResponse = await this.dbx.sharingCreateSharedLink({
-          path: response.result.path_display || path,
-        });
-        console.log('Shared link created:', shareResponse.result);
+        // Return the path of the uploaded file
+        return response.result.path_display || path;
 
-        // Convert shared link to direct download link
-        let downloadUrl = shareResponse.result.url;
-        downloadUrl = downloadUrl.replace('www.dropbox.com', 'dl.dropboxusercontent.com');
-        downloadUrl = downloadUrl.replace('?dl=0', '');
-
-        console.log('Final download URL:', downloadUrl);
-        return downloadUrl;
       } catch (error: any) {
         console.error('Dropbox API error:', {
           status: error?.status,
@@ -126,17 +115,7 @@ export class DropboxService {
           });
           console.log('Retry upload successful:', response.result);
 
-          const shareResponse = await this.dbx.sharingCreateSharedLink({
-            path: response.result.path_display || path,
-          });
-          console.log('Retry shared link created:', shareResponse.result);
-
-          let downloadUrl = shareResponse.result.url;
-          downloadUrl = downloadUrl.replace('www.dropbox.com', 'dl.dropboxusercontent.com');
-          downloadUrl = downloadUrl.replace('?dl=0', '');
-
-          console.log('Final download URL after retry:', downloadUrl);
-          return downloadUrl;
+          return response.result.path_display || path;
         }
         throw error;
       }
