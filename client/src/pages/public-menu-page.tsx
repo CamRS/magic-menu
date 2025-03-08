@@ -3,7 +3,7 @@ import { useRoute } from "wouter";
 import { type MenuItem, type Restaurant } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Search, Filter, X, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { Search, Filter, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import useEmblaCarousel from 'embla-carousel-react';
 import { Button } from "@/components/ui/button";
@@ -73,6 +73,7 @@ const MenuCard = ({ item }: { item: MenuItem }) => {
             </div>
           </div>
         )}
+
         {item.image && (
           <div className="w-full h-[200px] rounded-lg">
             <img
@@ -150,7 +151,7 @@ export default function PublicMenuPage() {
     emblaApi.on('reInit', onSelect);
   }, [emblaApi, onSelect]);
 
-  const { data: restaurant, isLoading: isLoadingRestaurant } = useQuery<Restaurant>({
+  const { data: restaurant } = useQuery<Restaurant>({
     queryKey: [`/api/restaurants/${restaurantId}`],
     enabled: !!restaurantId,
   });
@@ -164,7 +165,7 @@ export default function PublicMenuPage() {
 
       const response = await fetch(`/api/menu-items?${new URLSearchParams({
         restaurantId: restaurantId.toString(),
-        status: 'live'  // Only fetch live items for public display
+        status: 'live'
       })}`, {
         headers: {
           'Accept': 'application/json'
@@ -180,7 +181,7 @@ export default function PublicMenuPage() {
     },
     enabled: !!restaurantId,
     retry: 2,
-    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+    staleTime: 1000 * 60 * 5,
   });
 
   const uniqueTags = useMemo(() => {
@@ -195,14 +196,13 @@ export default function PublicMenuPage() {
   const filteredItems = useMemo(() => {
     if (!menuItems) return [];
     return menuItems
-      .filter(({ name, description, courseTags }) => {
-        // Only filter by search and tags, status is already filtered by the API
+      .filter(item => {
         const matchesSearch = !searchTerm ||
-          name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          description.toLowerCase().includes(searchTerm.toLowerCase());
+          item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          item.description.toLowerCase().includes(searchTerm.toLowerCase());
 
         const matchesTags = selectedTags.length === 0 ||
-          selectedTags.every(tag => courseTags?.includes(tag));
+          selectedTags.every(tag => item.courseTags?.includes(tag));
 
         return matchesSearch && matchesTags;
       })
@@ -218,14 +218,12 @@ export default function PublicMenuPage() {
     }
   };
 
-  if (!matches || !restaurantId || isLoadingRestaurant) {
-    return <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      {!matches || !restaurantId ? (
+  if (!matches || !restaurantId) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <p className="text-gray-500">Restaurant not found</p>
-      ) : (
-        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-      )}
-    </div>;
+      </div>
+    );
   }
 
   return (
@@ -249,7 +247,7 @@ export default function PublicMenuPage() {
               >
                 All Courses
               </Button>
-              {Array.from(uniqueTags).map((tag) => (
+              {uniqueTags.map((tag) => (
                 <Button
                   key={tag}
                   variant={selectedTags.includes(tag) ? "default" : "outline"}
@@ -312,6 +310,7 @@ export default function PublicMenuPage() {
           </div>
         )}
       </main>
+
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t z-50">
         <div className="max-w-4xl mx-auto px-4 py-3">
           <div className="flex items-center gap-3">
