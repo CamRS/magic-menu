@@ -158,7 +158,7 @@ const MenuItemCard = ({ item, selectedItems, handleStatusChange, handleEdit, han
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
               <span className="text-lg font-medium text-custom-gray-500 mr-4">
-                {item.price ? `$${parseFloat(item.price).toFixed(2)}` : ""}
+                {item.price && parseFloat(item.price) !== 0 ? `$${parseFloat(item.price).toFixed(2)}` : ""}
               </span>
               <Badge variant={item.status === "live" ? "default" : "secondary"} className="rounded-full px-3 py-1">
                 {item.status}
@@ -944,8 +944,7 @@ function HomePage() {
                       <TooltipContent>Copy menu URL</TooltipContent>
                     </Tooltip>
 
-                    <Tooltip>
-                      <TooltipTrigger asChild>
+                    <Tooltip><TooltipTrigger asChild>
                         <Button
                           variant="ghost"
                           size="icon"
