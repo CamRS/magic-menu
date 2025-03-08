@@ -102,6 +102,10 @@ app.use((req, res, next) => {
     const message = err.message || "Internal Server Error";
 
     res.status(status).json({ message });
+    log(`Error: ${message}`, 'error');
+    if (err.stack) {
+      log(`Stack trace: ${err.stack}`, 'error');
+    }
     throw err;
   });
 
@@ -131,6 +135,9 @@ app.use((req, res, next) => {
         process.exit(1);
       } else {
         log(`Fatal: Failed to start server: ${err.message}`, 'startup');
+        if (err.stack) {
+          log(`Stack trace: ${err.stack}`, 'error');
+        }
         process.exit(1);
       }
     });
