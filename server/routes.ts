@@ -78,6 +78,20 @@ function parseCSV(csvText: string): string[][] {
   return rows;
 }
 
+// Helper function to generate user-prefixed filename
+function generateUserPrefixedFilename(userId: number, originalFilename: string, prefix: string = ''): string {
+  if (!userId || userId <= 0) {
+    throw new Error('Invalid user ID');
+  }
+
+  const extension = path.extname(originalFilename);
+  const timestamp = Date.now();
+  const userPrefix = `user_${userId}`;
+  const prefixPart = prefix ? `${prefix}_` : '';
+
+  return `${userPrefix}_${prefixPart}${timestamp}${extension}`;
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   setupAuth(app);
 
@@ -336,14 +350,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       try {
-        // Upload image to Dropbox
         const userId = req.user.id;
-        const fileName = `menu_item_${Date.now()}${path.extname(req.file.originalname)}`;
+        // Generate filename with user ID prefix
+        const fileName = generateUserPrefixedFilename(userId, req.file.originalname, 'menu_item');
         const imageData = req.file.buffer.toString('base64');
 
         logger.info('Attempting to upload to Dropbox', { fileName, userId });
 
-        const imageUrl = await dropboxService.uploadImage(imageData, fileName, true, userId.toString()); // Pass userId to uploadImage
+        const imageUrl = await dropboxService.uploadImage(imageData, fileName, true, userId.toString());
         logger.info('Successfully uploaded to Dropbox', { imageUrl });
 
         // Create menu item with Dropbox URL
@@ -378,6 +392,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const item = await storage.createConsumerMenuItem(parsed.data);
         logger.info('Successfully created menu item', item);
         res.status(201).json(item);
+      } catch (uploadError) {
+        logger.error('Error uploading to Dropbox', uploadError);
+        res.status(500).json({ 
+          message: "Failed to upload image",
+          details: uploadError instanceof Error ? uploadError.message : 'Unknown error'
+        });
+      }
+    } catch (error) {
+      logger.error('Error handling menu item upload', error);
+      res.status(500).json({ 
+        message: "Internal server error",
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  app.post("/api/menu-items/upload", requireAuth, upload.single('file'), async (req: MulterRequest, res) => {
+    try {
+      if (!req.user) return res.sendStatus(401);
+
+      // Validate file existence and type
+      if (!req.file) {
+        logger.error('Upload failed - No file uploaded');
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      // Validate file size
+      if (req.file.size > 10 * 1024 * 1024) {
+        logger.error('Upload failed - File too large', { size: req.file.size });
+        return res.status(400).json({ message: "File too large. Maximum size is 10MB." });
+      }
+
+      // Validate file type
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
+      if (!allowedTypes.includes(req.file.mimetype)) {
+        logger.error('Upload failed - Invalid file type', { mimetype: req.file.mimetype });
+        return res.status(400).json({ message: "Invalid file type. Only JPEG, PNG and GIF are allowed." });
+      }
+
+      try {
+        // Get restaurant ID from form data
+        const restaurantId = req.body.restaurantId || '0';
+        const userId = req.user.id;
+
+        // Generate filename with user ID prefix
+        const fileName = generateUserPrefixedFilename(userId, req.file.originalname, `restaurant_${restaurantId}`);
+        const imageData = req.file.buffer.toString('base64');
+
+        logger.info('Attempting to upload to Dropbox', { fileName });
+
+        const imageUrl = await dropboxService.uploadImage(imageData, fileName);
+        logger.info('Successfully uploaded to Dropbox', { imageUrl });
+
+        res.status(201).json({ image: imageUrl });
       } catch (uploadError) {
         logger.error('Error uploading to Dropbox', uploadError);
         res.status(500).json({ 
@@ -785,59 +853,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error updating user account:', error);
       res.status(500).json({ message: "Internal server error" });
-    }
-  });
-
-  app.post("/api/menu-items/upload", requireAuth, upload.single('file'), async (req: MulterRequest, res) => {
-    try {
-      if (!req.user) return res.sendStatus(401);
-
-      // Validate file existence and type
-      if (!req.file) {
-        logger.error('Upload failed - No file uploaded');
-        return res.status(400).json({ message: "No file uploaded" });
-      }
-
-      // Validate file size
-      if (req.file.size > 10 * 1024 * 1024) {
-        logger.error('Upload failed - File too large', { size: req.file.size });
-        return res.status(400).json({ message: "File too large. Maximum size is 10MB." });
-      }
-
-      // Validate file type
-      const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
-      if (!allowedTypes.includes(req.file.mimetype)) {
-        logger.error('Upload failed - Invalid file type', { mimetype: req.file.mimetype });
-        return res.status(400).json({ message: "Invalid file type. Only JPEG, PNG and GIF are allowed." });
-      }
-
-      try {
-        // Get restaurant ID from form data
-        const restaurantId = req.body.restaurantId || '0';
-
-        // Create filename with restaurant ID prefix
-        const fileName = `RestaurantID-${restaurantId}_menu_item_${Date.now()}${path.extname(req.file.originalname)}`;
-        const imageData = req.file.buffer.toString('base64');
-
-        logger.info('Attempting to upload to Dropbox', { fileName });
-
-        const imageUrl = await dropboxService.uploadImage(imageData, fileName); // Not a consumer upload
-        logger.info('Successfully uploaded to Dropbox', { imageUrl });
-
-        res.status(201).json({ image: imageUrl });
-      } catch (uploadError) {
-        logger.error('Error uploading to Dropbox', uploadError);
-        res.status(500).json({ 
-          message: "Failed to upload image",
-          details: uploadError instanceof Error ? uploadError.message : 'Unknown error'
-        });
-      }
-    } catch (error) {
-      logger.error('Error handling menu item upload', error);
-      res.status(500).json({ 
-        message: "Internal server error",
-        details: error instanceof Error ? error.message : 'Unknown error'
-      });
     }
   });
 
