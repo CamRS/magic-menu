@@ -164,9 +164,8 @@ export default function PublicMenuPage() {
 
       const response = await fetch(`/api/menu-items?${new URLSearchParams({
         restaurantId: restaurantId.toString(),
-        status: 'live'
+        status: 'live'  // Only fetch live items for public display
       })}`, {
-        credentials: 'include',
         headers: {
           'Accept': 'application/json'
         }
@@ -177,11 +176,12 @@ export default function PublicMenuPage() {
       }
 
       const data = await response.json();
-      return data.items || []; // Extract items from response
+      console.log('Menu items response:', data); // Debug log
+      return data.items || [];
     },
     enabled: !!restaurantId,
     retry: 2,
-    staleTime: 1000 * 60 * 5,
+    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
   });
 
   const uniqueTags = useMemo(() => {
@@ -220,19 +220,13 @@ export default function PublicMenuPage() {
     }
   };
 
-  if (!matches || !restaurantId || isLoadingRestaurant || isLoadingMenu) {
+  if (!matches || !restaurantId || isLoadingRestaurant) {
     return <div className="min-h-screen flex items-center justify-center bg-gray-50">
       {!matches || !restaurantId ? (
         <p className="text-gray-500">Restaurant not found</p>
       ) : (
         <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
       )}
-    </div>;
-  }
-
-  if (error) {
-    return <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <p className="text-red-500">Error loading menu items: {error.message}</p>
     </div>;
   }
 
@@ -273,20 +267,27 @@ export default function PublicMenuPage() {
       </header>
 
       <main className="pt-[104px] pb-24 px-4 max-w-4xl mx-auto">
-        {filteredItems.length === 0 ? (
+        {isLoadingMenu ? (
+          <div className="flex justify-center items-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+          </div>
+        ) : error ? (
+          <div className="text-center py-8 text-red-500">
+            Error loading menu items: {error instanceof Error ? error.message : 'Unknown error'}
+          </div>
+        ) : !menuItems?.length ? (
           <div className="text-center py-8 text-gray-500">
-            No menu items match your filters
+            No menu items available
           </div>
         ) : (
           <div className="relative py-8">
             <div className="overflow-hidden -mx-4 px-4" ref={emblaRef}>
               <div className="flex items-center -mx-2">
-                {filteredItems.map((item) => (
+                {menuItems.map((item) => (
                   <MenuCard key={item.id} item={item} />
                 ))}
               </div>
             </div>
-
             <div className="absolute inset-y-0 left-0 flex items-center">
               <Button
                 variant="ghost"
@@ -313,7 +314,6 @@ export default function PublicMenuPage() {
           </div>
         )}
       </main>
-
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t z-50">
         <div className="max-w-4xl mx-auto px-4 py-3">
           <div className="flex items-center gap-3">
