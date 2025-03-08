@@ -704,46 +704,43 @@ function HomePage() {
 
     const file = e.dataTransfer.files[0];
     if (file && file.type.startsWith('image/')) {
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        const imageData = reader.result as string;
-        if (itemId) {
-          try {
-            const formData = new FormData();
-            formData.append('file', file);
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        // Add restaurant ID to identify the source
+        formData.append('restaurantId', selectedRestaurant?.id?.toString() || '0');
 
-            const response = await fetch('/api/menu-items/upload', {
-              method: 'POST',
-              body: formData,
-              credentials: 'include'
-            });
+        const response = await fetch('/api/menu-items/upload', {
+          method: 'POST',
+          body: formData,
+          credentials: 'include'
+        });
 
-            if (!response.ok) {
-              throw new Error('Failed to upload image');
-            }
-
-            const { image } = await response.json();
-
-            // Update the menu item with the new image URL
-            await apiRequest("PATCH", `/api/menu-items/${itemId}`, {
-              image
-            });
-
-            queryClient.invalidateQueries({ queryKey: ["/api/menu-items", selectedRestaurant?.id] });
-            toast({
-              title: "Success",
-              description: "Image updated successfully",
-            });
-          } catch (error) {
-            toast({
-              title: "Error",
-              description: "Failed to update image",
-              variant: "destructive",
-            });
-          }
+        if (!response.ok) {
+          throw new Error('Failed to upload image');
         }
-      };
-      reader.readAsDataURL(file);
+
+        const { image } = await response.json();
+
+        if (itemId) {
+          // Update the menu item with the new image URL
+          await apiRequest("PATCH", `/api/menu-items/${itemId}`, {
+            image
+          });
+
+          queryClient.invalidateQueries({ queryKey: ["/api/menu-items", selectedRestaurant?.id] });
+          toast({
+            title: "Success",
+            description: "Image updated successfully",
+          });
+        }
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to update image",
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -753,6 +750,8 @@ function HomePage() {
       try {
         const formData = new FormData();
         formData.append('file', file);
+        // Add restaurant ID to identify the source
+        formData.append('restaurantId', selectedRestaurant?.id?.toString() || '0');
 
         const response = await fetch('/api/menu-items/upload', {
           method: 'POST',

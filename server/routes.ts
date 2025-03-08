@@ -811,8 +811,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       try {
-        // Upload image to Dropbox
-        const fileName = `menu_item_${Date.now()}${path.extname(req.file.originalname)}`;
+        // Get restaurant ID from form data
+        const restaurantId = req.body.restaurantId || '0';
+
+        // Create filename with restaurant ID prefix
+        const fileName = `RestaurantID-${restaurantId}_menu_item_${Date.now()}${path.extname(req.file.originalname)}`;
         const imageData = req.file.buffer.toString('base64');
 
         logger.info('Attempting to upload to Dropbox', { fileName });
