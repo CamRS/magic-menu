@@ -71,9 +71,9 @@ export class DropboxService {
     }
   }
 
-  async uploadImage(imageData: string, fileName: string, isConsumerUpload: boolean = false): Promise<string> {
+  async uploadImage(imageData: string, fileName: string, isConsumerUpload: boolean = false, userId?: string): Promise<string> {
     try {
-      logger.info('Starting Dropbox upload process', { fileName });
+      logger.info('Starting Dropbox upload process', { fileName, userId });
 
       // Remove data URL prefix if present
       const buffer = Buffer.from(
@@ -81,9 +81,19 @@ export class DropboxService {
         'base64'
       );
 
+      // Modify filename to include userId if present
+      let modifiedFileName = fileName;
+      if (isConsumerUpload && userId) {
+        // Extract extension
+        const extension = fileName.substring(fileName.lastIndexOf('.'));
+        const baseName = fileName.substring(0, fileName.lastIndexOf('.'));
+        modifiedFileName = `user_${userId}_${baseName}${extension}`;
+      }
+
       const path = isConsumerUpload 
-        ? `/translate - magic menu/${fileName}`
+        ? `/translate - magic menu/${modifiedFileName}`
         : `/Magic Menu/${fileName}`;
+
       logger.info('Uploading to Dropbox path', { path });
 
       try {

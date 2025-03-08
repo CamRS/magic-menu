@@ -2,7 +2,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Search, Camera, Upload, ChevronDown, ChevronUp, Plus, Loader2, X } from "lucide-react";
+import { Search, Camera, Upload, ChevronDown, ChevronUp, Plus, Loader2 } from "lucide-react";
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { SettingsMenu } from "@/components/settings-dialogs";
 import { Badge } from "@/components/ui/badge";
@@ -99,8 +99,7 @@ const MenuCard = ({ item }: { item: ConsumerMenuItem }) => {
         )}
 
         <div>
-          <div className="text-sm text-gray-300">
-            Common description
+          <div className="text-sm text-gray-300"> Common description
           </div>
           {item.description && (
             <p className="text-gray-900 text-md leading-relaxed mt-1">
@@ -124,7 +123,6 @@ export default function ConsumerHomePage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [selectedAllergens, setSelectedAllergens] = useState<AllergenType[]>([]);
   const [selectedDietary, setSelectedDietary] = useState<typeof dietaryPreferences[number][]>([]);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
@@ -132,7 +130,6 @@ export default function ConsumerHomePage() {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [page, setPage] = useState(1);
   const [selectedStatus, setSelectedStatus] = useState<'live' | 'draft' | null>(null);
-  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const [emblaRef, emblaApi] = useEmblaCarousel({
     align: 'start',
@@ -146,12 +143,6 @@ export default function ConsumerHomePage() {
       emblaApi.reInit();
     }
   }, [emblaApi]);
-
-  useEffect(() => {
-    if (isSearchOpen && searchInputRef.current) {
-      searchInputRef.current.focus();
-    }
-  }, [isSearchOpen]);
 
   const { data: allMenuItems, isLoading } = useQuery<ConsumerMenuItem[]>({
     queryKey: ["/api/consumer-menu-items", user?.id],
@@ -221,19 +212,30 @@ export default function ConsumerHomePage() {
     mutationFn: async (file: File) => {
       const formData = new FormData();
       formData.append('file', file);
+      // Add user ID to identify the source (matching how restaurant ID is used in first code)
+      formData.append('userId', user?.id?.toString() || '0');
 
       const response = await fetch('/api/consumer-menu-items/upload', {
         method: 'POST',
         body: formData,
+        credentials: 'include' // Match the credentials option from first code
       });
 
       if (!response.ok) {
-        throw new Error('Failed to upload menu');
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to upload menu');
       }
 
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      // If you need to update a specific record with the returned image URL
+      // Similar to how the first code updates a menu item with the image URL
+      if (data.image) {
+        // You could make an additional API request here if needed
+        // Example: updateUserMenuImage(data.image)
+      }
+
       queryClient.invalidateQueries({ queryKey: ["/api/consumer-menu-items"] });
       toast({
         title: "Success",
@@ -317,39 +319,33 @@ export default function ConsumerHomePage() {
     setIsFiltersOpen(false);
   };
 
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  const focusSearchInput = () => {
+    if (searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Search Overlay */}
-      {isSearchOpen && (
-        <div className="fixed inset-0 bg-white z-50">
-          <div className="max-w-4xl mx-auto px-4 py-4">
-            <div className="relative">
-              <Input
-                ref={searchInputRef}
-                placeholder="Search menu..."
-                value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
-                  setPage(1);
-                }}
-                className="w-full pl-10 pr-4 h-11 rounded-full border-gray-200 bg-white"
-                autoFocus
-              />
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-              <button
-                onClick={() => setIsSearchOpen(false)}
-                className="absolute right-3 top-1/2 -translate-y-1/2"
-              >
-                <X className="h-5 w-5 text-gray-400" />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <header className="fixed top-0 left-0 right-0 bg-white border-b z-40">
+      <header className="fixed top-0 left-0 right-0 bg-white border-b z-50">
         <div className="max-w-4xl mx-auto px-4 py-4">
-          <div className="flex gap-2">
+          <div className="relative">
+            <Input
+              ref={searchInputRef}
+              placeholder="Search menu..."
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setPage(1);
+              }}
+              className="w-full pl-10 pr-4 h-11 rounded-full border-gray-200 bg-white"
+            />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+          </div>
+
+          <div className="flex gap-2 mt-3">
             <Button
               variant="outline"
               onClick={() => handleFiltersOpenChange(!isFiltersOpen)}
@@ -497,7 +493,7 @@ export default function ConsumerHomePage() {
             </label>
 
             <button 
-              onClick={() => setIsSearchOpen(true)}
+              onClick={focusSearchInput}
               className="flex flex-col items-center justify-center cursor-pointer"
             >
               <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center mb-1 transition-colors hover:bg-gray-100">

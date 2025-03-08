@@ -337,12 +337,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       try {
         // Upload image to Dropbox
+        const userId = req.user.id;
         const fileName = `menu_item_${Date.now()}${path.extname(req.file.originalname)}`;
         const imageData = req.file.buffer.toString('base64');
 
-        logger.info('Attempting to upload to Dropbox', { fileName });
+        logger.info('Attempting to upload to Dropbox', { fileName, userId });
 
-        const imageUrl = await dropboxService.uploadImage(imageData, fileName, true); // Set isConsumerUpload to true
+        const imageUrl = await dropboxService.uploadImage(imageData, fileName, true, userId.toString()); // Pass userId to uploadImage
         logger.info('Successfully uploaded to Dropbox', { imageUrl });
 
         // Create menu item with Dropbox URL

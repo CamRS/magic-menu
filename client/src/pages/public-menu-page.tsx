@@ -3,7 +3,7 @@ import { useRoute } from "wouter";
 import { type MenuItem, type Restaurant } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Search, Filter, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { Search, Filter, ChevronLeft, ChevronRight, Loader2, Sparkle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import useEmblaCarousel from 'embla-carousel-react';
 import { Button } from "@/components/ui/button";
@@ -32,7 +32,7 @@ const MenuCard = ({ item }: { item: MenuItem }) => {
 
   return (
     <Card className="flex-[0_0_90%] sm:flex-[0_0_45%] lg:flex-[0_0_30%] mx-2 bg-white rounded-3xl shadow-sm border border-gray-100">
-      <CardContent className="p-8 flex flex-col gap-5 justify-between h-full">
+      <CardContent className="p-8 flex flex-col gap-4 justify-between h-full min-h-[430px]">
         <div className="flex items-center gap-2">
           {courseTag && (
             <div className="text-gray-600 text-sm">
@@ -57,19 +57,17 @@ const MenuCard = ({ item }: { item: MenuItem }) => {
 
         {activeAllergens.length > 0 && (
           <div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-blue-600">Contains</span>
-              <div className="flex flex-wrap gap-2">
-                {activeAllergens.map((allergen) => (
-                  <Badge
-                    key={allergen}
-                    variant="secondary"
-                    className="bg-[#4169E1]/10 text-[#4169E1] border-none rounded-full capitalize px-3 py-0.5 text-sm"
-                  >
-                    {allergen}
-                  </Badge>
-                ))}
-              </div>
+            <span className="text-sm font-medium text-blue-600 block mb-2">Contains</span>
+            <div className="flex flex-wrap gap-2">
+              {activeAllergens.map((allergen) => (
+                <Badge
+                  key={allergen}
+                  variant="secondary"
+                  className="bg-[#4169E1]/10 text-[#4169E1] border-none rounded-full capitalize px-3 py-0.5 text-sm"
+                >
+                  {allergen}
+                </Badge>
+              ))}
             </div>
           </div>
         )}
@@ -236,9 +234,9 @@ export default function PublicMenuPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="fixed top-0 left-0 right-0 bg-white border-b z-40">
-        <div className="max-w-4xl mx-auto h-[50px] px-4">
+        <div className="max-w-4xl mx-auto h-[48px] px-4">
           <div className="flex items-center justify-center h-full">
-            <h1 className="text-lg font-semibold text-gray-900 text-center">
+            <h1 className="text-md font-semibold text-gray-900 text-center">
               {restaurant?.name}
             </h1>
           </div>
@@ -285,7 +283,7 @@ export default function PublicMenuPage() {
         ) : (
           <div className="relative py-8">
             <div className="overflow-hidden -mx-4 px-4" ref={emblaRef}>
-              <div className="flex items-center -mx-2">
+              <div className="flex items-center -mx-2 ">
                 {filteredItems.map((item) => (
                   <MenuCard key={item.id} item={item} />
                 ))}
@@ -340,8 +338,8 @@ export default function PublicMenuPage() {
                   size="lg"
                   className="h-12 px-6 rounded-full border-2 border-gray-200 hover:bg-gray-50 hover:border-gray-300 relative flex items-center gap-2"
                 >
-                  <Filter className="h-5 w-5 text-gray-600" />
-                  <span className="font-medium">Allergies</span>
+                  <Sparkle className="h-5 w-5 text-gray-600" />
+                  <span className="font-medium">Modify menu</span>
                   {(selectedAllergens.length > 0 || selectedDietary.length > 0) && (
                     <span className="absolute top-0 right-0 -mt-1 -mr-1 h-3 w-3 bg-blue-500 rounded-full" />
                   )}
@@ -351,12 +349,12 @@ export default function PublicMenuPage() {
                 <DrawerHeader>
                   <DrawerTitle>Filters</DrawerTitle>
                   <DrawerDescription>
-                    Customize your menu view
+                    Customize your menu
                   </DrawerDescription>
                 </DrawerHeader>
                 <div className="px-4 py-2 space-y-6">
                   <div>
-                    <h3 className="text-sm font-medium mb-3">Allergens</h3>
+                    <h3 className="text-sm font-medium mb-3">Remove items containing...</h3>
                     <div className="grid grid-cols-2 gap-3">
                       {allergensList.map((allergen) => (
                         <Button
@@ -382,7 +380,7 @@ export default function PublicMenuPage() {
                   </div>
 
                   <div>
-                    <h3 className="text-sm font-medium mb-3">Dietary Preferences</h3>
+                    <h3 className="text-sm font-medium mb-3">Only show items that are...</h3>
                     <div className="grid grid-cols-2 gap-3">
                       {dietaryPreferences.map((pref) => (
                         <Button
