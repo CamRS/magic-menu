@@ -166,18 +166,17 @@ export default function PublicMenuPage() {
       const response = await fetch(`/api/menu-items?${new URLSearchParams({
         restaurantId: restaurantId.toString(),
         status: 'live'
-      }).toString()}`, {
-        headers: {
-          'Accept': 'application/json'
-        }
-      });
+      }).toString()}`);
 
       if (!response.ok) {
         throw new Error('Failed to fetch menu items');
       }
 
       const data = await response.json();
-      console.log('Fetched menu items:', data); // Debug log
+      if (!data || !data.items) {
+        throw new Error('Invalid response format from server');
+      }
+
       return data.items;
     },
     enabled: !!restaurantId,
