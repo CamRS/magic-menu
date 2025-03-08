@@ -173,11 +173,20 @@ export default function PublicMenuPage() {
       }
 
       const data = await response.json();
-      if (!data || !data.items) {
-        throw new Error('Invalid response format from server');
+      console.log('API Response:', data); // Debug log to see the response structure
+
+      // Return the items array directly if it exists
+      if (Array.isArray(data)) {
+        return data;
       }
 
-      return data.items;
+      // If data is an object with items property
+      if (data && Array.isArray(data.items)) {
+        return data.items;
+      }
+
+      // If we get here, we don't have a valid response
+      throw new Error('No menu items found');
     },
     enabled: !!restaurantId,
   });
