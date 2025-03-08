@@ -12,8 +12,10 @@ export class DropboxService {
   private accessToken: string;
 
   constructor() {
+    console.log('Initializing DropboxService...');
     this.accessToken = process.env.VITE_DROPBOX_ACCESS_TOKEN || '';
     this.dbx = new Dropbox({ accessToken: this.accessToken });
+    console.log('DropboxService initialized with token length:', this.accessToken.length);
   }
 
   private async refreshToken(): Promise<string> {
@@ -23,36 +25,47 @@ export class DropboxService {
 
     console.log('Attempting to refresh Dropbox token');
 
-    const auth = Buffer.from(`${appKey}:${appSecret}`).toString('base64');
-
-    const response = await fetch('https://api.dropbox.com/oauth2/token', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Basic ${auth}`,
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: `grant_type=refresh_token&refresh_token=${refreshToken}`,
-    });
-
-    console.log('Token refresh response status:', response.status);
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Token refresh failed:', {
-        status: response.status,
-        statusText: response.statusText,
-        error: errorText
-      });
-      throw new Error('Failed to refresh token');
+    if (!appKey || !appSecret || !refreshToken) {
+      const error = new Error('Missing required environment variables for token refresh');
+      console.error('Token refresh failed:', error);
+      throw error;
     }
 
-    const data = await response.json() as RefreshTokenResponse;
-    console.log('Token refreshed successfully');
+    const auth = Buffer.from(`${appKey}:${appSecret}`).toString('base64');
 
-    this.accessToken = data.access_token;
-    this.dbx = new Dropbox({ accessToken: this.accessToken });
+    try {
+      const response = await fetch('https://api.dropbox.com/oauth2/token', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Basic ${auth}`,
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: `grant_type=refresh_token&refresh_token=${refreshToken}`,
+      });
 
-    return this.accessToken;
+      console.log('Token refresh response status:', response.status);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Token refresh failed:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorText
+        });
+        throw new Error(`Failed to refresh token: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json() as RefreshTokenResponse;
+      console.log('Token refreshed successfully');
+
+      this.accessToken = data.access_token;
+      this.dbx = new Dropbox({ accessToken: this.accessToken });
+
+      return this.accessToken;
+    } catch (error) {
+      console.error('Error during token refresh:', error);
+      throw error;
+    }
   }
 
   async uploadImage(imageData: string, fileName: string): Promise<string> {

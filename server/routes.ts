@@ -374,14 +374,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log('Successfully created menu item:', item);
         res.status(201).json(item);
       } catch (uploadError) {
-        console.error('Error uploading to Dropbox:', uploadError);
+        console.error('Error uploading to Dropbox:', {
+          error: uploadError instanceof Error ? {
+            message: uploadError.message,
+            stack: uploadError.stack,
+            name: uploadError.name
+          } : uploadError
+        });
         res.status(500).json({ 
           message: "Failed to upload image",
           details: uploadError instanceof Error ? uploadError.message : 'Unknown error'
         });
       }
     } catch (error) {
-      console.error('Error handling menu item upload:', error);
+      console.error('Error handling menu item upload:', {
+        error: error instanceof Error ? {
+          message: error.message,
+          stack: error.stack,
+          name: error.name
+        } : error
+      });
       res.status(500).json({ 
         message: "Internal server error",
         details: error instanceof Error ? error.message : 'Unknown error'
