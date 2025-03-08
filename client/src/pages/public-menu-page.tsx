@@ -163,8 +163,7 @@ export default function PublicMenuPage() {
       }
 
       const response = await fetch(`/api/menu-items?${new URLSearchParams({
-        restaurantId: restaurantId.toString(),
-        status: 'live'  // Only fetch live items for public display
+        restaurantId: restaurantId.toString()
       })}`, {
         headers: {
           'Accept': 'application/json'
@@ -176,7 +175,7 @@ export default function PublicMenuPage() {
       }
 
       const data = await response.json();
-      console.log('Menu items response:', data); // Debug log
+      console.log('Menu items response:', data);
       return data.items || [];
     },
     enabled: !!restaurantId,

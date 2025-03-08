@@ -114,7 +114,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const items = await storage.getMenuItems(restaurantId, status);
       console.log(`Found ${items.length} menu items`);
 
-      res.json(items);
+      res.json({
+        items: items
+      });
     } catch (error) {
       console.error('Error fetching menu items:', error);
       res.status(500).json({ message: "Internal server error" });
@@ -379,14 +381,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.status(201).json(item);
       } catch (uploadError) {
         logger.error('Error uploading to Dropbox', uploadError);
-        res.status(500).json({ 
+        res.status(500).json({
           message: "Failed to upload image",
           details: uploadError instanceof Error ? uploadError.message : 'Unknown error'
         });
       }
     } catch (error) {
       logger.error('Error handling menu item upload', error);
-      res.status(500).json({ 
+      res.status(500).json({
         message: "Internal server error",
         details: error instanceof Error ? error.message : 'Unknown error'
       });
@@ -826,14 +828,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.status(201).json({ image: imageUrl });
       } catch (uploadError) {
         logger.error('Error uploading to Dropbox', uploadError);
-        res.status(500).json({ 
+        res.status(500).json({
           message: "Failed to upload image",
           details: uploadError instanceof Error ? uploadError.message : 'Unknown error'
         });
       }
     } catch (error) {
       logger.error('Error handling menu item upload', error);
-      res.status(500).json({ 
+      res.status(500).json({
         message: "Internal server error",
         details: error instanceof Error ? error.message : 'Unknown error'
       });
