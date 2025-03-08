@@ -314,16 +314,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/consumer-menu-items/upload", requireAuth, upload.single('file'), async (req: MulterRequest, res) => {
     try {
       if (!req.user) return res.sendStatus(401);
+
+      // Validate file existence and type
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
       }
 
-      // Upload image to Dropbox
-      const fileName = `menu_item_${Date.now()}${path.extname(req.file.originalname)}`;
-      const imageData = req.file.buffer.toString('base64');
+      // Validate file size
+      if (req.file.size > 10 * 1024 * 1024) {
+        return res.status(400).json({ message: "File too large. Maximum size is 10MB." });
+      }
+
+      // Validate file type
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
+      if (!allowedTypes.includes(req.file.mimetype)) {
+        return res.status(400).json({ message: "Invalid file type. Only JPEG, PNG and GIF are allowed." });
+      }
 
       try {
+        // Upload image to Dropbox
+        const fileName = `menu_item_${Date.now()}${path.extname(req.file.originalname)}`;
+        const imageData = req.file.buffer.toString('base64');
+
+        console.log('Attempting to upload to Dropbox:', { fileName });
+
         const imageUrl = await dropboxService.uploadImage(imageData, fileName);
+        console.log('Successfully uploaded to Dropbox:', { imageUrl });
 
         // Create menu item with Dropbox URL
         const menuItem = {
@@ -347,6 +363,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         const parsed = insertConsumerMenuItemSchema.safeParse(menuItem);
         if (!parsed.success) {
+          console.error('Menu item validation failed:', parsed.error);
           return res.status(400).json({
             message: "Invalid menu item data",
             errors: parsed.error.errors
@@ -354,14 +371,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         const item = await storage.createConsumerMenuItem(parsed.data);
+        console.log('Successfully created menu item:', item);
         res.status(201).json(item);
       } catch (uploadError) {
         console.error('Error uploading to Dropbox:', uploadError);
-        res.status(500).json({ message: "Failed to upload image" });
+        res.status(500).json({ 
+          message: "Failed to upload image",
+          details: uploadError instanceof Error ? uploadError.message : 'Unknown error'
+        });
       }
     } catch (error) {
-      console.error('Error uploading menu item:', error);
-      res.status(500).json({ message: "Internal server error" });
+      console.error('Error handling menu item upload:', error);
+      res.status(500).json({ 
+        message: "Internal server error",
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   });
 
