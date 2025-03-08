@@ -944,8 +944,7 @@ function HomePage() {
                       <TooltipContent>Copy menu URL</TooltipContent>
                     </Tooltip>
 
-                    <Tooltip>
-                      <TooltipTrigger asChild>
+                    <Tooltip><TooltipTrigger asChild>
                         <Button
                           variant="ghost"
                           size="icon"

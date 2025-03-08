@@ -107,32 +107,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const status = req.query.status as string | undefined;
 
       if (isNaN(restaurantId) || restaurantId <= 0) {
-        logger.error('Invalid restaurant ID provided', { restaurantId });
         return res.status(400).json({ message: "Invalid restaurant ID" });
       }
 
-      logger.info('Fetching menu items', { 
-        restaurantId, 
-        status,
-        route: '/api/menu-items'
-      });
-
+      console.log(`Fetching menu items for restaurant ${restaurantId} with status ${status || 'all'}`);
       const items = await storage.getMenuItems(restaurantId, status);
+      console.log(`Found ${items.length} menu items`);
 
-      logger.info('Found menu items', { 
-        restaurantId,
-        status,
-        itemCount: items.length,
-        items: items.map(item => ({
-          id: item.id,
-          name: item.name,
-          status: item.status
-        }))
-      });
-
-      res.json({ items });
+      res.json(items);
     } catch (error) {
-      logger.error('Error fetching menu items:', error);
+      console.error('Error fetching menu items:', error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
