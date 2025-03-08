@@ -312,29 +312,6 @@ export default function ConsumerHomePage() {
     <div className="min-h-screen bg-gray-50">
       <header className="fixed top-0 left-0 right-0 bg-white border-b z-50">
         <div className="max-w-4xl mx-auto px-4 py-4">
-          <div className="flex gap-2 mb-3">
-            <Button
-              variant={selectedStatus === null ? "default" : "outline"}
-              onClick={() => setSelectedStatus(null)}
-              className="flex-1"
-            >
-              All Items ({allMenuItems?.length || 0})
-            </Button>
-            <Button
-              variant={selectedStatus === "draft" ? "default" : "outline"}
-              onClick={() => setSelectedStatus("draft")}
-              className="flex-1"
-            >
-              Drafts ({allMenuItems?.filter(item => item.status === "draft").length || 0})
-            </Button>
-            <Button
-              variant={selectedStatus === "live" ? "default" : "outline"}
-              onClick={() => setSelectedStatus("live")}
-              className="flex-1"
-            >
-              Live ({allMenuItems?.filter(item => item.status === "live").length || 0})
-            </Button>
-          </div>
           <div className="relative">
             <Input
               placeholder="Search menu..."
@@ -431,7 +408,7 @@ export default function ConsumerHomePage() {
         </div>
       </header>
 
-      <main className={`pt-[160px] px-4 pb-20 max-w-4xl mx-auto`}>
+      <main className={`pt-[120px] px-4 pb-20 max-w-4xl mx-auto`}>
         {isLoading ? (
           <div className="overflow-hidden" ref={emblaRef}>
             <div className="flex">
