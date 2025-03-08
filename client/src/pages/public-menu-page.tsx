@@ -166,7 +166,7 @@ export default function PublicMenuPage() {
       const response = await fetch(`/api/menu-items?${new URLSearchParams({
         restaurantId: restaurantId.toString(),
         status: 'live'
-      })}`, {
+      }).toString()}`, {
         headers: {
           'Accept': 'application/json'
         }
@@ -177,11 +177,10 @@ export default function PublicMenuPage() {
       }
 
       const data = await response.json();
-      return data.items || [];
+      console.log('Fetched menu items:', data); // Debug log
+      return data.items;
     },
     enabled: !!restaurantId,
-    retry: 2,
-    staleTime: 1000 * 60 * 5,
   });
 
   const uniqueTags = useMemo(() => {
