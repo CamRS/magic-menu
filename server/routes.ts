@@ -346,38 +346,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const imageUrl = await dropboxService.uploadImage(imageData, fileName, true, userId.toString()); // Pass userId to uploadImage
         logger.info('Successfully uploaded to Dropbox', { imageUrl });
 
-        // Create menu item with Dropbox URL
-        const menuItem = {
-          userId: req.user.id,
-          name: req.file.originalname.split('.')[0],
-          description: "Uploaded menu item",
-          image: imageUrl,
-          source: "upload",
-          courseTags: [],
-          allergens: {
-            milk: false,
-            eggs: false,
-            peanuts: false,
-            nuts: false,
-            shellfish: false,
-            fish: false,
-            soy: false,
-            gluten: false,
-          }
-        };
+        // Just return the image URL instead of creating a menu item
+        res.status(201).json({ image: imageUrl });
 
-        const parsed = insertConsumerMenuItemSchema.safeParse(menuItem);
-        if (!parsed.success) {
-          logger.error('Menu item validation failed', parsed.error);
-          return res.status(400).json({
-            message: "Invalid menu item data",
-            errors: parsed.error.errors
-          });
-        }
-
-        const item = await storage.createConsumerMenuItem(parsed.data);
-        logger.info('Successfully created menu item', item);
-        res.status(201).json(item);
       } catch (uploadError) {
         logger.error('Error uploading to Dropbox', uploadError);
         res.status(500).json({ 
@@ -398,12 +369,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       if (!req.user) return res.sendStatus(401);
 
-      const itemData = {
-        ...req.body,
-        userId: req.user.id,
-      };
-
-      const parsed = insertConsumerMenuItemSchema.safeParse(itemData);
+      const parsed = insertConsumerMenuItemSchema.safeParse(req.body);
       if (!parsed.success) {
         return res.status(400).json({
           message: "Invalid menu item data",
@@ -411,7 +377,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const item = await storage.createConsumerMenuItem(parsed.data);
+      // Assign user_id instead of restaurant_id for consumer side
+      const itemData = {
+        ...parsed.data,
+        user_id: req.user.id,  // Use user_id to identify the consumer
+      };
+
+      const item = await storage.createConsumerMenuItem(itemData);
       res.status(201).json(item);
     } catch (error) {
       console.error('Error creating consumer menu item:', error);
@@ -746,6 +718,121 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Zapier endpoint to create a consumer menu item
+  app.post("/api/zapier/consumer-menu-items", requireApiKey, async (req, res) => {
+    try {
+      console.log("Received Zapier consumer request with headers:", req.headers);
+      console.log("Received consumer request body:", req.body);
+
+      // Validate request format
+      if (!req.body.data) {
+        return res.status(400).json({
+          message: "Invalid request format",
+          details: "Request must include 'data' field containing menu items array",
+          received: Object.keys(req.body)
+        });
+      }
+
+      let parsedData;
+      try {
+        // Parse the stringified JSON data if needed
+        parsedData = typeof req.body.data === 'string'
+          ? JSON.parse(req.body.data)
+          : req.body.data;
+
+        console.log("Parsed consumer data:", parsedData);
+      } catch (parseError) {
+        console.error("Error parsing consumer data:", parseError);
+        return res.status(400).json({
+          message: "Invalid JSON data format",
+          error: parseError instanceof Error ? parseError.message : 'Failed to parse JSON data',
+          receivedData: req.body.data
+        });
+      }
+
+      // Handle array of items
+      if (Array.isArray(parsedData)) {
+        const results = {
+          success: 0,
+          failed: 0,
+          errors: [] as string[]
+        };
+
+        for (const item of parsedData) {
+          try {
+            // Process allergens as an array
+            const allergensList = Array.isArray(item.Allergens)
+              ? item.Allergens.map(allergen => String(allergen).toLowerCase())
+              : [];
+
+            const consumerMenuItem = {
+              userId: parseInt(item.UserID || '0'),
+              name: String(item.Name || ''),
+              name_original: item.OriginalName ? String(item.OriginalName) : "",
+              description: String(item.Description || ''),
+              price: String(item.Price || '0').replace(/[^\d.-]/g, ''),
+              courseTags: Array.isArray(item.Category) ? item.Category :
+                         typeof item.Category === 'string' ? [item.Category] : [],
+              course_original: item.OriginalCategory ? String(item.OriginalCategory) : "",
+              image: String(item.Image || ''),
+              source: "zapier",
+              allergens: {
+                milk: allergensList.includes('milk'),
+                eggs: allergensList.includes('eggs'),
+                peanuts: allergensList.includes('peanuts'),
+                nuts: allergensList.includes('nuts'),
+                shellfish: allergensList.includes('shellfish'),
+                fish: allergensList.includes('fish'),
+                soy: allergensList.includes('soy'),
+                gluten: allergensList.includes('gluten'),
+              }
+            };
+
+            console.log("Processing consumer menu item:", consumerMenuItem);
+
+            const parsed = insertConsumerMenuItemSchema.safeParse(consumerMenuItem);
+            if (!parsed.success) {
+              results.failed++;
+              results.errors.push(`Item '${consumerMenuItem.name}': ${parsed.error.errors.map(e => e.message).join(', ')}`);
+              continue;
+            }
+
+            // Verify user exists
+            const user = await storage.getUser(consumerMenuItem.userId);
+            if (!user) {
+              results.failed++;
+              results.errors.push(`Item '${consumerMenuItem.name}': User with ID ${consumerMenuItem.userId} not found`);
+              continue;
+            }
+
+            await storage.createConsumerMenuItem(parsed.data);
+            results.success++;
+          } catch (itemError) {
+            console.error("Error processing consumer item:", itemError);
+            results.failed++;
+            results.errors.push(`Failed to process item: ${itemError instanceof Error ? itemError.message : 'Unknown error'}`);
+          }
+        }
+
+        return res.status(results.failed > 0 ? 207 : 201).json(results);
+      }
+
+      // If we get here, it means the data is not an array
+      return res.status(400).json({
+        message: "Invalid data format",
+        details: "Expected an array of consumer menu items",
+        received: typeof parsedData
+      });
+
+    } catch (error) {
+      console.error('Error creating consumer menu item via Zapier:', error);
+      res.status(500).json({
+        message: "Internal server error",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+  
   // Update user preferences
   app.patch("/api/user/preferences", requireAuth, async (req, res) => {
     try {
