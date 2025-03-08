@@ -787,6 +787,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/menu-items/upload", requireAuth, upload.single('file'), async (req: MulterRequest, res) => {
+    try {
+      if (!req.user) return res.sendStatus(401);
+
+      // Validate file existence and type
+      if (!req.file) {
+        logger.error('Upload failed - No file uploaded');
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      // Validate file size
+      if (req.file.size > 10 * 1024 * 1024) {
+        logger.error('Upload failed - File too large', { size: req.file.size });
+        return res.status(400).json({ message: "File too large. Maximum size is 10MB." });
+      }
+
+      // Validate file type
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
+      if (!allowedTypes.includes(req.file.mimetype)) {
+        logger.error('Upload failed - Invalid file type', { mimetype: req.file.mimetype });
+        return res.status(400).json({ message: "Invalid file type. Only JPEG, PNG and GIF are allowed." });
+      }
+
+      try {
+        // Upload image to Dropbox
+        const fileName = `menu_item_${Date.now()}${path.extname(req.file.originalname)}`;
+        const imageData = req.file.buffer.toString('base64');
+
+        logger.info('Attempting to upload to Dropbox', { fileName });
+
+        const imageUrl = await dropboxService.uploadImage(imageData, fileName); // Not a consumer upload
+        logger.info('Successfully uploaded to Dropbox', { imageUrl });
+
+        res.status(201).json({ image: imageUrl });
+      } catch (uploadError) {
+        logger.error('Error uploading to Dropbox', uploadError);
+        res.status(500).json({ 
+          message: "Failed to upload image",
+          details: uploadError instanceof Error ? uploadError.message : 'Unknown error'
+        });
+      }
+    } catch (error) {
+      logger.error('Error handling menu item upload', error);
+      res.status(500).json({ 
+        message: "Internal server error",
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;

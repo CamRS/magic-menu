@@ -709,13 +709,25 @@ function HomePage() {
         const imageData = reader.result as string;
         if (itemId) {
           try {
-            const response = await apiRequest("PATCH", `/api/menu-items/${itemId}`, {
-              image: imageData
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const response = await fetch('/api/menu-items/upload', {
+              method: 'POST',
+              body: formData,
+              credentials: 'include'
             });
 
             if (!response.ok) {
-              throw new Error('Failed to update image');
+              throw new Error('Failed to upload image');
             }
+
+            const { image } = await response.json();
+
+            // Update the menu item with the new image URL
+            await apiRequest("PATCH", `/api/menu-items/${itemId}`, {
+              image
+            });
 
             queryClient.invalidateQueries({ queryKey: ["/api/menu-items", selectedRestaurant?.id] });
             toast({
@@ -739,8 +751,30 @@ function HomePage() {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onloadend = () => {
-        form.setValue("image", reader.result as string);
+      reader.onloadend = async () => {
+        try {
+          const formData = new FormData();
+          formData.append('file', file);
+
+          const response = await fetch('/api/menu-items/upload', {
+            method: 'POST',
+            body: formData,
+            credentials: 'include'
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to upload image');
+          }
+
+          const { image } = await response.json();
+          form.setValue("image", image);
+        } catch (error) {
+          toast({
+            title: "Error",
+            description: "Failed to upload image",
+            variant: "destructive",
+          });
+        }
       };
       reader.readAsDataURL(file);
     }
@@ -938,7 +972,7 @@ function HomePage() {
                     </Button>
                     <Button
                       variant="ghost"
-                                            className="w-full justify-start gap-3"
+                      className="w-full justify-start gap-3"
                       onClick={() => csvFileInputRef.current?.click()}
                     >
                       <Download className="h-5 w-5" />
