@@ -104,7 +104,7 @@ export class DropboxService {
         });
         logger.info('Upload successful', response.result);
 
-        // Return the path of the uploaded file, but do not immediately interact with the database
+        // Return the path of the uploaded file
         return response.result.path_display || path;
 
       } catch (error: any) {
@@ -135,5 +135,7 @@ export class DropboxService {
       throw error;
     }
   }
+}
 
+// Create and export a singleton instance
 export const dropboxService = new DropboxService();
