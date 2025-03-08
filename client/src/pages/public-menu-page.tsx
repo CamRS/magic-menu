@@ -176,7 +176,6 @@ export default function PublicMenuPage() {
       }
 
       const data = await response.json();
-      console.log('Menu items response:', data); // Debug log
       return data.items || [];
     },
     enabled: !!restaurantId,
@@ -196,7 +195,8 @@ export default function PublicMenuPage() {
   const filteredItems = useMemo(() => {
     if (!menuItems) return [];
     return menuItems
-      .filter(({ name, description, courseTags, allergens }) => {
+      .filter(({ name, description, courseTags }) => {
+        // Only filter by search and tags, status is already filtered by the API
         const matchesSearch = !searchTerm ||
           name.toLowerCase().includes(searchTerm.toLowerCase()) ||
           description.toLowerCase().includes(searchTerm.toLowerCase());
@@ -204,12 +204,10 @@ export default function PublicMenuPage() {
         const matchesTags = selectedTags.length === 0 ||
           selectedTags.every(tag => courseTags?.includes(tag));
 
-        const matchesAllergens = selectedAllergens.every(allergen => !allergens[allergen]);
-
-        return matchesSearch && matchesTags && matchesAllergens;
+        return matchesSearch && matchesTags;
       })
       .sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
-  }, [menuItems, searchTerm, selectedTags, selectedAllergens]);
+  }, [menuItems, searchTerm, selectedTags]);
 
   const handleTagSelection = (value: string) => {
     if (value === "all") {
@@ -275,15 +273,15 @@ export default function PublicMenuPage() {
           <div className="text-center py-8 text-red-500">
             Error loading menu items: {error instanceof Error ? error.message : 'Unknown error'}
           </div>
-        ) : !menuItems?.length ? (
+        ) : filteredItems.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
-            No menu items available
+            {searchTerm || selectedTags.length > 0 ? 'No menu items match your filters' : 'No menu items available'}
           </div>
         ) : (
           <div className="relative py-8">
             <div className="overflow-hidden -mx-4 px-4" ref={emblaRef}>
               <div className="flex items-center -mx-2">
-                {menuItems.map((item) => (
+                {filteredItems.map((item) => (
                   <MenuCard key={item.id} item={item} />
                 ))}
               </div>
