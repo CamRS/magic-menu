@@ -14,6 +14,10 @@ export class DropboxService {
   constructor() {
     console.log('Initializing DropboxService...');
     this.accessToken = process.env.VITE_DROPBOX_ACCESS_TOKEN || '';
+    if (!this.accessToken) {
+      console.error('No Dropbox access token found in environment variables');
+      throw new Error('Missing Dropbox access token');
+    }
     this.dbx = new Dropbox({ accessToken: this.accessToken });
     console.log('DropboxService initialized with token length:', this.accessToken.length);
   }
