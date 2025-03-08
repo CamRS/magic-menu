@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import type { Express, Request } from "express";
 import { z } from "zod";
 import { createServer, type Server } from "http";
 import { setupAuth, requireAuth, requireApiKey } from "./auth.js";
@@ -8,6 +8,12 @@ import { comparePasswords, hashPassword } from "./utils";
 import { insertConsumerMenuItemSchema } from "@shared/schema";
 import multer from "multer";
 import path from "path";
+import { dropboxService } from "./dropbox";
+
+// Type for multer request
+interface MulterRequest extends Request {
+  file?: Express.Multer.File;
+}
 
 // Configure multer for handling file uploads
 const upload = multer({
@@ -139,7 +145,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Unauthorized access to menu item" });
       }
 
-      const updated = await storage.updateMenuItemStatus(itemId, status);
+      const updated = await storage.updateMenuItemStatus(itemId, status as "draft" | "live");
       res.json(updated);
     } catch (error) {
       console.error('Error updating menu item status:', error);
@@ -305,44 +311,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/consumer-menu-items/upload", requireAuth, upload.single('file'), async (req, res) => {
+  app.post("/api/consumer-menu-items/upload", requireAuth, upload.single('file'), async (req: MulterRequest, res) => {
     try {
       if (!req.user) return res.sendStatus(401);
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
       }
 
-      // For now, create a simple menu item from the upload
-      // In a real implementation, you would process the image to extract menu items
-      const menuItem = {
-        userId: req.user.id,
-        name: req.file.originalname.split('.')[0],
-        description: "Uploaded menu item",
-        image: req.file.buffer.toString('base64'),
-        source: "upload",
-        courseTags: [],
-        allergens: {
-          milk: false,
-          eggs: false,
-          peanuts: false,
-          nuts: false,
-          shellfish: false,
-          fish: false,
-          soy: false,
-          gluten: false,
+      // Upload image to Dropbox
+      const fileName = `menu_item_${Date.now()}${path.extname(req.file.originalname)}`;
+      const imageData = req.file.buffer.toString('base64');
+
+      try {
+        const imageUrl = await dropboxService.uploadImage(imageData, fileName);
+
+        // Create menu item with Dropbox URL
+        const menuItem = {
+          userId: req.user.id,
+          name: req.file.originalname.split('.')[0],
+          description: "Uploaded menu item",
+          image: imageUrl,
+          source: "upload",
+          courseTags: [],
+          allergens: {
+            milk: false,
+            eggs: false,
+            peanuts: false,
+            nuts: false,
+            shellfish: false,
+            fish: false,
+            soy: false,
+            gluten: false,
+          }
+        };
+
+        const parsed = insertConsumerMenuItemSchema.safeParse(menuItem);
+        if (!parsed.success) {
+          return res.status(400).json({
+            message: "Invalid menu item data",
+            errors: parsed.error.errors
+          });
         }
-      };
 
-      const parsed = insertConsumerMenuItemSchema.safeParse(menuItem);
-      if (!parsed.success) {
-        return res.status(400).json({
-          message: "Invalid menu item data",
-          errors: parsed.error.errors
-        });
+        const item = await storage.createConsumerMenuItem(parsed.data);
+        res.status(201).json(item);
+      } catch (uploadError) {
+        console.error('Error uploading to Dropbox:', uploadError);
+        res.status(500).json({ message: "Failed to upload image" });
       }
-
-      const item = await storage.createConsumerMenuItem(parsed.data);
-      res.status(201).json(item);
     } catch (error) {
       console.error('Error uploading menu item:', error);
       res.status(500).json({ message: "Internal server error" });

@@ -4,11 +4,11 @@ import { setupVite, serveStatic, log } from "./vite";
 
 function validateEnvironmentVariables() {
   const requiredVariables = {
-    'ZAPIER_API_KEY': true,
     'VITE_DROPBOX_ACCESS_TOKEN': true,
     'VITE_DROPBOX_APP_KEY': true,
     'VITE_DROPBOX_APP_SECRET': true,
-    'VITE_DROPBOX_REFRESH_TOKEN': true
+    'VITE_DROPBOX_REFRESH_TOKEN': true,
+    'ZAPIER_API_KEY': true
   };
 
   const missingVariables = [];
