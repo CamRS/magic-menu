@@ -82,51 +82,42 @@ export class DropboxService {
     }
   }
 
-  private async getSharedLink(path: string): Promise<string> {
+  private async getSharedLink(path: string, retryCount = 0): Promise<string> {
+    const MAX_RETRIES = 1; // Only retry once after token refresh
+
     try {
-      const response = await this.dbx.sharingCreateSharedLinkWithSettings({
-        path,
-        settings: {
-          requested_visibility: { '.tag': 'public' }
-        }
-      });
-
-      // Convert the shared link to a direct download link
-      let downloadUrl = response.url; 
-      downloadUrl = downloadUrl.replace('www.dropbox.com', 'dl.dropboxusercontent.com');
-      downloadUrl = downloadUrl.replace('?dl=0', '?dl=1');
-
-      return downloadUrl;
-    } catch (error: any) {
-      if (error?.status === 401) {
-        logger.info('Token expired during shared link creation, refreshing...');
-        await this.refreshToken();
-
-        logger.info('Retrying shared link creation after token refresh...');
-        const response = await this.dbx.sharingCreateSharedLinkWithSettings({
-          path,
-          settings: {
-            requested_visibility: { '.tag': 'public' }
-          }
-        });
-
-        let downloadUrl = response.url; 
-        downloadUrl = downloadUrl.replace('www.dropbox.com', 'dl.dropboxusercontent.com');
-        downloadUrl = downloadUrl.replace('?dl=0', '?dl=1');
-        return downloadUrl;
-      }
-
-      logger.error('Failed to create shared link', {
-        error: {
-          status: error?.status,
-          message: error?.message,
-          errorSummary: error?.error?.error_summary,
-          errorTag: error?.error?.error?.['.tag'],
-          stack: error?.stack
-        },
+      // Simplest form, no extra settings
+      const response = await this.dbx.sharingCreateSharedLink({
         path
       });
-      throw error;
+
+      let downloadUrl = response.result.url;
+      downloadUrl = downloadUrl.replace('www.dropbox.com', 'dl.dropboxusercontent.com');
+      downloadUrl = downloadUrl.replace('?dl=0', '?dl=1');
+      return downloadUrl;
+    } catch (error: any) {
+      // Handle "already shared" error
+      if (error?.error?.['.tag'] === 'shared_link_already_exists') {
+        // Get existing links
+        const listResponse = await this.dbx.sharingListSharedLinks({ path });
+        if (listResponse.result.links && listResponse.result.links.length > 0) {
+          let downloadUrl = listResponse.result.links[0].url;
+          downloadUrl = downloadUrl.replace('www.dropbox.com', 'dl.dropboxusercontent.com');
+          downloadUrl = downloadUrl.replace('?dl=0', '?dl=1');
+          return downloadUrl;
+        }
+      }
+
+      // Handle token expiration
+      if (error?.status === 401 && retryCount < MAX_RETRIES) {
+        logger.info('Token expired during shared link creation, refreshing...');
+        await this.refreshToken();
+        logger.info('Retrying shared link creation after token refresh...');
+        return this.getSharedLink(path, retryCount + 1);
+      }
+
+      logger.error('Dropbox API error:', error);
+      throw new Error(`Failed to create shared link ${JSON.stringify({ error, path })}`);
     }
   }
 
@@ -180,46 +171,50 @@ export class DropboxService {
 
       try {
         logger.debug('Attempting file upload...');
-        const response = await this.dbx.filesUpload({
+        const uploadResponse = await this.dbx.filesUpload({
           path,
           contents: buffer,
         });
-        logger.info('Upload successful', response.result);
+        logger.info('Upload successful', uploadResponse.result);
 
-        const downloadUrl = await this.getSharedLink(response.result.path_display || path);
-        logger.info('Successfully generated shared link', { downloadUrl });
+        try {
+          const downloadUrl = await this.getSharedLink(uploadResponse.result.path_display || path);
+          logger.info('Successfully generated shared link', { downloadUrl });
 
-        await this.notifyZapier(downloadUrl);
+          await this.notifyZapier(downloadUrl);
 
-        return response.result.path_display || path;
-
-      } catch (error: any) {
-        logger.error('Dropbox API error', {
-          status: error?.status,
-          error: error?.error,
-          message: error?.message,
-          stack: error?.stack
+          return uploadResponse.result.path_display || path;
+        } catch (sharedLinkError: any) {
+          // If creating shared link fails even after retry in getSharedLink
+          logger.error('Failed to create shared link after upload', sharedLinkError);
+          throw sharedLinkError;
+        }
+      } catch (uploadError: any) {
+        logger.error('Dropbox API error during upload', {
+          status: uploadError?.status,
+          error: uploadError?.error,
+          message: uploadError?.message
         });
 
-        if (error?.status === 401) {
-          logger.info('Token expired, attempting refresh...');
+        if (uploadError?.status === 401) {
+          logger.info('Token expired during upload, attempting refresh...');
           await this.refreshToken();
 
           logger.info('Retrying upload after token refresh...');
-          const response = await this.dbx.filesUpload({
+          const retryResponse = await this.dbx.filesUpload({
             path,
             contents: buffer,
           });
-          logger.info('Retry upload successful', response.result);
+          logger.info('Retry upload successful', retryResponse.result);
 
-          const downloadUrl = await this.getSharedLink(response.result.path_display || path);
+          const downloadUrl = await this.getSharedLink(retryResponse.result.path_display || path);
           logger.info('Successfully generated shared link after retry', { downloadUrl });
 
           await this.notifyZapier(downloadUrl);
 
-          return response.result.path_display || path;
+          return retryResponse.result.path_display || path;
         }
-        throw error;
+        throw uploadError;
       }
     } catch (error) {
       logger.error('Error in uploadImage', error);
