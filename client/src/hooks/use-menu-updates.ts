@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { queryClient } from '@/lib/queryClient';
 
-export function useMenuUpdates(restaurantId: number | undefined | null) {
+export function useMenuUpdates(restaurantId: number | undefined) {
   useEffect(() => {
     if (!restaurantId) return;
 
@@ -10,8 +10,8 @@ export function useMenuUpdates(restaurantId: number | undefined | null) {
     eventSource.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-
-        if (data.type === 'menuUpdate') {
+        
+        if (data.type === 'update') {
           // Invalidate both the menu items query and the public menu query
           queryClient.invalidateQueries({ queryKey: ['/api/menu-items', restaurantId] });
           queryClient.invalidateQueries({ queryKey: ['/api/public/menu', restaurantId] });
