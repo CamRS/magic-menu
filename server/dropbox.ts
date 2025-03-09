@@ -11,16 +11,27 @@ interface RefreshTokenResponse {
 export class DropboxService {
   private dbx: Dropbox;
   private accessToken: string;
+  private zapierWebhookUrl: string;
 
   constructor() {
     logger.info('Initializing DropboxService...');
     this.accessToken = process.env.VITE_DROPBOX_ACCESS_TOKEN || '';
+    this.zapierWebhookUrl = process.env.ZAPIER_WEBHOOK_URL || '';
+
     if (!this.accessToken) {
       logger.error('No Dropbox access token found in environment variables');
       throw new Error('Missing Dropbox access token');
     }
+
+    if (!this.zapierWebhookUrl) {
+      logger.warn('No Zapier webhook URL found in environment variables');
+    }
+
     this.dbx = new Dropbox({ accessToken: this.accessToken });
-    logger.info('DropboxService initialized', { tokenLength: this.accessToken.length });
+    logger.info('DropboxService initialized', { 
+      tokenLength: this.accessToken.length,
+      hasWebhook: Boolean(this.zapierWebhookUrl)
+    });
   }
 
   private async refreshToken(): Promise<string> {
@@ -71,6 +82,33 @@ export class DropboxService {
     }
   }
 
+  private async notifyZapier(fileUrl: string): Promise<void> {
+    if (!this.zapierWebhookUrl) {
+      logger.warn('Skipping Zapier notification - no webhook URL configured');
+      return;
+    }
+
+    try {
+      logger.info('Sending notification to Zapier webhook', { fileUrl });
+      const response = await fetch(this.zapierWebhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          download_url: fileUrl,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Zapier webhook failed with status ${response.status}`);
+      }
+
+      logger.info('Successfully notified Zapier webhook');
+    } catch (error) {
+      logger.error('Failed to notify Zapier webhook', error);
+      // Don't throw the error - we don't want to fail the upload if webhook fails
+    }
+  }
+
   async uploadImage(imageData: string, fileName: string, isConsumerUpload: boolean = false, userId?: string): Promise<string> {
     try {
       logger.info('Starting Dropbox upload process', { fileName, userId });
@@ -104,8 +142,13 @@ export class DropboxService {
         });
         logger.info('Upload successful', response.result);
 
-        // Return the path of the uploaded file
-        return response.result.path_display || path;
+        // Get the file URL
+        const fileUrl = response.result.path_display || path;
+
+        // Notify Zapier about the upload
+        await this.notifyZapier(fileUrl);
+
+        return fileUrl;
 
       } catch (error: any) {
         logger.error('Dropbox API error', {
@@ -126,7 +169,12 @@ export class DropboxService {
           });
           logger.info('Retry upload successful', response.result);
 
-          return response.result.path_display || path;
+          const fileUrl = response.result.path_display || path;
+
+          // Notify Zapier about the upload after retry
+          await this.notifyZapier(fileUrl);
+
+          return fileUrl;
         }
         throw error;
       }
