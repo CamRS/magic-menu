@@ -1,4 +1,4 @@
-import type { Express, Request } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { z } from "zod";
 import { createServer, type Server } from "http";
 import { setupAuth, requireAuth, requireApiKey } from "./auth.js";
@@ -21,7 +21,7 @@ interface MulterRequest extends Request {
 }
 
 // Configure multer for handling file uploads
-const upload = multer({
+const multerConfig = multer({
   storage: multer.memoryStorage(),
   limits: {
     fileSize: 10 * 1024 * 1024, // 10MB limit
@@ -35,6 +35,38 @@ const upload = multer({
     }
   }
 });
+
+// Create a reusable upload middleware
+const upload = multerConfig;
+
+// Wrap multer middleware to handle errors properly
+const handleUpload = (fieldName: string = 'file') => (req: Request, res: Response, next: NextFunction) => {
+  upload.single(fieldName)(req, res, (err) => {
+    if (err instanceof multer.MulterError) {
+      logger.error('Multer error during upload:', { 
+        error: err.message, 
+        code: err.code,
+        field: err.field,
+        stack: err.stack 
+      });
+      return res.status(400).json({
+        message: "File upload error",
+        error: err.message,
+        code: err.code
+      });
+    } else if (err) {
+      logger.error('Non-Multer error during upload:', { 
+        error: err.message,
+        stack: err instanceof Error ? err.stack : undefined
+      });
+      return res.status(400).json({
+        message: "File upload error",
+        error: err.message
+      });
+    }
+    next();
+  });
+};
 
 // Helper function to parse CSV data
 function parseCSV(csvText: string): string[][] {
@@ -316,52 +348,116 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/consumer-menu-items/upload", requireAuth, upload.single('file'), async (req: MulterRequest, res) => {
+  // Update consumer menu items upload endpoint
+  app.post("/api/consumer-menu-items/upload", requireAuth, handleUpload('file'), async (req: MulterRequest, res) => {
     try {
-      if (!req.user) return res.sendStatus(401);
+      if (!req.user) {
+        logger.error('Upload failed - No authenticated user');
+        return res.status(401).json({ message: "Authentication required" });
+      }
 
-      // Validate file existence and type
+      logger.info('Starting consumer menu item file upload process', {
+        user: req.user.id,
+        file: req.file ? {
+          filename: req.file.originalname,
+          size: req.file.size,
+          mimetype: req.file.mimetype
+        } : 'No file'
+      });
+
       if (!req.file) {
         logger.error('Upload failed - No file uploaded');
         return res.status(400).json({ message: "No file uploaded" });
       }
 
-      // Validate file size
-      if (req.file.size > 10 * 1024 * 1024) {
-        logger.error('Upload failed - File too large', { size: req.file.size });
-        return res.status(400).json({ message: "File too large. Maximum size is 10MB." });
-      }
-
-      // Validate file type
-      const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
-      if (!allowedTypes.includes(req.file.mimetype)) {
-        logger.error('Upload failed - Invalid file type', { mimetype: req.file.mimetype });
-        return res.status(400).json({ message: "Invalid file type. Only JPEG, PNG and GIF are allowed." });
-      }
-
       try {
-        // Upload image to Dropbox
         const userId = req.user.id;
         const fileName = `menu_item_${Date.now()}${path.extname(req.file.originalname)}`;
         const imageData = req.file.buffer.toString('base64');
 
         logger.info('Attempting to upload to Dropbox', { fileName, userId });
 
-        const imageUrl = await dropboxService.uploadImage(imageData, fileName, true, userId.toString()); // Pass userId to uploadImage
+        const imageUrl = await dropboxService.uploadImage(imageData, fileName, true, userId.toString());
         logger.info('Successfully uploaded to Dropbox', { imageUrl });
 
-        // Just return the image URL instead of creating a menu item
         res.status(201).json({ image: imageUrl });
-
       } catch (uploadError) {
-        logger.error('Error uploading to Dropbox', uploadError);
+        logger.error('Error uploading to Dropbox', {
+          error: uploadError instanceof Error ? uploadError.message : 'Unknown error',
+          stack: uploadError instanceof Error ? uploadError.stack : undefined
+        });
+
         res.status(500).json({
           message: "Failed to upload image",
           details: uploadError instanceof Error ? uploadError.message : 'Unknown error'
         });
       }
     } catch (error) {
-      logger.error('Error handling menu item upload', error);
+      logger.error('Error handling menu item upload', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      });
+
+      res.status(500).json({
+        message: "Internal server error",
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  app.post("/api/menu-items/upload", requireAuth, handleUpload('file'), async (req: MulterRequest, res) => {
+    try {
+      if (!req.user) {
+        logger.error('Upload failed - No authenticated user');
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      logger.info('Starting menu item file upload process', {
+        user: req.user.id,
+        file: req.file ? {
+          filename: req.file.originalname,
+          size: req.file.size,
+          mimetype: req.file.mimetype
+        } : 'No file'
+      });
+
+      if (!req.file) {
+        logger.error('Upload failed - No file uploaded');
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      try {
+        const restaurantId = req.body.restaurantId || '0';
+        const fileName = `RestaurantID-${restaurantId}_menu_item_${Date.now()}${path.extname(req.file.originalname)}`;
+        const imageData = req.file.buffer.toString('base64');
+
+        logger.info('Attempting to upload to Dropbox', { 
+          fileName,
+          restaurantId,
+          userId: req.user.id 
+        });
+
+        const imageUrl = await dropboxService.uploadImage(imageData, fileName, false); // Not a consumer upload
+        logger.info('Successfully uploaded to Dropbox', { imageUrl });
+
+        res.status(201).json({ image: imageUrl });
+      } catch (uploadError) {
+        logger.error('Error uploading to Dropbox', {
+          error: uploadError instanceof Error ? uploadError.message : 'Unknown error',
+          stack: uploadError instanceof Error ? uploadError.stack : undefined
+        });
+
+        res.status(500).json({
+          message: "Failed to upload image",
+          details: uploadError instanceof Error ? uploadError.message : 'Unknown error'
+        });
+      }
+    } catch (error) {
+      logger.error('Error handling menu item upload', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      });
+
       res.status(500).json({
         message: "Internal server error",
         details: error instanceof Error ? error.message : 'Unknown error'
@@ -792,7 +888,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } catch (parseError) {
         console.error("Error parsing consumer data:", parseError);
         return res.status(400).json({
-          message: "Invalid JSON data format",
+          message:"Invalid JSON data format",
           error: parseError instanceof Error ? parseError.message : 'Failed to parse JSON data',
           receivedData: req.body.data
         });
@@ -879,7 +975,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
-  
+
   // Update user preferences
   app.patch("/api/user/preferences", requireAuth, async (req, res) => {
     try {
@@ -919,356 +1015,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error updating user account:', error);
       res.status(500).json({ message: "Internal server error" });
-    }
-  });
-
-  app.post("/api/menu-items/upload", requireAuth, upload.single('file'), async (req: MulterRequest, res) => {
-    try {
-      if (!req.user) return res.sendStatus(401);
-
-      // Validate file existence and type
-      if (!req.file) {
-        logger.error('Upload failed - No file uploaded');
-        return res.status(400).json({ message: "No file uploaded" });
-      }
-
-      // Validate file size
-      if (req.file.size > 10 * 1024 * 1024) {
-        logger.error('Upload failed - File too large', { size: req.file.size });
-        return res.status(400).json({ message: "File too large. Maximum size is 10MB." });
-      }
-
-      // Validate file type
-      const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
-      if (!allowedTypes.includes(req.file.mimetype)) {
-        logger.error('Upload failed - Invalid file type', { mimetype: req.file.mimetype });
-        return res.status(400).json({ message: "Invalid file type. Only JPEG, PNG and GIF are allowed." });
-      }
-
-      try {
-        // Get restaurant ID from form data
-        const restaurantId = req.body.restaurantId || '0';
-
-        // Create filename with restaurant ID prefix
-        const fileName = `RestaurantID-${restaurantId}_menu_item_${Date.now()}${path.extname(req.file.originalname)}`;
-        const imageData = req.file.buffer.toString('base64');
-
-        logger.info('Attempting to upload to Dropbox', { fileName });
-
-        const imageUrl = await dropboxService.uploadImage(imageData, fileName); // Not a consumer upload
-        logger.info('Successfully uploaded to Dropbox', { imageUrl });
-
-        res.status(201).json({ image: imageUrl });
-      } catch (uploadError) {
-        logger.error('Error uploading to Dropbox', uploadError);
-        res.status(500).json({
-          message: "Failed to upload image",
-          details: uploadError instanceof Error ? uploadError.message : 'Unknown error'
-        });
-      }
-    } catch (error) {
-      logger.error('Error handling menu item upload', error);
-      res.status(500).json({
-        message: "Internal server error",
-        details: error instanceof Error ? error.message : 'Unknown error'
-      });
-    }
-  });
-
-  // Add SSE endpoint before the Zapier endpoints
-  app.get("/api/menu-updates/:restaurantId", (req, res) => {
-    const restaurantId = parseInt(req.params.restaurantId);
-    if (isNaN(restaurantId)) {
-      return res.status(400).json({ message: "Invalid restaurant ID" });
-    }
-
-    // Set headers for SSE
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-
-    // Send initial connection established message
-    res.write(`data: ${JSON.stringify({ type: 'connected' })}\n\n`);
-
-    // Set up event listener for this restaurant
-    const listener = (updatedRestaurantId: number) => {
-      if (updatedRestaurantId === restaurantId) {
-        res.write(`data: ${JSON.stringify({ type: 'menuUpdate', restaurantId })}\n\n`);
-      }
-    };
-
-    menuUpdateEmitter.on('menuUpdate', listener);
-
-    // Clean up on client disconnect
-    req.on('close', () => {
-      menuUpdateEmitter.off('menuUpdate', listener);
-    });
-  });
-
-  // New Zapier API endpoints
-  app.get("/api/zapier/test", requireApiKey, async (_req, res) => {
-    try {
-      res.json({
-        status: "success",
-        message: "Zapier connection successful",
-        timestamp: new Date().toISOString()
-      });
-    } catch (error) {
-      console.error('Error in Zapier test endpoint:', error);
-      res.status(500).json({ message: "Internal server error" });
-    }
-  });
-
-  // Zapier endpoint to create a menu item
-  app.post("/api/zapier/menu-items", requireApiKey, async (req, res) => {
-    try {
-      console.log("Received Zapier request with headers:", req.headers);
-      console.log("Received request body:", req.body);
-
-      // Validate request format
-      if (!req.body.data) {
-        return res.status(400).json({
-          message: "Invalid request format",
-          details: "Request must include 'data' field containing menu items array",
-          received: Object.keys(req.body)
-        });
-      }
-
-      let parsedData;
-      try {
-        // Parse the stringified JSON data if needed
-        parsedData = typeof req.body.data === 'string'
-          ? JSON.parse(req.body.data)
-          : req.body.data;
-
-        console.log("Parsed data:", parsedData);
-      } catch (parseError) {
-        console.error("Error parsing data:", parseError);
-        return res.status(400).json({
-          message: "Invalid JSON data format",
-          error: parseError instanceof Error ? parseError.message : 'Failed to parse JSON data',
-          receivedData: req.body.data
-        });
-      }
-
-      if (Array.isArray(parsedData)) {
-        const results = {
-          success: 0,
-          failed: 0,
-          errors: [] as string[]
-        };
-
-        // Keep track of affected restaurants for notifications
-        const updatedRestaurants = new Set<number>();
-
-        for (const item of parsedData) {
-          try {
-            // Process allergens as an array
-            const allergensList = Array.isArray(item.Allergens)
-              ? item.Allergens.map(allergen => String(allergen).toLowerCase())
-              : [];
-
-            const menuItem = {
-              restaurantId: parseInt(item.RestaurantID || '0'),
-              name: String(item.Name || ''),
-              description: String(item.Description || ''),
-              price: String(item.Price || '0').replace(/[^\d.-]/g, ''),
-              courseTags: Array.isArray(item.Category) ? item.Category :
-                        typeof item.Category === 'string' ? [item.Category] : [],
-              customTags: [],
-              image: '',
-              allergens: {
-                milk: allergensList.includes('milk'),
-                eggs: allergensList.includes('eggs'),
-                peanuts: allergensList.includes('peanuts'),
-                nuts: allergensList.includes('nuts'),
-                shellfish: allergensList.includes('shellfish'),
-                fish: allergensList.includes('fish'),
-                soy: allergensList.includes('soy'),
-                gluten: allergensList.includes('gluten'),
-              }
-            };
-
-            console.log("Processing menu item:", menuItem);
-
-            const parsed = insertMenuItemSchema.safeParse(menuItem);
-            if (!parsed.success) {
-              results.failed++;
-              results.errors.push(`Item '${menuItem.name}': ${parsed.error.errors.map(e => e.message).join(', ')}`);
-              continue;
-            }
-
-            // Verify restaurant exists
-            const restaurant = await storage.getRestaurant(menuItem.restaurantId);
-            if (!restaurant) {
-              results.failed++;
-              results.errors.push(`Item '${menuItem.name}': Restaurant with ID ${menuItem.restaurantId} not found`);
-              continue;
-            }
-
-            await storage.createMenuItem(parsed.data);
-            results.success++;
-
-            // Add restaurant ID to the set of updated restaurants
-            updatedRestaurants.add(menuItem.restaurantId);
-          } catch (itemError) {
-            console.error("Error processing item:", itemError);
-            results.failed++;
-            results.errors.push(`Failed to process item: ${itemError instanceof Error ? itemError.message : 'Unknown error'}`);
-          }
-        }
-
-        // Emit update events for all affected restaurants
-        for (const restaurantId of updatedRestaurants) {
-          console.log(`Emitting menu update event for restaurant ${restaurantId}`);
-          menuUpdateEmitter.emit('menuUpdate', restaurantId);
-        }
-
-        return res.status(results.failed > 0 ? 207 : 201).json(results);
-      }
-
-      return res.status(400).json({
-        message: "Invalid data format",
-        details: "Expected an array of menu items",
-        received: typeof parsedData
-      });
-
-    } catch (error) {
-      console.error('Error creating menu item via Zapier:', error);
-      res.status(500).json({
-        message: "Internal server error",
-        details: error instanceof Error ? error.message : "Unknown error"
-      });
-    }
-  });
-
-  // Zapier endpoint to get menu items for a restaurant
-  app.get("/api/zapier/menu-items/:restaurantId", requireApiKey, async (req, res) => {
-    try {
-      const restaurantId = parseInt(req.params.restaurantId);
-      if (isNaN(restaurantId)) {
-        return res.status(400).json({ message: "Invalid restaurant ID" });
-      }
-
-      const items = await storage.getMenuItems(restaurantId);
-      res.json(items);
-    } catch (error) {
-      console.error('Error fetching menu items via Zapier:', error);
-      res.status(500).json({ message: "Internal server error" });
-    }
-  });
-
-  // Zapier endpoint to create a consumer menu item
-  app.post("/api/zapier/consumer-menu-items", requireApiKey, async (req, res) => {
-    try {
-      console.log("Received Zapier consumer request with headers:", req.headers);
-      console.log("Received consumer request body:", req.body);
-
-      // Validate request format
-      if (!req.body.data) {
-        return res.status(400).json({
-          message: "Invalid request format",
-          details: "Request must include 'data' field containing menu items array",
-          received: Object.keys(req.body)
-        });
-      }
-
-      let parsedData;
-      try {
-        // Parse the stringified JSON data if needed
-        parsedData = typeof req.body.data === 'string'
-          ? JSON.parse(req.body.data)
-          : req.body.data;
-
-        console.log("Parsed consumer data:", parsedData);
-      } catch (parseError) {
-        console.error("Error parsing consumer data:", parseError);
-        return res.status(400).json({
-          message: "Invalid JSON data format",
-          error: parseError instanceof Error ? parseError.message : 'Failed to parse JSON data',
-          receivedData: req.body.data
-        });
-      }
-
-      // Handle array of items
-      if (Array.isArray(parsedData)) {
-        const results = {
-          success: 0,
-          failed: 0,
-          errors: [] as string[]
-        };
-
-        for (const item of parsedData) {
-          try {
-            // Process allergens as an array
-            const allergensList = Array.isArray(item.Allergens)
-              ? item.Allergens.map(allergen => String(allergen).toLowerCase())
-              : [];
-
-            const consumerMenuItem = {
-              userId: parseInt(item.UserID || '0'),
-              name: String(item.Name || ''),
-              name_original: item.OriginalName ? String(item.OriginalName) : "",
-              description: String(item.Description || ''),
-              price: String(item.Price || '0').replace(/[^\d.-]/g, ''),
-              courseTags: Array.isArray(item.Category) ? item.Category :
-                        typeof item.Category === 'string' ? [item.Category] : [],
-              course_original: item.OriginalCategory ? String(item.OriginalCategory) : "",
-              image: String(item.Image || ''),
-              source: "zapier",
-              allergens: {
-                milk: allergensList.includes('milk'),
-                eggs: allergensList.includes('eggs'),
-                peanuts: allergensList.includes('peanuts'),
-                nuts: allergensList.includes('nuts'),
-                shellfish: allergensList.includes('shellfish'),
-                fish: allergensList.includes('fish'),
-                soy: allergensList.includes('soy'),
-                gluten: allergensList.includes('gluten'),
-              }
-            };
-
-            console.log("Processing consumer menu item:", consumerMenuItem);
-
-            const parsed = insertConsumerMenuItemSchema.safeParse(consumerMenuItem);
-            if (!parsed.success) {
-              results.failed++;
-              results.errors.push(`Item '${consumerMenuItem.name}': ${parsed.error.errors.map(e => e.message).join(', ')}`);
-              continue;
-            }
-
-            // Verify user exists
-            const user = await storage.getUser(consumerMenuItem.userId);
-            if (!user) {
-              results.failed++;
-              results.errors.push(`Item '${consumerMenuItem.name}': User with ID ${consumerMenuItem.userId} not found`);
-              continue;
-            }
-
-            await storage.createConsumerMenuItem(parsed.data);
-            results.success++;
-          } catch (itemError) {
-            console.error("Error processing consumer item:", itemError);
-            results.failed++;
-            results.errors.push(`Failed to process item: ${itemError instanceof Error ? itemError.message : 'Unknown error'}`);
-          }
-        }
-
-        return res.status(results.failed > 0 ? 207 : 201).json(results);
-      }
-
-      return res.status(400).json({
-        message: "Invalid data format",
-        details: "Expected an array of consumer menu items",
-        received: typeof parsedData
-      });
-
-    } catch (error) {
-      console.error('Error creating consumer menu item via Zapier:', error);
-      res.status(500).json({
-        message: "Internal server error",
-        details: error instanceof Error ? error.message : "Unknown error"
-      });
     }
   });
 
