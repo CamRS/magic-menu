@@ -100,7 +100,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(restaurant);
     } catch (error) {
-      logger.error('Error fetching restaurant:', { error: error instanceof Error ? error.message : 'Unknown error' });
+      console.error('Error fetching restaurant:', error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
@@ -114,13 +114,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid restaurant ID" });
       }
 
-      logger.info('Fetching menu items', { restaurantId, status: status || 'all' });
+      console.log(`Fetching menu items for restaurant ${restaurantId} with status ${status || 'all'}`);
       const items = await storage.getMenuItems(restaurantId, status);
-      logger.info('Menu items fetched successfully', { count: items.length, restaurantId });
+      console.log(`Found ${items.length} menu items`);
 
       res.json(items);
     } catch (error) {
-      logger.error('Error fetching menu items:', { error: error instanceof Error ? error.message : 'Unknown error' });
+      console.error('Error fetching menu items:', error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
@@ -153,7 +153,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updated = await storage.updateMenuItemStatus(itemId, status as "draft" | "live");
       res.json(updated);
     } catch (error) {
-      logger.error('Error updating menu item status:', { error: error instanceof Error ? error.message : 'Unknown error' });
+      console.error('Error updating menu item status:', error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
@@ -166,7 +166,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const restaurants = await storage.getRestaurants(req.user.id);
       res.json(restaurants);
     } catch (error) {
-      logger.error('Error fetching restaurants:', { error: error instanceof Error ? error.message : 'Unknown error' });
+      console.error('Error fetching restaurants:', error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
@@ -187,7 +187,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const restaurant = await storage.createRestaurant(parsed.data);
       res.status(201).json(restaurant);
     } catch (error) {
-      logger.error('Error creating restaurant:', { error: error instanceof Error ? error.message : 'Unknown error' });
+      console.error('Error creating restaurant:', error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
@@ -196,7 +196,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       if (!req.user) return res.sendStatus(401);
 
-      logger.info("Original request body:", req.body);
+      console.log("Original request body:", req.body);
 
       // Transform the request body to handle missing or empty price
       const requestBody = {
@@ -209,7 +209,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           : []
       };
 
-      logger.info("Transformed request body:", requestBody);
+      console.log("Transformed request body:", requestBody);
 
       const parsed = insertMenuItemSchema.safeParse(requestBody);
 
@@ -220,7 +220,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      logger.info("Parsed data:", parsed.data);
+      console.log("Parsed data:", parsed.data);
 
       // Verify restaurant belongs to user
       const restaurant = await storage.getRestaurant(parsed.data.restaurantId);
@@ -229,11 +229,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const item = await storage.createMenuItem(parsed.data);
-      logger.info("Created menu item:", item);
+      console.log("Created menu item:", item);
 
       res.status(201).json(item);
     } catch (error) {
-      logger.error('Error creating menu item:', { error: error instanceof Error ? error.message : 'Unknown error' });
+      console.error('Error creating menu item:', error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
@@ -268,7 +268,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updated = await storage.updateMenuItem(item.id, updateData);
       res.json(updated);
     } catch (error) {
-      logger.error('Error updating menu item:', { error: error instanceof Error ? error.message : 'Unknown error' });
+      console.error('Error updating menu item:', error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
@@ -295,7 +295,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.deleteMenuItem(item.id);
       res.sendStatus(204);
     } catch (error) {
-      logger.error('Error deleting menu item:', { error: error instanceof Error ? error.message : 'Unknown error' });
+      console.error('Error deleting menu item:', error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
@@ -311,7 +311,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         total: items.length
       });
     } catch (error) {
-      logger.error('Error fetching consumer menu items:', { error: error instanceof Error ? error.message : 'Unknown error' });
+      console.error('Error fetching consumer menu items:', error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
@@ -390,7 +390,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const item = await storage.createConsumerMenuItem(itemData);
       res.status(201).json(item);
     } catch (error) {
-      logger.error('Error creating consumer menu item:', { error: error instanceof Error ? error.message : 'Unknown error' });
+      console.error('Error creating consumer menu item:', error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
@@ -446,7 +446,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.send(csv);
     } catch (error) {
-      logger.error('Error exporting menu:', { error: error instanceof Error ? error.message : 'Unknown error' });
+      console.error('Error exporting menu:', error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
@@ -558,7 +558,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             results.created++;
           }
         } catch (error) {
-          logger.error(`Error processing row ${i}:`, { error: error instanceof Error ? error.message : 'Unknown error' });
+          console.error(`Error processing row ${i}:`, error);
           results.failed++;
           results.errors.push(`Row ${i}: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
@@ -574,7 +574,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
     } catch (error) {
-      logger.error('Error importing menu:', { error: error instanceof Error ? error.message : 'Unknown error' });
+      console.error('Error importing menu:', error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
@@ -596,6 +596,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     // Set up event listener for this restaurant
     const listener = (updatedRestaurantId: number) => {
+      logger.info(`🔄 SSE: Menu update event received for restaurant ${updatedRestaurantId}`);
       if (updatedRestaurantId === restaurantId) {
         res.write(`data: ${JSON.stringify({ type: 'menuUpdate', restaurantId })}\n\n`);
       }
@@ -618,7 +619,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         timestamp: new Date().toISOString()
       });
     } catch (error) {
-      logger.error('Error in Zapier test endpoint:', { error: error instanceof Error ? error.message : 'Unknown error' });
+      console.error('Error in Zapier test endpoint:', error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
@@ -626,10 +627,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Zapier endpoint to create a menu item
   app.post("/api/zapier/menu-items", requireApiKey, async (req, res) => {
     try {
-      logger.info('Received Zapier request', { 
-        headers: req.headers,
-        body: req.body 
-      });
+      console.log("Received Zapier request with headers:", req.headers);
+      console.log("Received request body:", req.body);
+      logger.info('Zapier request called');
 
       // Validate request format
       if (!req.body.data) {
@@ -647,12 +647,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ? JSON.parse(req.body.data)
           : req.body.data;
 
-        logger.info('Parsed Zapier data', { parsedData });
+        console.log("Parsed data:", parsedData);
       } catch (parseError) {
-        logger.error('Error parsing Zapier data', { 
-          error: parseError instanceof Error ? parseError.message : 'Unknown error',
-          receivedData: req.body.data 
-        });
+        console.error("Error parsing data:", parseError);
         return res.status(400).json({
           message: "Invalid JSON data format",
           error: parseError instanceof Error ? parseError.message : 'Failed to parse JSON data',
@@ -698,7 +695,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               }
             };
 
-            logger.info('Processing menu item', { menuItem });
+            console.log("Processing menu item:", menuItem);
 
             const parsed = insertMenuItemSchema.safeParse(menuItem);
             if (!parsed.success) {
@@ -721,20 +718,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Add restaurant ID to the set of updated restaurants
             updatedRestaurants.add(menuItem.restaurantId);
           } catch (itemError) {
-            logger.error('Error processing menu item', { 
-              error: itemError instanceof Error ? itemError.message : 'Unknown error',
-              item 
-            });
+            console.error("Error processing item:", itemError);
             results.failed++;
             results.errors.push(`Failed to process item: ${itemError instanceof Error ? itemError.message : 'Unknown error'}`);
           }
         }
 
+        logger.info(`Emitting spot`);
+
         // Emit update events for all affected restaurants
-        for (const restaurantId of updatedRestaurants) {
-          logger.info('Emitting menu update event', { restaurantId });
+        updatedRestaurants.forEach(restaurantId => {
+          logger.info(`Emitting menu update event for restaurant ${restaurantId}`);
           menuUpdateEmitter.emit('menuUpdate', restaurantId);
-        }
+        });
 
         return res.status(results.failed > 0 ? 207 : 201).json(results);
       }
@@ -746,9 +742,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
     } catch (error) {
-      logger.error('Error creating menu item via Zapier', { 
-        error: error instanceof Error ? error.message : 'Unknown error' 
-      });
+      console.error('Error creating menu item via Zapier:', error);
       res.status(500).json({
         message: "Internal server error",
         details: error instanceof Error ? error.message : "Unknown error"
@@ -767,7 +761,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const items = await storage.getMenuItems(restaurantId);
       res.json(items);
     } catch (error) {
-      logger.error('Error fetching menu items via Zapier:', { error: error instanceof Error ? error.message : 'Unknown error' });
+      console.error('Error fetching menu items via Zapier:', error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
@@ -775,7 +769,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Zapier endpoint to create a consumer menu item
   app.post("/api/zapier/consumer-menu-items", requireApiKey, async (req, res) => {
     try {
-      logger.info("Received Zapier consumer request", { headers: req.headers, body: req.body });
+      console.log("Received Zapier consumer request with headers:", req.headers);
+      console.log("Received consumer request body:", req.body);
 
       // Validate request format
       if (!req.body.data) {
@@ -793,9 +788,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ? JSON.parse(req.body.data)
           : req.body.data;
 
-        logger.info("Parsed consumer data:", parsedData);
+        console.log("Parsed consumer data:", parsedData);
       } catch (parseError) {
-        logger.error("Error parsing consumer data:", { error: parseError instanceof Error ? parseError.message : 'Unknown error', receivedData: req.body.data });
+        console.error("Error parsing consumer data:", parseError);
         return res.status(400).json({
           message: "Invalid JSON data format",
           error: parseError instanceof Error ? parseError.message : 'Failed to parse JSON data',
@@ -841,7 +836,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               }
             };
 
-            logger.info("Processing consumer menu item:", consumerMenuItem);
+            console.log("Processing consumer menu item:", consumerMenuItem);
 
             const parsed = insertConsumerMenuItemSchema.safeParse(consumerMenuItem);
             if (!parsed.success) {
@@ -861,7 +856,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             await storage.createConsumerMenuItem(parsed.data);
             results.success++;
           } catch (itemError) {
-            logger.error("Error processing consumer item:", { error: itemError instanceof Error ? itemError.message : 'Unknown error', item });
+            console.error("Error processing consumer item:", itemError);
             results.failed++;
             results.errors.push(`Failed to process item: ${itemError instanceof Error ? itemError.message : 'Unknown error'}`);
           }
@@ -877,14 +872,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
     } catch (error) {
-      logger.error('Error creating consumer menu item via Zapier:', { error: error instanceof Error ? error.message : 'Unknown error' });
+      console.error('Error creating consumer menu item via Zapier:', error);
       res.status(500).json({
         message: "Internal server error",
         details: error instanceof Error ? error.message : "Unknown error"
       });
     }
   });
-
+  
   // Update user preferences
   app.patch("/api/user/preferences", requireAuth, async (req, res) => {
     try {
@@ -898,7 +893,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updatedUser = await storage.updateUser(req.user.id, updates);
       res.json(updatedUser);
     } catch (error) {
-      logger.error('Error updating user preferences:', { error: error instanceof Error ? error.message : 'Unknown error' });
+      console.error('Error updating user preferences:', error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
@@ -922,7 +917,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updatedUser = await storage.updateUser(req.user.id, updates);
       res.json(updatedUser);
     } catch (error) {
-      logger.error('Error updating user account:', { error: error instanceof Error ? error.message : 'Unknown error' });
+      console.error('Error updating user account:', error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
@@ -1019,7 +1014,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         timestamp: new Date().toISOString()
       });
     } catch (error) {
-      logger.error('Error in Zapier test endpoint:', { error: error instanceof Error ? error.message : 'Unknown error' });
+      console.error('Error in Zapier test endpoint:', error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
@@ -1027,10 +1022,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Zapier endpoint to create a menu item
   app.post("/api/zapier/menu-items", requireApiKey, async (req, res) => {
     try {
-      logger.info('Received Zapier request', { 
-        headers: req.headers,
-        body: req.body 
-      });
+      console.log("Received Zapier request with headers:", req.headers);
+      console.log("Received request body:", req.body);
 
       // Validate request format
       if (!req.body.data) {
@@ -1048,12 +1041,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ? JSON.parse(req.body.data)
           : req.body.data;
 
-        logger.info('Parsed Zapier data', { parsedData });
+        console.log("Parsed data:", parsedData);
       } catch (parseError) {
-        logger.error('Error parsing Zapier data', { 
-          error: parseError instanceof Error ? parseError.message : 'Unknown error',
-          receivedData: req.body.data 
-        });
+        console.error("Error parsing data:", parseError);
         return res.status(400).json({
           message: "Invalid JSON data format",
           error: parseError instanceof Error ? parseError.message : 'Failed to parse JSON data',
@@ -1099,7 +1089,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               }
             };
 
-            logger.info('Processing menu item', { menuItem });
+            console.log("Processing menu item:", menuItem);
 
             const parsed = insertMenuItemSchema.safeParse(menuItem);
             if (!parsed.success) {
@@ -1122,10 +1112,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Add restaurant ID to the set of updated restaurants
             updatedRestaurants.add(menuItem.restaurantId);
           } catch (itemError) {
-            logger.error('Error processing menu item', { 
-              error: itemError instanceof Error ? itemError.message : 'Unknown error',
-              item 
-            });
+            console.error("Error processing item:", itemError);
             results.failed++;
             results.errors.push(`Failed to process item: ${itemError instanceof Error ? itemError.message : 'Unknown error'}`);
           }
@@ -1133,7 +1120,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Emit update events for all affected restaurants
         for (const restaurantId of updatedRestaurants) {
-          logger.info('Emitting menu update event', { restaurantId });
+          console.log(`Emitting menu update event for restaurant ${restaurantId}`);
           menuUpdateEmitter.emit('menuUpdate', restaurantId);
         }
 
@@ -1147,9 +1134,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
     } catch (error) {
-      logger.error('Error creating menu item via Zapier', { 
-        error: error instanceof Error ? error.message : 'Unknown error' 
-      });
+      console.error('Error creating menu item via Zapier:', error);
       res.status(500).json({
         message: "Internal server error",
         details: error instanceof Error ? error.message : "Unknown error"
@@ -1168,7 +1153,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const items = await storage.getMenuItems(restaurantId);
       res.json(items);
     } catch (error) {
-      logger.error('Error fetching menu items via Zapier:', { error: error instanceof Error ? error.message : 'Unknown error' });
+      console.error('Error fetching menu items via Zapier:', error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
@@ -1176,7 +1161,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Zapier endpoint to create a consumer menu item
   app.post("/api/zapier/consumer-menu-items", requireApiKey, async (req, res) => {
     try {
-      logger.info("Received Zapier consumer request", { headers: req.headers, body: req.body });
+      console.log("Received Zapier consumer request with headers:", req.headers);
+      console.log("Received consumer request body:", req.body);
 
       // Validate request format
       if (!req.body.data) {
@@ -1194,9 +1180,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ? JSON.parse(req.body.data)
           : req.body.data;
 
-        logger.info("Parsed consumer data:", parsedData);
+        console.log("Parsed consumer data:", parsedData);
       } catch (parseError) {
-        logger.error("Error parsing consumer data:", { error: parseError instanceof Error ? parseError.message : 'Unknown error', receivedData: req.body.data });
+        console.error("Error parsing consumer data:", parseError);
         return res.status(400).json({
           message: "Invalid JSON data format",
           error: parseError instanceof Error ? parseError.message : 'Failed to parse JSON data',
@@ -1242,7 +1228,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               }
             };
 
-            logger.info("Processing consumer menu item:", consumerMenuItem);
+            console.log("Processing consumer menu item:", consumerMenuItem);
 
             const parsed = insertConsumerMenuItemSchema.safeParse(consumerMenuItem);
             if (!parsed.success) {
@@ -1262,7 +1248,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             await storage.createConsumerMenuItem(parsed.data);
             results.success++;
           } catch (itemError) {
-            logger.error("Error processing consumer item:", { error: itemError instanceof Error ? itemError.message : 'Unknown error', item });
+            console.error("Error processing consumer item:", itemError);
             results.failed++;
             results.errors.push(`Failed to process item: ${itemError instanceof Error ? itemError.message : 'Unknown error'}`);
           }
@@ -1278,7 +1264,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
     } catch (error) {
-      logger.error('Error creating consumer menu item via Zapier:', { error: error instanceof Error ? error.message : 'Unknown error' });
+      console.error('Error creating consumer menu item via Zapier:', error);
       res.status(500).json({
         message: "Internal server error",
         details: error instanceof Error ? error.message : "Unknown error"
