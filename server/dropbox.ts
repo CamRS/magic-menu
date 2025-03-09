@@ -84,39 +84,48 @@ export class DropboxService {
 
   private async getSharedLink(path: string): Promise<string> {
     try {
-      const response = await this.dbx.sharingCreateSharedLink({
+      const response = await this.dbx.sharingCreateSharedLinkWithSettings({
         path,
         settings: {
-          requested_visibility: { '.tag': 'public' },
-          audience: { '.tag': 'public' },
-          access: { '.tag': 'viewer' }
+          requested_visibility: { '.tag': 'public' }
         }
       });
 
       // Convert the shared link to a direct download link
-      let downloadUrl = response.result.url;
-      // Replace 'www.dropbox' with 'dl.dropboxusercontent' to get direct download link
+      let downloadUrl = response.url; 
       downloadUrl = downloadUrl.replace('www.dropbox.com', 'dl.dropboxusercontent.com');
-      // Remove ?dl=0 and append ?dl=1 to force download
       downloadUrl = downloadUrl.replace('?dl=0', '?dl=1');
 
       return downloadUrl;
     } catch (error: any) {
       if (error?.status === 401) {
+        logger.info('Token expired during shared link creation, refreshing...');
         await this.refreshToken();
-        const response = await this.dbx.sharingCreateSharedLink({
+
+        logger.info('Retrying shared link creation after token refresh...');
+        const response = await this.dbx.sharingCreateSharedLinkWithSettings({
           path,
           settings: {
-            requested_visibility: { '.tag': 'public' },
-            audience: { '.tag': 'public' },
-            access: { '.tag': 'viewer' }
+            requested_visibility: { '.tag': 'public' }
           }
         });
-        let downloadUrl = response.result.url;
+
+        let downloadUrl = response.url; 
         downloadUrl = downloadUrl.replace('www.dropbox.com', 'dl.dropboxusercontent.com');
         downloadUrl = downloadUrl.replace('?dl=0', '?dl=1');
         return downloadUrl;
       }
+
+      logger.error('Failed to create shared link', {
+        error: {
+          status: error?.status,
+          message: error?.message,
+          errorSummary: error?.error?.error_summary,
+          errorTag: error?.error?.error?.['.tag'],
+          stack: error?.stack
+        },
+        path
+      });
       throw error;
     }
   }
@@ -144,7 +153,6 @@ export class DropboxService {
       logger.info('Successfully notified Zapier webhook');
     } catch (error) {
       logger.error('Failed to notify Zapier webhook', error);
-      // Don't throw the error - we don't want to fail the upload if webhook fails
     }
   }
 
@@ -152,16 +160,13 @@ export class DropboxService {
     try {
       logger.info('Starting Dropbox upload process', { fileName, userId });
 
-      // Remove data URL prefix if present
       const buffer = Buffer.from(
         imageData.replace(/^data:image\/\w+;base64,/, ''),
         'base64'
       );
 
-      // Modify filename to include userId if present
       let modifiedFileName = fileName;
       if (isConsumerUpload && userId) {
-        // Extract extension
         const extension = fileName.substring(fileName.lastIndexOf('.'));
         const baseName = fileName.substring(0, fileName.lastIndexOf('.'));
         modifiedFileName = `user_${userId}_${baseName}${extension}`;
@@ -181,11 +186,9 @@ export class DropboxService {
         });
         logger.info('Upload successful', response.result);
 
-        // Get the shared link for the file
         const downloadUrl = await this.getSharedLink(response.result.path_display || path);
         logger.info('Successfully generated shared link', { downloadUrl });
 
-        // Notify Zapier about the upload
         await this.notifyZapier(downloadUrl);
 
         return response.result.path_display || path;
@@ -209,11 +212,9 @@ export class DropboxService {
           });
           logger.info('Retry upload successful', response.result);
 
-          // Get the shared link after retry
           const downloadUrl = await this.getSharedLink(response.result.path_display || path);
           logger.info('Successfully generated shared link after retry', { downloadUrl });
 
-          // Notify Zapier about the upload after retry
           await this.notifyZapier(downloadUrl);
 
           return response.result.path_display || path;
@@ -227,5 +228,4 @@ export class DropboxService {
   }
 }
 
-// Create and export a singleton instance
 export const dropboxService = new DropboxService();
