@@ -24,7 +24,7 @@ export class DropboxService {
     }
 
     if (!this.zapierWebhookUrl) {
-      logger.warn('No Zapier webhook URL found in environment variables');
+      logger.info('No Zapier webhook URL found in environment variables');
     }
 
     this.dbx = new Dropbox({ accessToken: this.accessToken });
@@ -123,7 +123,7 @@ export class DropboxService {
 
   private async notifyZapier(fileUrl: string): Promise<void> {
     if (!this.zapierWebhookUrl) {
-      logger.warn('Skipping Zapier notification - no webhook URL configured');
+      logger.info('Skipping Zapier notification - no webhook URL configured');
       return;
     }
 
