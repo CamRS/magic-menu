@@ -10,6 +10,10 @@ import multer from "multer";
 import path from "path";
 import { dropboxService } from "./dropbox";
 import { logger } from './logger';
+import { EventEmitter } from 'events';
+
+// Create an event emitter for SSE updates
+const menuUpdateEmitter = new EventEmitter();
 
 // Type for multer request
 interface MulterRequest extends Request {
@@ -592,7 +596,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Zapier endpoint to create a menu item
   app.post("/api/zapier/menu-items", requireApiKey, async (req, res) => {
     try {
-      console.log("Received Zapier request with headers:", req.headers); // Add header logging
+      console.log("Received Zapier request with headers:", req.headers);
       console.log("Received request body:", req.body);
 
       // Validate request format
@@ -676,6 +680,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
             await storage.createMenuItem(parsed.data);
             results.success++;
+
+            // Emit an update event with the restaurant ID
+            menuUpdateEmitter.emit('menuUpdate', item.RestaurantID);
           } catch (itemError) {
             console.error("Error processing item:", itemError);
             results.failed++;
@@ -926,6 +933,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
         details: error instanceof Error ? error.message : 'Unknown error'
       });
     }
+  });
+
+  // Add SSE endpoint for menu updates
+  app.get("/api/menu-updates/:restaurantId", (req, res) => {
+    const restaurantId = req.params.restaurantId;
+
+    // Set headers for SSE
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive'
+    });
+
+    // Send initial connection established message
+    res.write('data: {"type":"connected"}\n\n');
+
+    // Handle menu updates for this restaurant
+    const updateHandler = (updatedRestaurantId: string) => {
+      if (updatedRestaurantId === restaurantId) {
+        res.write(`data: {"type":"update","restaurantId":"${restaurantId}"}\n\n`);
+      }
+    };
+
+    // Register listener
+    menuUpdateEmitter.on('menuUpdate', updateHandler);
+
+    // Clean up on client disconnect
+    req.on('close', () => {
+      menuUpdateEmitter.off('menuUpdate', updateHandler);
+    });
   });
 
   const httpServer = createServer(app);

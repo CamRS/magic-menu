@@ -7,6 +7,7 @@ import { Search, Filter, ChevronLeft, ChevronRight, Loader2, Sparkle } from "luc
 import { Input } from "@/components/ui/input";
 import useEmblaCarousel from 'embla-carousel-react';
 import { Button } from "@/components/ui/button";
+import { useMenuUpdates } from '@/hooks/use-menu-updates';
 import {
   Drawer,
   DrawerClose,
@@ -222,6 +223,9 @@ export default function PublicMenuPage() {
       setSelectedTags(tags);
     }
   };
+
+  // Add the menu updates hook
+  useMenuUpdates(restaurantId);
 
   if (!matches || !restaurantId) {
     return (

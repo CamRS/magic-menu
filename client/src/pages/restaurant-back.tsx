@@ -58,6 +58,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { QRCodeSVG } from "qrcode.react";
 import {Tooltip, TooltipContent, TooltipProvider, TooltipTrigger} from "@/components/ui/tooltip";
+import { useMenuUpdates } from '@/hooks/use-menu-updates';
 
 type MenuItemStatus = "draft" | "live";
 
@@ -829,6 +830,8 @@ function HomePage() {
       });
     }
   };
+
+  useMenuUpdates(selectedRestaurant?.id);
 
   return (
     <div className="min-h-screen bg-custom-gray-100">
