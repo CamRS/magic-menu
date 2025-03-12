@@ -215,12 +215,13 @@ export default function ConsumerHomePage() {
     mutationFn: async (file: File) => {
       const formData = new FormData();
       formData.append('file', file);
+      // Add user ID to identify the source (matching how restaurant ID is used in first code)
       formData.append('userId', user?.id?.toString() || '0');
 
       const response = await fetch('/api/consumer-menu-items/upload', {
         method: 'POST',
         body: formData,
-        credentials: 'include'
+        credentials: 'include' // Match the credentials option from first code
       });
 
       if (!response.ok) {
@@ -230,33 +231,19 @@ export default function ConsumerHomePage() {
 
       return response.json();
     },
-    onSuccess: async (data) => {
-      try {
-        // Delete existing menu items for the user
-        const deleteResponse = await fetch('/api/consumer-menu-items', {
-          method: 'DELETE',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
-
-        if (!deleteResponse.ok) {
-          throw new Error('Failed to clear existing menu items');
-        }
-
-        queryClient.invalidateQueries({ queryKey: ["/api/consumer-menu-items"] });
-        toast({
-          title: "Success",
-          description: "Menu uploaded and existing items cleared successfully",
-        });
-      } catch (error) {
-        toast({
-          title: "Warning",
-          description: "Menu uploaded but failed to clear existing items",
-          variant: "destructive",
-        });
+    onSuccess: (data) => {
+      // If you need to update a specific record with the returned image URL
+      // Similar to how the first code updates a menu item with the image URL
+      if (data.image) {
+        // You could make an additional API request here if needed
+        // Example: updateUserMenuImage(data.image)
       }
+
+      queryClient.invalidateQueries({ queryKey: ["/api/consumer-menu-items"] });
+      toast({
+        title: "Success",
+        description: "Menu uploaded successfully",
+      });
     },
     onError: (error: Error) => {
       toast({
