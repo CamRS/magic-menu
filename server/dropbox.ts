@@ -12,11 +12,13 @@ export class DropboxService {
   private dbx: Dropbox;
   private accessToken: string;
   private zapierWebhookUrl: string;
+  private zapierConsumerWebookUrl: string;
 
   constructor() {
     logger.info('Initializing DropboxService...');
     this.accessToken = process.env.VITE_DROPBOX_ACCESS_TOKEN || '';
     this.zapierWebhookUrl = process.env.ZAPIER_WEBHOOK_URL || '';
+    this.zapierConsumerWebookUrl = process.env.ZAPIER_CONSUMER_WEBHOOK_URL || '';
 
     if (!this.accessToken) {
       logger.error('No Dropbox access token found in environment variables');
@@ -30,7 +32,8 @@ export class DropboxService {
     this.dbx = new Dropbox({ accessToken: this.accessToken });
     logger.info('DropboxService initialized', { 
       tokenLength: this.accessToken.length,
-      hasWebhook: Boolean(this.zapierWebhookUrl)
+      hasWebhook: Boolean(this.zapierWebhookUrl),
+      hasConsumerWebhook: Boolean(this.zapierConsumerWebookUrl)
     });
   }
 
@@ -121,15 +124,15 @@ export class DropboxService {
     }
   }
 
-  private async notifyZapier(fileUrl: string): Promise<void> {
-    if (!this.zapierWebhookUrl) {
+  private async notifyZapier(fileUrl: string, zapierUrl: string): Promise<void> {
+    if (!zapierUrl) {
       logger.info('Skipping Zapier notification - no webhook URL configured');
       return;
     }
 
     try {
       logger.info('Sending notification to Zapier webhook', { fileUrl });
-      const response = await fetch(this.zapierWebhookUrl, {
+      const response = await fetch(zapierUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -167,6 +170,12 @@ export class DropboxService {
         ? `/translate - magic menu/${modifiedFileName}`
         : `/Magic Menu/${fileName}`;
 
+      const zapierUrl = isConsumerUpload 
+      ? this.zapierConsumerWebookUrl
+      : this.zapierWebhookUrl;
+
+      logger.info('Zapier webhook URL', { zapierUrl });
+
       logger.info('Uploading to Dropbox path', { path });
 
       try {
@@ -181,7 +190,7 @@ export class DropboxService {
           const downloadUrl = await this.getSharedLink(uploadResponse.result.path_display || path);
           logger.info('Successfully generated shared link', { downloadUrl });
 
-          await this.notifyZapier(downloadUrl);
+          await this.notifyZapier(downloadUrl, zapierUrl);
 
           return uploadResponse.result.path_display || path;
         } catch (sharedLinkError: any) {

@@ -7,6 +7,7 @@ import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { SettingsMenu } from "@/components/settings-dialogs";
 import { Badge } from "@/components/ui/badge";
 import useEmblaCarousel from 'embla-carousel-react';
+import { useMenuUpdates } from '@/hooks/use-menu-updates';
 import {
   Select,
   SelectContent,
@@ -130,6 +131,8 @@ export default function ConsumerHomePage() {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [page, setPage] = useState(1);
   const [selectedStatus, setSelectedStatus] = useState<'live' | 'draft' | null>(null);
+
+  useMenuUpdates(user?.id)
 
   const [emblaRef, emblaApi] = useEmblaCarousel({
     align: 'start',

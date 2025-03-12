@@ -806,6 +806,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           errors: [] as string[]
         };
 
+        const updatedConsumers = new Set<number>();
+
         for (const item of parsedData) {
           try {
             // Process allergens as an array
@@ -855,12 +857,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
             await storage.createConsumerMenuItem(parsed.data);
             results.success++;
+
+            updatedConsumers.add(consumerMenuItem.userId);
           } catch (itemError) {
             console.error("Error processing consumer item:", itemError);
             results.failed++;
             results.errors.push(`Failed to process item: ${itemError instanceof Error ? itemError.message : 'Unknown error'}`);
           }
         }
+
+        updatedConsumers.forEach(userId => {
+          logger.info(`Emitting menu update event for consumer ${userId}`);
+          menuUpdateEmitter.emit('menuUpdate', userId);
+        });
 
         return res.status(results.failed > 0 ? 207 : 201).json(results);
       }
