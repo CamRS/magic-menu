@@ -123,97 +123,45 @@ export default function PublicMenuPage() {
     align: 'start',
     containScroll: 'trimSnaps',
     dragFree: true,
-    slidesToScroll: 1
   });
-
-  const scrollPrev = useCallback(() => {
-    if (emblaApi) emblaApi.scrollPrev();
-  }, [emblaApi]);
-
-  const scrollNext = useCallback(() => {
-    if (emblaApi) emblaApi.scrollNext();
-  }, [emblaApi]);
-
-  const [prevBtnEnabled, setPrevBtnEnabled] = useState(false);
-  const [nextBtnEnabled, setNextBtnEnabled] = useState(false);
-
-  const onSelect = useCallback(() => {
-    if (!emblaApi) return;
-    setPrevBtnEnabled(emblaApi.canScrollPrev());
-    setNextBtnEnabled(emblaApi.canScrollNext());
-  }, [emblaApi]);
-
-  useEffect(() => {
-    if (!emblaApi) return;
-    onSelect();
-    emblaApi.on('select', onSelect);
-    emblaApi.on('reInit', onSelect);
-  }, [emblaApi, onSelect]);
 
   const { data: restaurant } = useQuery<Restaurant>({
     queryKey: [`/api/restaurants/${restaurantId}`],
     enabled: !!restaurantId,
   });
 
-  const { data: menuItems, isLoading: isLoadingMenu, error } = useQuery<MenuItem[]>({
+  const { data: menuItems, isLoading } = useQuery<MenuItem[]>({
     queryKey: [`/api/menu-items`, restaurantId],
-    queryFn: async () => {
-      if (!restaurantId) {
-        throw new Error('Restaurant ID is required');
-      }
-
-      const response = await fetch(`/api/menu-items?${new URLSearchParams({
-        restaurantId: restaurantId.toString(),
-        status: 'live'
-      }).toString()}`);
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch menu items');
-      }
-
-      const data = await response.json();
-      console.log('API Response:', data); // Debug log to see the response structure
-
-      // Return the items array directly if it exists
-      if (Array.isArray(data)) {
-        return data;
-      }
-
-      // If data is an object with items property
-      if (data && Array.isArray(data.items)) {
-        return data.items;
-      }
-
-      // If we get here, we don't have a valid response
-      throw new Error('No menu items found');
-    },
     enabled: !!restaurantId,
   });
 
+  const filteredItems = useMemo(() => {
+    if (!menuItems || !Array.isArray(menuItems)) return [];
+
+    return menuItems.filter(item => {
+      const matchesSearch = !searchTerm ||
+        item.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.description?.toLowerCase().includes(searchTerm.toLowerCase());
+
+      const matchesTags = selectedTags.length === 0 ||
+        (item.courseTags && selectedTags.every(tag => item.courseTags.includes(tag)));
+
+      return matchesSearch && matchesTags;
+    });
+  }, [menuItems, searchTerm, selectedTags]);
+
   const uniqueTags = useMemo(() => {
-    if (!menuItems) return [];
+    if (!menuItems || !Array.isArray(menuItems)) return [];
     const tagSet = new Set<string>();
     menuItems.forEach(item => {
-      item.courseTags?.forEach(tag => tagSet.add(tag));
+      if (item.courseTags) {
+        item.courseTags.forEach(tag => {
+          if (tag) tagSet.add(tag);
+        });
+      }
     });
     return Array.from(tagSet).sort();
   }, [menuItems]);
-
-  const filteredItems = useMemo(() => {
-    if (!menuItems) return [];
-    return menuItems
-      .filter(item => {
-        const matchesSearch = !searchTerm ||
-          item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          item.description.toLowerCase().includes(searchTerm.toLowerCase());
-
-        const matchesTags = selectedTags.length === 0 ||
-          selectedTags.every(tag => item.courseTags?.includes(tag));
-
-        return matchesSearch && matchesTags;
-      })
-      .sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
-  }, [menuItems, searchTerm, selectedTags]);
 
   const handleTagSelection = (value: string) => {
     if (value === "all") {
@@ -224,7 +172,6 @@ export default function PublicMenuPage() {
     }
   };
 
-  // Add the menu updates hook
   useMenuUpdates(restaurantId);
 
   if (!matches || !restaurantId) {
@@ -272,49 +219,26 @@ export default function PublicMenuPage() {
       </header>
 
       <main className="pt-[104px] pb-24 px-4 max-w-4xl mx-auto">
-        {isLoadingMenu ? (
+        {isLoading ? (
           <div className="flex justify-center items-center py-8">
             <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
           </div>
-        ) : error ? (
-          <div className="text-center py-8 text-red-500">
-            Error loading menu items: {error instanceof Error ? error.message : 'Unknown error'}
+        ) : !menuItems || menuItems.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">
+            No menu items available
           </div>
         ) : filteredItems.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
-            {searchTerm || selectedTags.length > 0 ? 'No menu items match your filters' : 'No menu items available'}
+            No menu items match your filters
           </div>
         ) : (
           <div className="relative py-8">
             <div className="overflow-hidden -mx-4 px-4" ref={emblaRef}>
-              <div className="flex items-center -mx-2 ">
+              <div className="flex gap-4">
                 {filteredItems.map((item) => (
                   <MenuCard key={item.id} item={item} />
                 ))}
               </div>
-            </div>
-            <div className="absolute inset-y-0 left-0 flex items-center">
-              <Button
-                variant="ghost"
-                size="icon"
-                className={`h-8 w-8 rounded-full bg-white shadow-md ${!prevBtnEnabled && 'opacity-50 cursor-not-allowed'}`}
-                onClick={scrollPrev}
-                disabled={!prevBtnEnabled}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-            </div>
-
-            <div className="absolute inset-y-0 right-0 flex items-center">
-              <Button
-                variant="ghost"
-                size="icon"
-                className={`h-8 w-8 rounded-full bg-white shadow-md ${!nextBtnEnabled && 'opacity-50 cursor-not-allowed'}`}
-                onClick={scrollNext}
-                disabled={!nextBtnEnabled}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
             </div>
           </div>
         )}
