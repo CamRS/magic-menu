@@ -59,7 +59,6 @@ import { Badge } from "@/components/ui/badge";
 import { QRCodeSVG } from "qrcode.react";
 import {Tooltip, TooltipContent, TooltipProvider, TooltipTrigger} from "@/components/ui/tooltip";
 import { useMenuUpdates } from '@/hooks/use-menu-updates';
-import { BeatLoader } from "react-spinners";
 
 type MenuItemStatus = "draft" | "live";
 
@@ -352,7 +351,6 @@ function HomePage() {
   const csvFileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
   const [selectedStatus, setSelectedStatus] = useState<MenuItemStatus | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
 
   const form = useForm<InsertMenuItem>({
     resolver: zodResolver(insertMenuItemSchema),
@@ -710,6 +708,7 @@ function HomePage() {
       try {
         const formData = new FormData();
         formData.append('file', file);
+        // Add restaurant ID to identify the source
         formData.append('restaurantId', selectedRestaurant?.id?.toString() || '0');
 
         const response = await fetch('/api/menu-items/upload', {
@@ -725,6 +724,7 @@ function HomePage() {
         const { image } = await response.json();
 
         if (itemId) {
+          // Update the menu item with the new image URL
           await apiRequest("PATCH", `/api/menu-items/${itemId}`, {
             image
           });
@@ -741,7 +741,6 @@ function HomePage() {
           description: "Failed to update image",
           variant: "destructive",
         });
-      } finally {
       }
     }
   };
@@ -750,9 +749,9 @@ function HomePage() {
     const file = e.target.files?.[0];
     if (file) {
       try {
-        setIsUploading(true);
         const formData = new FormData();
         formData.append('file', file);
+        // Add restaurant ID to identify the source
         formData.append('restaurantId', selectedRestaurant?.id?.toString() || '0');
 
         const response = await fetch('/api/menu-items/upload', {
@@ -778,8 +777,6 @@ function HomePage() {
           description: "Failed to upload image",
           variant: "destructive",
         });
-      } finally {
-        setIsUploading(false);
       }
     }
   };
@@ -836,22 +833,8 @@ function HomePage() {
 
   useMenuUpdates(selectedRestaurant?.id);
 
-  const LoadingOverlay = () => (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 flex flex-col items-center">
-        <BeatLoader
-          color="#4169E1"
-          size={25}
-          speedMultiplier={0.75}
-        />
-        <p className="mt-4 text-gray-700">Processing image...</p>
-      </div>
-    </div>
-  );
-
   return (
     <div className="min-h-screen bg-custom-gray-100">
-      {isUploading && <LoadingOverlay />}
       <header className="sticky top-0 z-50 bg-white/85 backdrop-blur-sm border-b border-custom-gray-200">
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex items-center justify-between h-16">

@@ -143,8 +143,8 @@ export class DropboxService {
       if (!response.ok) {
         throw new Error(`Zapier webhook failed with status ${response.status}`);
       }
-      const jsonResponse = await response.json();
-      logger.info(`Successfully notified Zapier webhook' ${JSON.stringify(jsonResponse, null, 2)}`);
+
+      logger.info('Successfully notified Zapier webhook');
     } catch (error) {
       logger.error('Failed to notify Zapier webhook', error);
     }
@@ -189,23 +189,6 @@ export class DropboxService {
         try {
           const downloadUrl = await this.getSharedLink(uploadResponse.result.path_display || path);
           logger.info('Successfully generated shared link', { downloadUrl });
-
-          // Listen for SSE Event from Zapier
-          const eventSource = new EventSource(`/api/sse-zapier?userId=${userId}`);
-
-          const timeout = setTimeout(() => {
-            console.error("Zapier response timeout exceeded (30s)");
-            eventSource.close();
-          }, 30000); // 30-second timeout
-
-          eventSource.onmessage = (event) => {
-            const data = JSON.parse(event.data);
-            if (data.completed) {
-              console.log("Zapier process completed!", data);
-              clearTimeout(timeout); // Stop timeout
-              eventSource.close(); // Close SSE connection
-            }
-          };
 
           await this.notifyZapier(downloadUrl, zapierUrl);
 
