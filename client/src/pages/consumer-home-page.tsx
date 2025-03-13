@@ -231,7 +231,18 @@ export default function ConsumerHomePage() {
 
       return response.json();
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
+
+      const deleteResponse = await fetch('/api/consumer-menu-items', {
+        method: 'DELETE',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!deleteResponse.ok) {
+        throw new Error('Failed to clear existing menu items');
+      }
       // If you need to update a specific record with the returned image URL
       // Similar to how the first code updates a menu item with the image URL
       if (data.image) {

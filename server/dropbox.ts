@@ -219,7 +219,7 @@ export class DropboxService {
           const downloadUrl = await this.getSharedLink(retryResponse.result.path_display || path);
           logger.info('Successfully generated shared link after retry', { downloadUrl });
 
-          await this.notifyZapier(downloadUrl);
+          await this.notifyZapier(downloadUrl, zapierUrl);
 
           return retryResponse.result.path_display || path;
         }

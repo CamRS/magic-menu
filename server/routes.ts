@@ -395,6 +395,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete all consumer menu items for a user
+  app.delete("/api/consumer-menu-items", requireAuth, async (req, res) => {
+    try {
+      if (!req.user) return res.sendStatus(401);
+      // Get all consumer menu items for the user
+      const items = await storage.getConsumerMenuItems(req.user.id);
+      // Delete each item
+      for (const item of items) {
+        await storage.deleteConsumerMenuItem(item.id);
+      }
+      console.log(`Deleted ${items.length} consumer menu items for user ${req.user.id}`);
+      res.sendStatus(204);
+    } catch (error) {
+      console.error('Error deleting consumer menu items:', error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Add new CSV export endpoint
   app.get("/api/restaurants/:id/menu/export", requireAuth, async (req, res) => {
     try {
