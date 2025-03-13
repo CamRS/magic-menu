@@ -3,7 +3,7 @@ import { useRoute } from "wouter";
 import { type MenuItem, type Restaurant } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Search, Filter, ChevronLeft, ChevronRight, Loader2, Sparkle } from "lucide-react";
+import { Search, Sparkle, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import useEmblaCarousel from 'embla-carousel-react';
 import { Button } from "@/components/ui/button";
@@ -25,7 +25,7 @@ const allergensList: AllergenType[] = ['milk', 'eggs', 'peanuts', 'nuts', 'shell
 const dietaryPreferences = ['Vegetarian', 'Vegan'] as const;
 
 const MenuCard = ({ item }: { item: MenuItem }) => {
-  const activeAllergens = Object.entries(item.allergens)
+  const activeAllergens = Object.entries(item.allergens || {})
     .filter(([_, value]) => value)
     .map(([key]) => key);
 
@@ -118,6 +118,7 @@ export default function PublicMenuPage() {
   const [selectedDietary, setSelectedDietary] = useState<typeof dietaryPreferences[number][]>([]);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
 
   const [emblaRef, emblaApi] = useEmblaCarousel({
     align: 'start',
@@ -125,30 +126,79 @@ export default function PublicMenuPage() {
     dragFree: true,
   });
 
-  const { data: restaurant } = useQuery<Restaurant>({
+  // Enhanced restaurant query with error handling
+  const { 
+    data: restaurant, 
+    isLoading: isLoadingRestaurant,
+    error: restaurantError
+  } = useQuery<Restaurant>({
     queryKey: [`/api/restaurants/${restaurantId}`],
     enabled: !!restaurantId,
+    retry: 3,
+    // Log any errors for debugging
+    onError: (error) => {
+      console.error('Restaurant fetch error:', error);
+      setApiError(`Error loading restaurant: ${error.message}`);
+    }
   });
 
-  const { data: menuItems, isLoading } = useQuery<MenuItem[]>({
-    queryKey: [`/api/menu-items`, restaurantId],
+  // Enhanced menu items query with error handling
+  const { 
+    data: menuItems, 
+    isLoading: isLoadingMenuItems,
+    error: menuItemsError
+  } = useQuery<MenuItem[]>({
+    queryKey: [`/api/menu-items/restaurant/${restaurantId}`], // Adjusted endpoint to match what might be expected by the API
     enabled: !!restaurantId,
+    retry: 3,
+    // Log any errors for debugging
+    onError: (error) => {
+      console.error('Menu items fetch error:', error);
+      setApiError(`Error loading menu items: ${error.message}`);
+    }
   });
 
+  // Debug logging
+  useEffect(() => {
+    console.log('Restaurant ID:', restaurantId);
+    console.log('Restaurant data:', restaurant);
+    console.log('Menu items:', menuItems);
+  }, [restaurantId, restaurant, menuItems]);
+
+  // Apply allergen and dietary filters
   const filteredItems = useMemo(() => {
-    if (!menuItems || !Array.isArray(menuItems)) return [];
+    if (!menuItems || !Array.isArray(menuItems)) {
+      console.log('No menu items array available');
+      return [];
+    }
+
+    console.log(`Filtering ${menuItems.length} menu items`);
 
     return menuItems.filter(item => {
+      // Check search term
       const matchesSearch = !searchTerm ||
         item.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.description?.toLowerCase().includes(searchTerm.toLowerCase());
 
+      // Check course tags
       const matchesTags = selectedTags.length === 0 ||
-        (item.courseTags && selectedTags.every(tag => item.courseTags.includes(tag)));
+        (item.courseTags && selectedTags.some(tag => item.courseTags?.includes(tag)));
 
-      return matchesSearch && matchesTags;
+      // Check allergens
+      const matchesAllergens = selectedAllergens.length === 0 ||
+        !selectedAllergens.some(allergen => item.allergens?.[allergen]);
+
+      // Check dietary preferences
+      const matchesDietary = selectedDietary.length === 0 ||
+        selectedDietary.some(pref => {
+          if (pref === 'Vegetarian') return item.isVegetarian;
+          if (pref === 'Vegan') return item.isVegan;
+          return false;
+        });
+
+      return matchesSearch && matchesTags && matchesAllergens && matchesDietary;
     });
-  }, [menuItems, searchTerm, selectedTags]);
+  }, [menuItems, searchTerm, selectedTags, selectedAllergens, selectedDietary]);
 
   const uniqueTags = useMemo(() => {
     if (!menuItems || !Array.isArray(menuItems)) return [];
@@ -163,16 +213,67 @@ export default function PublicMenuPage() {
     return Array.from(tagSet).sort();
   }, [menuItems]);
 
-  const handleTagSelection = (value: string) => {
-    if (value === "all") {
+  const handleTagSelection = (tag: string) => {
+    if (tag === "all") {
       setSelectedTags([]);
     } else {
-      const tags = value.split(",").filter(Boolean);
-      setSelectedTags(tags);
+      setSelectedTags(prev => 
+        prev.includes(tag) 
+          ? prev.filter(t => t !== tag) 
+          : [...prev, tag]
+      );
     }
   };
 
+  // Navigation buttons for the carousel
+  const scrollPrev = useCallback(() => {
+    if (emblaApi) emblaApi.scrollPrev();
+  }, [emblaApi]);
+
+  const scrollNext = useCallback(() => {
+    if (emblaApi) emblaApi.scrollNext();
+  }, [emblaApi]);
+
+  const [canScrollPrev, setCanScrollPrev] = useState(false);
+  const [canScrollNext, setCanScrollNext] = useState(false);
+
+  useEffect(() => {
+    if (!emblaApi) return;
+
+    const onSelect = () => {
+      setCanScrollPrev(emblaApi.canScrollPrev());
+      setCanScrollNext(emblaApi.canScrollNext());
+    };
+
+    emblaApi.on('select', onSelect);
+    emblaApi.on('reInit', onSelect);
+    onSelect();
+
+    return () => {
+      emblaApi.off('select', onSelect);
+      emblaApi.off('reInit', onSelect);
+    };
+  }, [emblaApi]);
+
+  // Custom hook for menu updates
   useMenuUpdates(restaurantId);
+
+  const isLoading = isLoadingRestaurant || isLoadingMenuItems;
+  const error = restaurantError || menuItemsError;
+
+  // Check if we have items but for some reason aren't displaying them
+  useEffect(() => {
+    if (menuItems && menuItems.length > 0 && filteredItems.length === 0 && !searchTerm && selectedTags.length === 0) {
+      console.warn('Have menu items but none are being displayed after filtering', { 
+        menuItems, 
+        filteredItems,
+        searchTerm,
+        selectedTags,
+        selectedAllergens,
+        selectedDietary
+      });
+    }
+  }, [menuItems, filteredItems, searchTerm, selectedTags, selectedAllergens, selectedDietary]);
 
   if (!matches || !restaurantId) {
     return (
@@ -188,7 +289,7 @@ export default function PublicMenuPage() {
         <div className="max-w-4xl mx-auto h-[48px] px-4">
           <div className="flex items-center justify-center h-full">
             <h1 className="text-md font-semibold text-gray-900 text-center">
-              {restaurant?.name}
+              {restaurant?.name || 'Loading...'}
             </h1>
           </div>
         </div>
@@ -219,9 +320,31 @@ export default function PublicMenuPage() {
       </header>
 
       <main className="pt-[104px] pb-24 px-4 max-w-4xl mx-auto">
+        {/* API Error Message */}
+        {apiError && (
+          <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg mb-6">
+            {apiError}
+          </div>
+        )}
+
+        {/* Debug Info (only in development) */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg mb-6 text-sm">
+            <h3 className="font-bold mb-2">Debug Info:</h3>
+            <p>Restaurant ID: {restaurantId}</p>
+            <p>Menu Items Count: {menuItems?.length || 0}</p>
+            <p>Filtered Items Count: {filteredItems.length}</p>
+            <p>API URL: {`/api/menu-items/restaurant/${restaurantId}`}</p>
+          </div>
+        )}
+
         {isLoading ? (
           <div className="flex justify-center items-center py-8">
             <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+          </div>
+        ) : error ? (
+          <div className="text-center py-8 text-red-500">
+            Error loading data: {error.message}
           </div>
         ) : !menuItems || menuItems.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
@@ -233,8 +356,31 @@ export default function PublicMenuPage() {
           </div>
         ) : (
           <div className="relative py-8">
-            <div className="overflow-hidden -mx-4 px-4" ref={emblaRef}>
-              <div className="flex gap-4">
+            {/* Carousel Navigation Buttons */}
+            <div className="flex justify-between absolute top-1/2 -translate-y-1/2 left-0 right-0 z-30 px-2">
+              <Button 
+                variant="outline" 
+                size="icon" 
+                className={`rounded-full bg-white/80 backdrop-blur-sm ${!canScrollPrev ? 'opacity-50 cursor-not-allowed' : ''}`}
+                onClick={scrollPrev}
+                disabled={!canScrollPrev}
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </Button>
+              <Button 
+                variant="outline" 
+                size="icon" 
+                className={`rounded-full bg-white/80 backdrop-blur-sm ${!canScrollNext ? 'opacity-50 cursor-not-allowed' : ''}`}
+                onClick={scrollNext}
+                disabled={!canScrollNext}
+              >
+                <ChevronRight className="h-5 w-5" />
+              </Button>
+            </div>
+
+            {/* Embla Carousel */}
+            <div className="overflow-hidden" ref={emblaRef}>
+              <div className="flex">
                 {filteredItems.map((item) => (
                   <MenuCard key={item.id} item={item} />
                 ))}
