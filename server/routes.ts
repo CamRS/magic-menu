@@ -14,6 +14,7 @@ import { EventEmitter } from 'events';
 
 // Create an event emitter for SSE updates
 const menuUpdateEmitter = new EventEmitter();
+const sseClients: Record<string, Response[]> = {};
 
 // Type for multer request
 interface MulterRequest extends Request {
@@ -599,32 +600,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Add SSE endpoint before the Zapier endpoints
   app.get("/api/menu-updates/:restaurantId", (req, res) => {
-    const restaurantId = parseInt(req.params.restaurantId);
-    if (isNaN(restaurantId)) {
+    const restaurantId = req.params.restaurantId;
+    if (!restaurantId) {
       return res.status(400).json({ message: "Invalid restaurant ID" });
     }
 
-    // Set headers for SSE
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
+    // Set SSE Headers
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
 
     // Send initial connection established message
-    res.write(`data: ${JSON.stringify({ type: 'connected' })}\n\n`);
+    res.write(`data: ${JSON.stringify({ type: "connected" })}\n\n`);
 
-    // Set up event listener for this restaurant
-    const listener = (updatedRestaurantId: number) => {
-      logger.info(`🔄 SSE: Menu update event received for restaurant ${updatedRestaurantId}`);
+    // Store SSE client connection
+    if (!sseClients[restaurantId]) {
+      sseClients[restaurantId] = [];
+    }
+    sseClients[restaurantId].push(res);
+
+    // Listen for menu updates
+    const listener = (updatedRestaurantId: string) => {
       if (updatedRestaurantId === restaurantId) {
-        res.write(`data: ${JSON.stringify({ type: 'menuUpdate', restaurantId })}\n\n`);
+        res.write(`data: ${JSON.stringify({ type: "menuUpdate", restaurantId })}\n\n`);
       }
     };
 
-    menuUpdateEmitter.on('menuUpdate', listener);
+    menuUpdateEmitter.on("menuUpdate", listener);
 
-    // Clean up on client disconnect
-    req.on('close', () => {
-      menuUpdateEmitter.off('menuUpdate', listener);
+    // Cleanup on client disconnect
+    req.on("close", () => {
+      menuUpdateEmitter.off("menuUpdate", listener);
+      sseClients[restaurantId] = sseClients[restaurantId].filter((client) => client !== res);
     });
   });
 
@@ -884,9 +891,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
 
-        updatedConsumers.forEach(userId => {
+        updatedConsumers.forEach((userId) => {
           logger.info(`Emitting menu update event for consumer ${userId}`);
-          menuUpdateEmitter.emit('menuUpdate', userId);
+          menuUpdateEmitter.emit("menuUpdate", userId);
+
+          if (sseClients[userId]) {
+            sseClients[userId].forEach((client) => {
+              client.write(`data: ${JSON.stringify({ type: "consumerMenuUpdate", userId })}\n\n`);
+            });
+            delete sseClients[userId]; // Clean up clients after sending event
+          }
         });
 
         return res.status(results.failed > 0 ? 207 : 201).json(results);
@@ -982,7 +996,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         logger.info('Attempting to upload to Dropbox', { fileName });
 
-        const imageUrl = await dropboxService.uploadImage(imageData, fileName); // Not a consumer upload
+        const imageUrl = await dropboxService.uploadImage(imageData, fileName, ); // Not a consumer upload
         logger.info('Successfully uploaded to Dropbox', { imageUrl });
 
         res.status(201).json({ image: imageUrl });

@@ -708,7 +708,6 @@ function HomePage() {
     const file = e.dataTransfer.files[0];
     if (file && file.type.startsWith('image/')) {
       try {
-        setIsUploading(true);
         const formData = new FormData();
         formData.append('file', file);
         formData.append('restaurantId', selectedRestaurant?.id?.toString() || '0');
@@ -743,7 +742,6 @@ function HomePage() {
           variant: "destructive",
         });
       } finally {
-        setIsUploading(false);
       }
     }
   };
