@@ -58,7 +58,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { QRCodeSVG } from "qrcode.react";
 import {Tooltip, TooltipContent, TooltipProvider, TooltipTrigger} from "@/components/ui/tooltip";
-import { useMenuUpdates } from '@/hooks/use-menu-updates';
 import { MutatingDots } from "react-loader-spinner";
 
 type MenuItemStatus = "draft" | "live";
@@ -782,6 +781,7 @@ function HomePage() {
         });
       } finally {
         setIsUploading(false);
+        location.reload();
       }
     }
   };
@@ -835,8 +835,6 @@ function HomePage() {
       });
     }
   };
-
-  useMenuUpdates(selectedRestaurant?.id);
 
   return (
     <div className="min-h-screen bg-custom-gray-100">

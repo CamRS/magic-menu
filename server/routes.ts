@@ -1006,10 +1006,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Add SSE endpoint before the Zapier endpoints
-  app.get("/api/menu-updates/:restaurantId", (req, res) => {
-  Insert the new code immediately before that line, like this:
-  javascriptCopy// Create a Map to store promises for pending uploads by userId/restaurantId
+  // Create a Map to store promises for pending uploads by userId/restaurantId
   const pendingUploads = new Map();
 
   // Add an event listener for menu updates that will resolve the corresponding promises
