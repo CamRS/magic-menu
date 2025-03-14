@@ -62,7 +62,6 @@ import { useMenuUpdates } from '@/hooks/use-menu-updates';
 
 type MenuItemStatus = "draft" | "live";
 
-
 const defaultFormValues: InsertMenuItem = {
   name: "",
   name_original: "",
