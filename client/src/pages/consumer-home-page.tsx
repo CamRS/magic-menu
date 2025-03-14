@@ -7,7 +7,6 @@ import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { SettingsMenu } from "@/components/settings-dialogs";
 import { Badge } from "@/components/ui/badge";
 import useEmblaCarousel from 'embla-carousel-react';
-import { useMenuUpdates } from '@/hooks/use-menu-updates';
 import {
   Select,
   SelectContent,
@@ -25,6 +24,7 @@ import { type ConsumerMenuItem } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
+import { MutatingDots } from "react-loader-spinner";
 
 const ITEMS_PER_PAGE = 9;
 
@@ -131,8 +131,8 @@ export default function ConsumerHomePage() {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [page, setPage] = useState(1);
   const [selectedStatus, setSelectedStatus] = useState<'live' | 'draft' | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
-  useMenuUpdates(user?.id)
 
   const [emblaRef, emblaApi] = useEmblaCarousel({
     align: 'start',
@@ -213,10 +213,22 @@ export default function ConsumerHomePage() {
 
   const uploadMutation = useMutation({
     mutationFn: async (file: File) => {
+      setIsUploading(true);
       const formData = new FormData();
       formData.append('file', file);
       // Add user ID to identify the source (matching how restaurant ID is used in first code)
       formData.append('userId', user?.id?.toString() || '0');
+
+      const deleteResponse = await fetch('/api/consumer-menu-items', {
+        method: 'DELETE',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!deleteResponse.ok) {
+        throw new Error('Failed to clear existing menu items');
+      }
 
       const response = await fetch('/api/consumer-menu-items/upload', {
         method: 'POST',
@@ -232,17 +244,6 @@ export default function ConsumerHomePage() {
       return response.json();
     },
     onSuccess: async (data) => {
-
-      const deleteResponse = await fetch('/api/consumer-menu-items', {
-        method: 'DELETE',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      if (!deleteResponse.ok) {
-        throw new Error('Failed to clear existing menu items');
-      }
       // If you need to update a specific record with the returned image URL
       // Similar to how the first code updates a menu item with the image URL
       if (data.image) {
@@ -255,6 +256,8 @@ export default function ConsumerHomePage() {
         title: "Success",
         description: "Menu uploaded successfully",
       });
+      setIsUploading(false);
+      location.reload();
     },
     onError: (error: Error) => {
       toast({
@@ -262,6 +265,8 @@ export default function ConsumerHomePage() {
         description: error.message,
         variant: "destructive",
       });
+      setIsUploading(false);
+      location.reload();
     },
   });
 
@@ -543,6 +548,26 @@ export default function ConsumerHomePage() {
           </div>
         </div>
       </nav>
+      {isUploading && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white p-10 rounded-xl shadow-xl flex flex-col items-center justify-center" style={{ width: "280px", height: "280px" }}>
+            <div className="flex items-center justify-center" style={{ marginBottom: "30px" }}>
+              <div style={{ transform: "translateX(0px)" }}>
+                <MutatingDots 
+                  height="100"
+                  width="100"
+                  color="#6171FF"
+                  secondaryColor="#4F46E5"
+                  radius="12.5"
+                  ariaLabel="mutating-dots-loading"
+                  visible={true}
+                />
+              </div>
+            </div>
+            <p className="text-center font-medium text-gray-700">Uploading image...</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

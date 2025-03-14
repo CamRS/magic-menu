@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import useEmblaCarousel from 'embla-carousel-react';
 import { Button } from "@/components/ui/button";
 import { useMenuUpdates } from '@/hooks/use-menu-updates';
-import { logger } from '@/lib/logger';
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
   Drawer,
   DrawerClose,
@@ -163,27 +163,27 @@ export default function PublicMenuPage() {
         throw new Error('Restaurant ID is required');
       }
 
-      const response = await fetch(`/api/menu-items?${new URLSearchParams({
-        restaurantId: restaurantId.toString(),
-        status: 'live'
-      }).toString()}`);
-
+      const response = await apiRequest("GET", `/api/menu-items?restaurantId=${restaurantId}`);
       if (!response.ok) {
-        throw new Error('Failed to fetch menu items');
+        console.error("Failed to fetch menu items:", await response.text());
+        throw new Error("Failed to fetch menu items");
       }
 
       const data = await response.json();
-      logger.info('API Response:', data); 
+      console.log('API Response:', data); // Debug log to see the response structure
 
+      // Return the items array directly if it exists
       if (Array.isArray(data)) {
         return data;
       }
 
+      // If data is an object with items property
       if (data && Array.isArray(data.items)) {
         return data.items;
       }
 
-      throw new Error('Invalid menu items response format');
+      // If we get here, we don't have a valid response
+      throw new Error('No menu items found');
     },
     enabled: !!restaurantId,
   });
@@ -222,6 +222,7 @@ export default function PublicMenuPage() {
     }
   };
 
+  // Add the menu updates hook
   useMenuUpdates(restaurantId);
 
   if (!matches || !restaurantId) {
