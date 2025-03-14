@@ -232,7 +232,18 @@ const MenuItemCard = ({
   </Card>
 );
 
-function MenuSection({ section, items, selectedItems, handleStatusChange, handleEdit, handleDelete, handleImageDrop, handleImageDelete, toggleItemSelection }: {
+function MenuSection({ 
+  section, 
+  items, 
+  selectedItems, 
+  handleStatusChange, 
+  handleEdit, 
+  handleDelete, 
+  handleImageDrop, 
+  handleImageDelete, 
+  toggleItemSelection,
+  isUploading 
+}: {
   section: string;
   items: MenuItem[];
   selectedItems: number[];
@@ -242,6 +253,7 @@ function MenuSection({ section, items, selectedItems, handleStatusChange, handle
   handleImageDrop: (e: React.DragEvent<HTMLDivElement>, id?: number) => void;
   handleImageDelete: (id: number) => void;
   toggleItemSelection: (id: number) => void;
+  isUploading: boolean;
 }) {
   const [isExpanded, setIsExpanded] = useState(true);
   const [sectionItems, setSectionItems] = useState(items);
@@ -324,14 +336,6 @@ function MenuSection({ section, items, selectedItems, handleStatusChange, handle
                       scale: 1.02,
                       boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)",
                     }}
-                    dragTransition={{
-                      bounceStiffness: 300,
-                      bounceDamping: 20
-                    }}
-                    transition={{
-                      duration: 0.2,
-                      ease: [0.43, 0.13, 0.23, 0.96]
-                    }}
                   >
                     <MenuItemCard
                       item={item}
@@ -342,6 +346,7 @@ function MenuSection({ section, items, selectedItems, handleStatusChange, handle
                       handleImageDrop={handleImageDrop}
                       handleImageDelete={handleImageDelete}
                       toggleItemSelection={toggleItemSelection}
+                      isUploading={isUploading}
                     />
                   </Reorder.Item>
                 ))}
@@ -423,7 +428,7 @@ function HomePage() {
     }
   }, [restaurants, selectedRestaurant, form]);
 
-  const { data: menuItems, isLoading: isLoadingMenuItems } = useQuery<MenuItem[]>({
+  const { data: menuItems, isLoading: isLoadingMenuItems, error } = useQuery<MenuItem[]>({
     queryKey: ["/api/menu-items", selectedRestaurant?.id],
     queryFn: async () => {
       if (!selectedRestaurant?.id) return [];
@@ -1067,7 +1072,7 @@ function HomePage() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-6">
+      <main className="pt-[104px] pb-24 px-4 max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <div className="relative flex-1 max-w-xl">
             <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-custom-gray-400" />
@@ -1125,20 +1130,31 @@ function HomePage() {
           </div>
         </div>
 
-        {Array.from(groupedByCourse.entries()).map(([section, items]) => (
-          <MenuSection
-            key={section}
-            section={section}
-            items={items}
-            selectedItems={selectedItems}
-            handleStatusChange={handleStatusChange}
-            handleEdit={handleEdit}
-            handleDelete={handleDelete}
-            handleImageDrop={handleImageDrop}
-            handleImageDelete={handleImageDelete}
-            toggleItemSelection={toggleItemSelection}
-          />
-        ))}
+        {isLoadingMenuItems ? (
+          <div className="flex justify-center items-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+          </div>
+        ) : error ? (
+          <div className="text-center py-8 text-red-500">
+            Error loading menu items
+          </div>
+        ) : (
+          Array.from(groupedByCourse.entries()).map(([section, items]) => (
+            <MenuSection
+              key={section}
+              section={section}
+              items={items}
+              selectedItems={selectedItems}
+              handleStatusChange={handleStatusChange}
+              handleEdit={handleEdit}
+              handleDelete={handleDelete}
+              handleImageDrop={handleImageDrop}
+              handleImageDelete={handleImageDelete}
+              toggleItemSelection={toggleItemSelection}
+              isUploading={isUploading}
+            />
+          ))
+        )}
       </main>
 
       <Dialog
