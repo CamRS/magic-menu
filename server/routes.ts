@@ -36,6 +36,80 @@ const upload = multer({
   }
 });
 
+const uploadPromiseTracker = {
+  pendingUploads: new Map(),
+
+  create(id: number | string) {
+    const stringId = String(id);
+    logger.info(`Creating upload promise for user ${stringId}`);
+
+    // Create the promise outside of the Promise constructor
+    let resolvePromise: ((result: any) => void) | null = null;
+    let rejectPromise: ((error: any) => void) | null = null;
+
+    const promiseInstance = new Promise((resolve, reject) => {
+      resolvePromise = resolve;
+      rejectPromise = reject;
+    });
+
+    // Set a timeout to resolve the promise
+    const timeoutId = setTimeout(() => {
+      logger.info(`Upload promise for user ${stringId} timed out`);
+      if (resolvePromise) {
+        resolvePromise({ 
+          success: true, 
+          timedOut: true,
+          message: 'No immediate update received' 
+        });
+      }
+      this.pendingUploads.delete(stringId);
+    }, 45000);
+
+    // Store the promise details
+    this.pendingUploads.set(stringId, {
+      promise: promiseInstance,
+      resolve: resolvePromise,
+      reject: rejectPromise,
+      timeoutId
+    });
+
+    // Log the current state of pendingUploads for debugging
+    logger.info('pendingUploads after creating promise:', 
+      Array.from(this.pendingUploads.entries()).map(([key, value]) => ({ 
+        key, 
+        hasResolve: !!value.resolve 
+      }))
+    );
+
+    return promiseInstance;
+  },
+
+  resolve(id: number | string, result: any = { success: true }) {
+    const stringId = String(id);
+    logger.info(`Attempting to resolve upload promise for user ${stringId}`);
+
+    const uploadEntry = this.pendingUploads.get(stringId);
+    if (uploadEntry) {
+      logger.info(`Found pending upload for ${stringId}`);
+
+      // Clear the timeout
+      clearTimeout(uploadEntry.timeoutId);
+
+      // Resolve the promise if resolve function exists
+      if (uploadEntry.resolve) {
+        uploadEntry.resolve(result);
+      }
+
+      // Remove from pending uploads
+      this.pendingUploads.delete(stringId);
+
+      logger.info(`Resolved upload promise for user ${stringId}`);
+    } else {
+      logger.info(`No pending upload found for user ${stringId}`);
+    }
+  }
+};
+
 // Helper function to parse CSV data
 function parseCSV(csvText: string): string[][] {
   const rows: string[][] = [];
@@ -961,42 +1035,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Create a Map to store promises for pending uploads by userId/restaurantId
-  const pendingUploads = new Map();
-
   // Add an event listener for menu updates that will resolve the corresponding promises
   menuUpdateEmitter.on('menuUpdate', (id) => {
-    if (pendingUploads.has(id)) {
-      const { resolve, timeoutId } = pendingUploads.get(id);
-      clearTimeout(timeoutId);
-      resolve({ success: true });
-      pendingUploads.delete(id);
-    }
+    logger.info(`Menu update event received for user ${id}`);
+    logger.info('pendingUploads:', uploadPromiseTracker.pendingUploads);
+
+    uploadPromiseTracker.resolve(id);
   });
 
   // Function to create a promise that waits for an SSE event or times out
-  function createUploadPromise(id) {
-    let resolvePromise;
-    let timeoutId;
-
-    const promise = new Promise((resolve) => {
-      resolvePromise = resolve;
-
-      // Set a timeout of 30 seconds
-      timeoutId = setTimeout(() => {
-        if (pendingUploads.has(id)) {
-          resolve({ success: true, timedOut: true });
-          pendingUploads.delete(id);
-        }
-      }, 45000);
-    });
-
-    pendingUploads.set(id, { 
-      resolve: resolvePromise, 
-      timeoutId 
-    });
-
-    return promise;
+  function createUploadPromise(id: number | string) {
+    return uploadPromiseTracker.create(id);
   }
 
   // Add SSE endpoint before the Zapier endpoints
