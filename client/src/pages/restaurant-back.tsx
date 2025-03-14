@@ -63,8 +63,6 @@ import { MutatingDots } from "react-loader-spinner";
 
 type MenuItemStatus = "draft" | "live";
 
-const [isUploading, setIsUploading] = useState(false);
-
 const defaultFormValues: InsertMenuItem = {
   name: "",
   name_original: "",
@@ -94,7 +92,17 @@ const defaultFormValues: InsertMenuItem = {
   },
 };
 
-const MenuItemCard = ({ item, selectedItems, handleStatusChange, handleEdit, handleDelete, handleImageDrop, handleImageDelete, toggleItemSelection }: {
+const MenuItemCard = ({ 
+  item, 
+  selectedItems, 
+  handleStatusChange, 
+  handleEdit, 
+  handleDelete, 
+  handleImageDrop, 
+  handleImageDelete, 
+  toggleItemSelection,
+  isUploading 
+}: {
   item: MenuItem;
   selectedItems: number[];
   handleStatusChange: (item: MenuItem) => void;
@@ -103,6 +111,7 @@ const MenuItemCard = ({ item, selectedItems, handleStatusChange, handleEdit, han
   handleImageDrop: (e: React.DragEvent<HTMLDivElement>, id?: number) => void;
   handleImageDelete: (id: number) => void;
   toggleItemSelection: (id: number) => void;
+  isUploading: boolean;
 }) => (
   <Card key={item.id} className="menu-card">
     <CardContent className="p-4">
@@ -127,7 +136,21 @@ const MenuItemCard = ({ item, selectedItems, handleStatusChange, handleEdit, han
           }}
           onDrop={(e) => handleImageDrop(e, item.id)}
         >
-          {item.image ? (
+          {isUploading ? (
+            <div className="w-full h-full flex items-center justify-center">
+              <MutatingDots
+                height="100"
+                width="100"
+                color="#4169E1"
+                secondaryColor="#60A5FA"
+                radius="12.5"
+                ariaLabel="mutating-dots-loading"
+                wrapperStyle={{}}
+                wrapperClass=""
+                visible={true}
+              />
+            </div>
+          ) : item.image ? (
             <>
               <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
               <Button
@@ -354,6 +377,7 @@ function HomePage() {
   const csvFileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
   const [selectedStatus, setSelectedStatus] = useState<MenuItemStatus | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   const form = useForm<InsertMenuItem>({
     resolver: zodResolver(insertMenuItemSchema),
@@ -709,9 +733,9 @@ function HomePage() {
     const file = e.dataTransfer.files[0];
     if (file && file.type.startsWith('image/')) {
       try {
+        setIsUploading(true);
         const formData = new FormData();
         formData.append('file', file);
-        // Add restaurant ID to identify the source
         formData.append('restaurantId', selectedRestaurant?.id?.toString() || '0');
 
         const response = await fetch('/api/menu-items/upload', {
@@ -727,7 +751,6 @@ function HomePage() {
         const { image } = await response.json();
 
         if (itemId) {
-          // Update the menu item with the new image URL
           await apiRequest("PATCH", `/api/menu-items/${itemId}`, {
             image
           });
@@ -744,6 +767,8 @@ function HomePage() {
           description: "Failed to update image",
           variant: "destructive",
         });
+      } finally {
+        setIsUploading(false);
       }
     }
   };
@@ -752,9 +777,9 @@ function HomePage() {
     const file = e.target.files?.[0];
     if (file) {
       try {
+        setIsUploading(true);
         const formData = new FormData();
         formData.append('file', file);
-        // Add restaurant ID to identify the source
         formData.append('restaurantId', selectedRestaurant?.id?.toString() || '0');
 
         const response = await fetch('/api/menu-items/upload', {
@@ -780,6 +805,8 @@ function HomePage() {
           description: "Failed to upload image",
           variant: "destructive",
         });
+      } finally {
+        setIsUploading(false);
       }
     }
   };
@@ -930,7 +957,7 @@ function HomePage() {
                           className="rounded-full"
                           onClick={() => setShowQrCode(true)}
                         >
-                          <QrCode className="h-5 w-5" />
+                          <QrCode className="h-5 w5" />
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>Menu QR code</TooltipContent>
@@ -1077,10 +1104,8 @@ function HomePage() {
               variant="outline"
               onClick={() => {
                 if (selectedItems.length === filteredItems.length) {
-                  // If all items are already selected, deselect all
                   setSelectedItems([]);
                 } else {
-                  // Otherwise, select all filtered items
                   setSelectedItems(filteredItems.map(item => item.id));
                 }
               }}
