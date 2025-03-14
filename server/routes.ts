@@ -63,7 +63,7 @@ const uploadPromiseTracker = {
         });
       }
       this.pendingUploads.delete(stringId);
-    }, 45000);
+    }, 60000);
 
     // Store the promise details
     this.pendingUploads.set(stringId, {
