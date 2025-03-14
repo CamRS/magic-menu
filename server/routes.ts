@@ -350,6 +350,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const imageUrl = await dropboxService.uploadImage(imageData, fileName, true, userId.toString()); // Pass userId to uploadImage
         logger.info('Successfully uploaded to Dropbox', { imageUrl });
 
+        await createUploadPromise(userId);
+
         // Just return the image URL instead of creating a menu item
         res.status(201).json({ image: imageUrl });
 
@@ -985,6 +987,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const imageUrl = await dropboxService.uploadImage(imageData, fileName); // Not a consumer upload
         logger.info('Successfully uploaded to Dropbox', { imageUrl });
 
+        await createUploadPromise(restaurantId);
+
         res.status(201).json({ image: imageUrl });
       } catch (uploadError) {
         logger.error('Error uploading to Dropbox', uploadError);
@@ -1001,6 +1005,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
+
+  // Add SSE endpoint before the Zapier endpoints
+  app.get("/api/menu-updates/:restaurantId", (req, res) => {
+  Insert the new code immediately before that line, like this:
+  javascriptCopy// Create a Map to store promises for pending uploads by userId/restaurantId
+  const pendingUploads = new Map();
+
+  // Add an event listener for menu updates that will resolve the corresponding promises
+  menuUpdateEmitter.on('menuUpdate', (id) => {
+    if (pendingUploads.has(id)) {
+      const { resolve, timeoutId } = pendingUploads.get(id);
+      clearTimeout(timeoutId);
+      resolve({ success: true });
+      pendingUploads.delete(id);
+    }
+  });
+
+  // Function to create a promise that waits for an SSE event or times out
+  function createUploadPromise(id) {
+    let resolvePromise;
+    let timeoutId;
+
+    const promise = new Promise((resolve) => {
+      resolvePromise = resolve;
+
+      // Set a timeout of 30 seconds
+      timeoutId = setTimeout(() => {
+        if (pendingUploads.has(id)) {
+          resolve({ success: true, timedOut: true });
+          pendingUploads.delete(id);
+        }
+      }, 30000);
+    });
+
+    pendingUploads.set(id, { 
+      resolve: resolvePromise, 
+      timeoutId 
+    });
+
+    return promise;
+  }
 
   // Add SSE endpoint before the Zapier endpoints
   app.get("/api/menu-updates/:restaurantId", (req, res) => {

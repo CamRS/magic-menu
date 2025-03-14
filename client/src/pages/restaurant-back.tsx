@@ -62,7 +62,6 @@ import { useMenuUpdates } from '@/hooks/use-menu-updates';
 import { MutatingDots } from "react-loader-spinner";
 
 type MenuItemStatus = "draft" | "live";
-type StatusCounts = Record<MenuItemStatus | "all", number>;
 
 const defaultFormValues: InsertMenuItem = {
   name: "",
@@ -348,12 +347,12 @@ function HomePage() {
   const [newEmail, setNewEmail] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
-  const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const qrCodeRef = useRef<HTMLDivElement>(null);
   const csvFileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
   const [selectedStatus, setSelectedStatus] = useState<MenuItemStatus | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   const form = useForm<InsertMenuItem>({
     resolver: zodResolver(insertMenuItemSchema),
@@ -454,12 +453,12 @@ function HomePage() {
     }, new Map<string, MenuItem[]>());
   }, [filteredItems]);
 
-  const statusCounts = useMemo<StatusCounts>(() => {
+  const statusCounts = useMemo(() => {
     if (!menuItems) return { all: 0, draft: 0, live: 0 };
 
-    return menuItems.reduce((acc: StatusCounts, item) => {
+    return menuItems.reduce((acc, item) => {
       acc.all++;
-      acc[item.status as MenuItemStatus]++;
+      acc[item.status]++;
       return acc;
     }, { all: 0, draft: 0, live: 0 });
   }, [menuItems]);
@@ -1246,26 +1245,10 @@ function HomePage() {
                   className="hidden"
                 />
                 <div className="text-center">
-                  {isUploading ? (
-                    <div className="flex justify-center items-center">
-                      <MutatingDots 
-                        height="100"
-                        width="100"
-                        color="#6171FF"
-                        secondaryColor="#4F46E5"
-                        radius="12.5"
-                        ariaLabel="mutating-dots-loading"
-                        visible={true}
-                      />
-                    </div>
-                  ) : (
-                    <>
-                      <Upload className="mx-auto h-12 w-12 text-gray-400" />
-                      <p className="mt-2 text-sm text-gray-500">
-                        Drag and drop an image here, or click to select
-                      </p>
-                    </>
-                  )}
+                  <Upload className="mx-auto h-12 w-12 text-gray-400" />
+                  <p className="mt-2 text-sm text-gray-500">
+                    Drag and drop an image here, or click to select
+                  </p>
                 </div>
                 {form.watch("image") && !isUploading && (
                   <div className="relative mt-4">
@@ -1443,6 +1426,26 @@ function HomePage() {
         onChange={handleImageUpload}
         className="hidden"
       />
+      {isUploading && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white p-10 rounded-xl shadow-xl flex flex-col items-center justify-center" style={{ width: "280px", height: "280px" }}>
+            <div className="flex items-center justify-center" style={{ marginBottom: "30px" }}>
+              <div style={{ transform: "translateX(0px)" }}>
+                <MutatingDots 
+                  height="100"
+                  width="100"
+                  color="#6171FF"
+                  secondaryColor="#4F46E5"
+                  radius="12.5"
+                  ariaLabel="mutating-dots-loading"
+                  visible={true}
+                />
+              </div>
+            </div>
+            <p className="text-center font-medium text-gray-700">Uploading image...</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
