@@ -62,8 +62,7 @@ import { useMenuUpdates } from '@/hooks/use-menu-updates';
 import { MutatingDots } from "react-loader-spinner";
 
 type MenuItemStatus = "draft" | "live";
-
-const [isUploading, setIsUploading] = useState(false);
+type StatusCounts = Record<MenuItemStatus | "all", number>;
 
 const defaultFormValues: InsertMenuItem = {
   name: "",
@@ -349,6 +348,7 @@ function HomePage() {
   const [newEmail, setNewEmail] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const qrCodeRef = useRef<HTMLDivElement>(null);
   const csvFileInputRef = useRef<HTMLInputElement>(null);
@@ -454,12 +454,12 @@ function HomePage() {
     }, new Map<string, MenuItem[]>());
   }, [filteredItems]);
 
-  const statusCounts = useMemo(() => {
+  const statusCounts = useMemo<StatusCounts>(() => {
     if (!menuItems) return { all: 0, draft: 0, live: 0 };
 
-    return menuItems.reduce((acc, item) => {
+    return menuItems.reduce((acc: StatusCounts, item) => {
       acc.all++;
-      acc[item.status]++;
+      acc[item.status as MenuItemStatus]++;
       return acc;
     }, { all: 0, draft: 0, live: 0 });
   }, [menuItems]);
