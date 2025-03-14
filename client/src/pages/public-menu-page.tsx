@@ -9,6 +9,7 @@ import useEmblaCarousel from 'embla-carousel-react';
 import { Button } from "@/components/ui/button";
 import { useMenuUpdates } from '@/hooks/use-menu-updates';
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { MutatingDots } from "react-loader-spinner";
 import {
   Drawer,
   DrawerClose,
@@ -26,6 +27,8 @@ const allergensList: AllergenType[] = ['milk', 'eggs', 'peanuts', 'nuts', 'shell
 const dietaryPreferences = ['Vegetarian', 'Vegan'] as const;
 
 const MenuCard = ({ item }: { item: MenuItem }) => {
+  const [imageLoading, setImageLoading] = useState(true);
+
   const activeAllergens = Object.entries(item.allergens)
     .filter(([_, value]) => value)
     .map(([key]) => key);
@@ -75,12 +78,27 @@ const MenuCard = ({ item }: { item: MenuItem }) => {
         )}
 
         {item.image && (
-          <div className="w-full h-[200px] rounded-lg">
+          <div className="w-full h-[200px] rounded-lg relative">
+            {imageLoading && (
+              <div className="absolute inset-0 flex items-center justify-center bg-gray-50 rounded-lg">
+                <MutatingDots
+                  height="100"
+                  width="100"
+                  color="#4169E1"
+                  secondaryColor="#4169E1"
+                  radius="12.5"
+                  ariaLabel="mutating-dots-loading"
+                  visible={true}
+                />
+              </div>
+            )}
             <img
               src={item.image}
               alt={item.name}
-              className="w-full h-full object-cover rounded-lg"
+              className={`w-full h-full object-cover rounded-lg transition-opacity duration-300 ${imageLoading ? 'opacity-0' : 'opacity-100'}`}
+              onLoad={() => setImageLoading(false)}
               onError={(e) => {
+                setImageLoading(false);
                 e.currentTarget.onerror = null;
                 e.currentTarget.style.display = 'none';
                 const parent = e.currentTarget.parentElement;

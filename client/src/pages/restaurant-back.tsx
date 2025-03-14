@@ -59,11 +59,9 @@ import { Badge } from "@/components/ui/badge";
 import { QRCodeSVG } from "qrcode.react";
 import {Tooltip, TooltipContent, TooltipProvider, TooltipTrigger} from "@/components/ui/tooltip";
 import { useMenuUpdates } from '@/hooks/use-menu-updates';
-import { MutatingDots } from "react-loader-spinner";
 
 type MenuItemStatus = "draft" | "live";
 
-const [isUploading, setIsUploading] = useState(false);
 
 const defaultFormValues: InsertMenuItem = {
   name: "",
