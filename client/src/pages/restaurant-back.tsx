@@ -1070,6 +1070,21 @@ function HomePage() {
             >
               Live ({statusCounts.live})
             </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (selectedItems.length === filteredItems.length) {
+                  // If all items are already selected, deselect all
+                  setSelectedItems([]);
+                } else {
+                  // Otherwise, select all filtered items
+                  setSelectedItems(filteredItems.map(item => item.id));
+                }
+              }}
+              className="ml-2"
+            >
+              {selectedItems.length === filteredItems.length ? "Deselect All" : "Select All"}
+            </Button>
             {selectedItems.length > 0 && (
               <Button
                 variant="destructive"
