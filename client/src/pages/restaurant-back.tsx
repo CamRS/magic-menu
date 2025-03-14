@@ -59,8 +59,11 @@ import { Badge } from "@/components/ui/badge";
 import { QRCodeSVG } from "qrcode.react";
 import {Tooltip, TooltipContent, TooltipProvider, TooltipTrigger} from "@/components/ui/tooltip";
 import { useMenuUpdates } from '@/hooks/use-menu-updates';
+import { MutatingDots } from "react-loader-spinner";
 
 type MenuItemStatus = "draft" | "live";
+
+const [isUploading, setIsUploading] = useState(false);
 
 const defaultFormValues: InsertMenuItem = {
   name: "",
@@ -749,6 +752,7 @@ function HomePage() {
     const file = e.target.files?.[0];
     if (file) {
       try {
+        setIsUploading(true);
         const formData = new FormData();
         formData.append('file', file);
         // Add restaurant ID to identify the source
@@ -777,6 +781,8 @@ function HomePage() {
           description: "Failed to upload image",
           variant: "destructive",
         });
+      } finally {
+        setIsUploading(false);
       }
     }
   };
@@ -1240,12 +1246,28 @@ function HomePage() {
                   className="hidden"
                 />
                 <div className="text-center">
-                  <Upload className="mx-auto h-12 w-12 text-gray-400" />
-                  <p className="mt-2 text-sm text-gray-500">
-                    Drag and drop an image here, or click to select
-                  </p>
+                  {isUploading ? (
+                    <div className="flex justify-center items-center">
+                      <MutatingDots 
+                        height="100"
+                        width="100"
+                        color="#6171FF"
+                        secondaryColor="#4F46E5"
+                        radius="12.5"
+                        ariaLabel="mutating-dots-loading"
+                        visible={true}
+                      />
+                    </div>
+                  ) : (
+                    <>
+                      <Upload className="mx-auto h-12 w-12 text-gray-400" />
+                      <p className="mt-2 text-sm text-gray-500">
+                        Drag and drop an image here, or click to select
+                      </p>
+                    </>
+                  )}
                 </div>
-                {form.watch("image") && (
+                {form.watch("image") && !isUploading && (
                   <div className="relative mt-4">
                     <img src={form.watch("image")} alt="Preview" className="max-h-40 rounded-lg" />
                     <Button
