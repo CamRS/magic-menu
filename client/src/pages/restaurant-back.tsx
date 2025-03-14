@@ -63,6 +63,8 @@ import { MutatingDots } from "react-loader-spinner";
 
 type MenuItemStatus = "draft" | "live";
 
+const [isUploading, setIsUploading] = useState(false);
+
 const defaultFormValues: InsertMenuItem = {
   name: "",
   name_original: "",
@@ -92,17 +94,7 @@ const defaultFormValues: InsertMenuItem = {
   },
 };
 
-const MenuItemCard = ({ 
-  item, 
-  selectedItems, 
-  handleStatusChange, 
-  handleEdit, 
-  handleDelete, 
-  handleImageDrop, 
-  handleImageDelete, 
-  toggleItemSelection,
-  isUploading 
-}: {
+const MenuItemCard = ({ item, selectedItems, handleStatusChange, handleEdit, handleDelete, handleImageDrop, handleImageDelete, toggleItemSelection }: {
   item: MenuItem;
   selectedItems: number[];
   handleStatusChange: (item: MenuItem) => void;
@@ -111,7 +103,6 @@ const MenuItemCard = ({
   handleImageDrop: (e: React.DragEvent<HTMLDivElement>, id?: number) => void;
   handleImageDelete: (id: number) => void;
   toggleItemSelection: (id: number) => void;
-  isUploading: boolean;
 }) => (
   <Card key={item.id} className="menu-card">
     <CardContent className="p-4">
@@ -136,21 +127,7 @@ const MenuItemCard = ({
           }}
           onDrop={(e) => handleImageDrop(e, item.id)}
         >
-          {isUploading ? (
-            <div className="w-full h-full flex items-center justify-center">
-              <MutatingDots
-                height="100"
-                width="100"
-                color="#4169E1"
-                secondaryColor="#60A5FA"
-                radius="12.5"
-                ariaLabel="mutating-dots-loading"
-                wrapperStyle={{}}
-                wrapperClass=""
-                visible={true}
-              />
-            </div>
-          ) : item.image ? (
+          {item.image ? (
             <>
               <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
               <Button
@@ -232,18 +209,7 @@ const MenuItemCard = ({
   </Card>
 );
 
-function MenuSection({ 
-  section, 
-  items, 
-  selectedItems, 
-  handleStatusChange, 
-  handleEdit, 
-  handleDelete, 
-  handleImageDrop, 
-  handleImageDelete, 
-  toggleItemSelection,
-  isUploading 
-}: {
+function MenuSection({ section, items, selectedItems, handleStatusChange, handleEdit, handleDelete, handleImageDrop, handleImageDelete, toggleItemSelection }: {
   section: string;
   items: MenuItem[];
   selectedItems: number[];
@@ -253,7 +219,6 @@ function MenuSection({
   handleImageDrop: (e: React.DragEvent<HTMLDivElement>, id?: number) => void;
   handleImageDelete: (id: number) => void;
   toggleItemSelection: (id: number) => void;
-  isUploading: boolean;
 }) {
   const [isExpanded, setIsExpanded] = useState(true);
   const [sectionItems, setSectionItems] = useState(items);
@@ -336,6 +301,14 @@ function MenuSection({
                       scale: 1.02,
                       boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)",
                     }}
+                    dragTransition={{
+                      bounceStiffness: 300,
+                      bounceDamping: 20
+                    }}
+                    transition={{
+                      duration: 0.2,
+                      ease: [0.43, 0.13, 0.23, 0.96]
+                    }}
                   >
                     <MenuItemCard
                       item={item}
@@ -346,7 +319,6 @@ function MenuSection({
                       handleImageDrop={handleImageDrop}
                       handleImageDelete={handleImageDelete}
                       toggleItemSelection={toggleItemSelection}
-                      isUploading={isUploading}
                     />
                   </Reorder.Item>
                 ))}
@@ -382,7 +354,6 @@ function HomePage() {
   const csvFileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
   const [selectedStatus, setSelectedStatus] = useState<MenuItemStatus | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
 
   const form = useForm<InsertMenuItem>({
     resolver: zodResolver(insertMenuItemSchema),
@@ -428,7 +399,7 @@ function HomePage() {
     }
   }, [restaurants, selectedRestaurant, form]);
 
-  const { data: menuItems, isLoading: isLoadingMenuItems, error } = useQuery<MenuItem[]>({
+  const { data: menuItems, isLoading: isLoadingMenuItems } = useQuery<MenuItem[]>({
     queryKey: ["/api/menu-items", selectedRestaurant?.id],
     queryFn: async () => {
       if (!selectedRestaurant?.id) return [];
@@ -738,9 +709,9 @@ function HomePage() {
     const file = e.dataTransfer.files[0];
     if (file && file.type.startsWith('image/')) {
       try {
-        setIsUploading(true);
         const formData = new FormData();
         formData.append('file', file);
+        // Add restaurant ID to identify the source
         formData.append('restaurantId', selectedRestaurant?.id?.toString() || '0');
 
         const response = await fetch('/api/menu-items/upload', {
@@ -756,6 +727,7 @@ function HomePage() {
         const { image } = await response.json();
 
         if (itemId) {
+          // Update the menu item with the new image URL
           await apiRequest("PATCH", `/api/menu-items/${itemId}`, {
             image
           });
@@ -772,8 +744,6 @@ function HomePage() {
           description: "Failed to update image",
           variant: "destructive",
         });
-      } finally {
-        setIsUploading(false);
       }
     }
   };
@@ -782,9 +752,9 @@ function HomePage() {
     const file = e.target.files?.[0];
     if (file) {
       try {
-        setIsUploading(true);
         const formData = new FormData();
         formData.append('file', file);
+        // Add restaurant ID to identify the source
         formData.append('restaurantId', selectedRestaurant?.id?.toString() || '0');
 
         const response = await fetch('/api/menu-items/upload', {
@@ -810,8 +780,6 @@ function HomePage() {
           description: "Failed to upload image",
           variant: "destructive",
         });
-      } finally {
-        setIsUploading(false);
       }
     }
   };
@@ -962,7 +930,7 @@ function HomePage() {
                           className="rounded-full"
                           onClick={() => setShowQrCode(true)}
                         >
-                          <QrCode className="h-5 w5" />
+                          <QrCode className="h-5 w-5" />
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>Menu QR code</TooltipContent>
@@ -1072,7 +1040,7 @@ function HomePage() {
         </div>
       </header>
 
-      <main className="pt-[104px] pb-24 px-4 max-w-7xl mx-auto">
+      <main className="max-w-7xl mx-auto px-4 py-6">
         <div className="flex items-center justify-between mb-6">
           <div className="relative flex-1 max-w-xl">
             <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-custom-gray-400" />
@@ -1109,8 +1077,10 @@ function HomePage() {
               variant="outline"
               onClick={() => {
                 if (selectedItems.length === filteredItems.length) {
+                  // If all items are already selected, deselect all
                   setSelectedItems([]);
                 } else {
+                  // Otherwise, select all filtered items
                   setSelectedItems(filteredItems.map(item => item.id));
                 }
               }}
@@ -1130,31 +1100,20 @@ function HomePage() {
           </div>
         </div>
 
-        {isLoadingMenuItems ? (
-          <div className="flex justify-center items-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-          </div>
-        ) : error ? (
-          <div className="text-center py-8 text-red-500">
-            Error loading menu items
-          </div>
-        ) : (
-          Array.from(groupedByCourse.entries()).map(([section, items]) => (
-            <MenuSection
-              key={section}
-              section={section}
-              items={items}
-              selectedItems={selectedItems}
-              handleStatusChange={handleStatusChange}
-              handleEdit={handleEdit}
-              handleDelete={handleDelete}
-              handleImageDrop={handleImageDrop}
-              handleImageDelete={handleImageDelete}
-              toggleItemSelection={toggleItemSelection}
-              isUploading={isUploading}
-            />
-          ))
-        )}
+        {Array.from(groupedByCourse.entries()).map(([section, items]) => (
+          <MenuSection
+            key={section}
+            section={section}
+            items={items}
+            selectedItems={selectedItems}
+            handleStatusChange={handleStatusChange}
+            handleEdit={handleEdit}
+            handleDelete={handleDelete}
+            handleImageDrop={handleImageDrop}
+            handleImageDelete={handleImageDelete}
+            toggleItemSelection={toggleItemSelection}
+          />
+        ))}
       </main>
 
       <Dialog
